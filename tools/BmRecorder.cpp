@@ -19,9 +19,6 @@ using namespace libblackmagic;
 bool keepGoing = true;
 
 
-std::shared_ptr<SharedBMSDIBuffer> sdiBuffer;
-
-
 void signal_handler( int sig )
 {
 	LOG(INFO) << "Signal handler: " << sig;
@@ -37,6 +34,8 @@ void signal_handler( int sig )
 }
 
 static void processKbInput( char c, DeckLink &decklink ) {
+
+	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.outputHandler().sdiProtocolBuffer() );
 
 	switch(c) {
 		case 'f':
@@ -102,7 +101,6 @@ int main( int argc, char** argv )
 
 	DeckLink decklink;
 
-	sdiBuffer = decklink.outputHandler().sdiProtocolBuffer();
 
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
@@ -124,28 +122,21 @@ int main( int argc, char** argv )
 
 	while( keepGoing ) {
 
-		if( count > 0 && (count % 100)==0 ) {
-			LOG_IF(INFO, logOnce) << count << " frames";
-			logOnce = false;
-		} else {
-			logOnce = true;
-		}
-
 		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
 		//if( (duration > 0) && (loopStart > end) ) { keepGoing = false;  break; }
 
-		//if( decklink.grab() ) {
-		if( true ) {
+		if( decklink.grab() ) {
 			cv::Mat image;
-			//decklink.getImage(0, image);
+			decklink.getRawImage(0, image);
 
 			cv::imshow("Image", image);
+			LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
+
 			char c = cv::waitKey(1);
 
-				++displayed;
+			++displayed;
 
 			// Take action on character
-
 			processKbInput( c, decklink );
 
 	 		++count;
@@ -154,7 +145,7 @@ int main( int argc, char** argv )
 			// if grab() fails
 			LOG(INFO) << "unable to grab frame";
 			++miss;
-			std::this_thread::sleep_for(std::chrono::microseconds(100));
+			std::this_thread::sleep_for(std::chrono::microseconds(1000));
 		}
 
 	}

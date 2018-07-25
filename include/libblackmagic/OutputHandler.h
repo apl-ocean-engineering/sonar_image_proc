@@ -30,7 +30,7 @@ namespace libblackmagic {
 	{
 	public:
 		OutputHandler( IDeckLinkOutput *deckLinkOutput,
-										IDeckLinkDisplayMode *mode );
+									 IDeckLinkDisplayMode *mode );
 		virtual ~OutputHandler(void);
 
 		//void setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer );

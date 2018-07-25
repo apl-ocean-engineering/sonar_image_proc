@@ -39,21 +39,22 @@ namespace libblackmagic {
     bool startStreams();
     void stopStreams();
 
-    InputHandler &inputHandler()    { return *_inputHandler; }
-    OutputHandler &outputHandler()  { return *_outputHandler; }
+    // Lazy constructors
+    InputHandler &inputHandler();
+    OutputHandler &outputHandler();
 
     // virtual int numFrames( void ) const { return -1; }
 
     // // Pull images from _InputHandler
     virtual bool grab( void );
     virtual int getRawImage( int i, cv::Mat &mat );
-    
+
     //
     // virtual ImageSize imageSize( void ) const;
 
   protected:
 
-    // Lazy-constructors
+    // Lazy constructors
     IDeckLink *deckLink();
     IDeckLinkInput *deckLinkInput();
     IDeckLinkOutput *deckLinkOutput();

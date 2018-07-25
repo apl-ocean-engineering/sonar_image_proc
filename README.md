@@ -1,1 +1,1 @@
-# libvideoio_bm
+# libblackmagic

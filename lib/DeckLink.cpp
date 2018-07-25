@@ -13,10 +13,10 @@ namespace libblackmagic {
 
   DeckLink::DeckLink()
   : _deckLink( nullptr ),
-    _deckLinkInput( nullptr ),
-    _deckLinkOutput( nullptr ),
-    _inputHandler( nullptr ),
-    _outputHandler(nullptr)
+  _deckLinkInput( nullptr ),
+  _deckLinkOutput( nullptr ),
+  _inputHandler( nullptr  ),
+  _outputHandler(nullptr)
   {
     //initialize();
   }
@@ -36,14 +36,11 @@ namespace libblackmagic {
 
   }
 
-
+  //==== Lazy constructors ====
   IDeckLink *DeckLink::deckLink()
   {
-    if( !_deckLink && !createDeckLink() ) {
-      LOG(FATAL) << "Error creating Decklink card";
-      return NULL;
-    }
-    CHECK( (bool)_deckLink ) << "_deckLink not set";
+    if( !_deckLink ) createDeckLink();
+    CHECK( (bool)_deckLink ) << "Error creating Decklink card";
     return _deckLink;
   }
 
@@ -65,6 +62,24 @@ namespace libblackmagic {
     }
     CHECK( (bool)_deckLinkOutput ) << "_deckLinkOutput not set";
     return _deckLinkOutput;
+  }
+
+  InputHandler &DeckLink::inputHandler()
+  {
+    // Handler is created in parallel with deckLinkInput
+    if( !_inputHandler ) { deckLinkInput(); }
+    CHECK( (bool)_inputHandler ) << "_inputHandler not set";
+
+    return *_inputHandler;
+  }
+
+  OutputHandler &DeckLink::outputHandler()
+  {
+    // Handler is create in parallel with deckLinkOutput
+    if( !_outputHandler ) { deckLinkOutput(); }
+    CHECK( (bool)_outputHandler ) << "_outputHandler not set";
+
+    return *_outputHandler;
   }
 
   //=================================================================
@@ -212,9 +227,9 @@ namespace libblackmagic {
         // Check display mode is supported with given options
         BMDDisplayModeSupport displayModeSupported;
         result = deckLinkInput()->DoesSupportVideoMode(displayMode->GetDisplayMode(),
-                                                        pixelFormat,
-                                                        inputFlags,
-                                                        &displayModeSupported, NULL);
+        pixelFormat,
+        inputFlags,
+        &displayModeSupported, NULL);
 
         if (result != S_OK) {
           LOG(WARNING) << "Error checking if DeckLinkInput supports this mode";
@@ -248,8 +263,8 @@ namespace libblackmagic {
 
     // Made it this far?  Great!
     result = deckLinkInput()->EnableVideoInput(displayMode->GetDisplayMode(),
-                                              pixelFormat,
-                                              inputFlags);
+    pixelFormat,
+    inputFlags);
     if (result != S_OK)
     {
       LOG(WARNING) << "Failed to enable video input. Is another application using the card?";
@@ -259,7 +274,7 @@ namespace libblackmagic {
     return true;
 
     bail:
-      free( displayMode );
+    free( displayMode );
 
     return false;
   }
@@ -403,9 +418,9 @@ namespace libblackmagic {
     // TODO.  Go back and check how many copies are being made...
     _grabbedImage = cv::Mat();
 
-    while( inputHandler().queue().try_and_pop(_grabbedImage) ) {;}
-
-    if( !_grabbedImage.empty() ) return true;
+    // while( inputHandler().queue().try_and_pop(_grabbedImage) ) { LOG(INFO) << "Pop!  Queue now " << inputHandler().queue().size(); }
+    //
+    // if( !_grabbedImage.empty() ) return true;
 
     // If there was nothing in the queue, wait
     if( inputHandler().queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
@@ -413,23 +428,25 @@ namespace libblackmagic {
       return false;
     }
 
+    if( !_grabbedImage.empty() ) return true;
+
     return false;
   }
 
-    int DeckLink::getRawImage( int i, cv::Mat &mat )
-    {
-      switch(i) {
-        case 0:
-                mat = _grabbedImage;
-                return 1;
-                break;
+  int DeckLink::getRawImage( int i, cv::Mat &mat )
+  {
+    switch(i) {
+      case 0:
+              mat = _grabbedImage;
+              return 1;
+              break;
 
-        default:
-                return 0;
-      }
-
-      return 0;
+      default:
+              return 0;
     }
+
+    return 0;
+  }
 
   // ImageSize DeckLink::imageSize( void ) const
   // {
