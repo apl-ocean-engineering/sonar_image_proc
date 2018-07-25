@@ -16,9 +16,11 @@ using namespace libblackmagic;
 
 #include "libbmsdi/helpers.h"
 
-
-
 bool keepGoing = true;
+
+
+std::shared_ptr<SharedBMSDIBuffer> sdiBuffer;
+
 
 void signal_handler( int sig )
 {
@@ -26,11 +28,11 @@ void signal_handler( int sig )
 
 	switch( sig ) {
 		case SIGINT:
-		keepGoing = false;
-		break;
+				keepGoing = false;
+				break;
 		default:
-			keepGoing = false;
-			break;
+				keepGoing = false;
+				break;
 	}
 }
 
@@ -38,14 +40,39 @@ static void processKbInput( char c, DeckLink &decklink ) {
 
 	switch(c) {
 		case 'f':
-				// Send focus
-				LOG(INFO) << "Sending instantaneous autofocus to camera";
-				//decklink.queueSDIBuffer( bmInstantaneousAutofocus(1) );
-				break;
+					// Send absolute focus value
+					LOG(INFO) << "Sending instantaneous autofocus to camera";
+					{
+						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+						bmAddInstantaneousAutofocus( sdiBuffer->buffer, 1 );
+					}
+					break;
+		 case '[':
+					// Send positive focus increment
+					LOG(INFO) << "Sending focus increment to camera";
+					{
+						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+						bmAddFocusOffset( sdiBuffer->buffer, 1, 0.1 );
+					}
+					break;
+			case ']':
+					// Send negative focus increment
+					LOG(INFO) << "Sending focus decrement to camera";
+					{
+						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+						bmAddFocusOffset( sdiBuffer->buffer, 1, -0.1 );
+					}
+					break;
+
 		case 's':
 				// Toggle between reference sources
 				static uint8_t ref = 0;
 				LOG(INFO) << "Sending reference " << (int)ref;
+				LOG(INFO) << "Sending instantaneous autofocus to camera";
+				{
+					SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+					bmAddReferenceSource( sdiBuffer->buffer, 1, ref );
+				}
 
 				//decklink.queueSDIBuffer( bmReferenceSource(1,ref) );
 
@@ -75,10 +102,7 @@ int main( int argc, char** argv )
 
 	DeckLink decklink;
 
-
-	std::shared_ptr<BMSDIBuffer> sdiBuffer;
-
-
+	sdiBuffer = decklink.outputHandler().sdiProtocolBuffer();
 
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {

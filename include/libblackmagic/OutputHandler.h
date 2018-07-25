@@ -7,12 +7,17 @@
 
 namespace libblackmagic {
 
-	class SharedBMBuffer {
+	class SharedBMSDIBuffer {
 	public:
 
-		SharedBMBuffer()
+		typedef std::lock_guard<std::mutex> lock_guard;
+
+		SharedBMSDIBuffer()
 			: buffer( bmNewBuffer() ), _writeMutex()
 		{;}
+
+		std::mutex &writeMutex()
+			{ return _writeMutex; }
 
 		BMSDIBuffer *buffer;
 		std::mutex _writeMutex;
@@ -30,9 +35,7 @@ namespace libblackmagic {
 
 		//void setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer );
 
-		std::shared_ptr<SharedBMBuffer> sdiProtocolBuffer();
-		void scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count = 1 );
-
+		const std::shared_ptr<SharedBMSDIBuffer> &sdiProtocolBuffer();
 
 		HRESULT	STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 
@@ -42,6 +45,10 @@ namespace libblackmagic {
 		HRESULT	STDMETHODCALLTYPE QueryInterface (REFIID iid, LPVOID *ppv){ return E_NOINTERFACE; }
 		ULONG STDMETHODCALLTYPE AddRef() { return 1; }
 		ULONG STDMETHODCALLTYPE Release() { return 1; }
+
+	protected:
+
+		void scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count = 1 );
 
 	private:
 
@@ -56,7 +63,7 @@ namespace libblackmagic {
 
 		unsigned int _totalFramesScheduled;
 
-		std::shared_ptr<SharedBMBuffer> _buffer;
+		std::shared_ptr<SharedBMSDIBuffer> _buffer;
 		IDeckLinkMutableVideoFrame *_blankFrame;
 
 	};

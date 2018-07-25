@@ -13,7 +13,7 @@ namespace libblackmagic {
 				: _deckLinkOutput( deckLinkOutput ),
 				_mode( mode ),
 				_totalFramesScheduled(0),
-				_buffer( new SharedBMBuffer() ),
+				_buffer( new SharedBMSDIBuffer() ),
 				_blankFrame( CreateBlueFrame(deckLinkOutput, true ))
 	{
 		_deckLinkOutput->AddRef();
@@ -36,7 +36,7 @@ namespace libblackmagic {
 		if( _deckLinkOutput ) _deckLinkOutput->Release();
 	}
 
-	std::shared_ptr<SharedBMBuffer> OutputHandler::sdiProtocolBuffer()
+	const std::shared_ptr<SharedBMSDIBuffer> &OutputHandler::sdiProtocolBuffer()
 	{
 		return _buffer;
 	}
