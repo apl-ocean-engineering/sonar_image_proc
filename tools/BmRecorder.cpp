@@ -63,6 +63,24 @@ static void processKbInput( char c, DeckLink &decklink ) {
 					}
 					break;
 
+			case ';':
+ 					// Send positive focus increment
+ 					LOG(INFO) << "Sending aperture increment to camera";
+ 					{
+ 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+ 						bmAddOrdinalApertureOffset( sdiBuffer->buffer, 1, 1 );
+ 					}
+ 					break;
+ 			case '\'':
+ 					// Send negative focus increment
+ 					LOG(INFO) << "Sending aperture decrement to camera";
+ 					{
+ 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+						bmAddOrdinalApertureOffset( sdiBuffer->buffer, 1, -1 );
+ 					}
+ 					break;
+
+
 		case 's':
 				// Toggle between reference sources
 				static uint8_t ref = 0;
@@ -113,10 +131,9 @@ int main( int argc, char** argv )
 	// std::chrono::steady_clock::time_point end( start + std::chrono::seconds( duration ) );
 
 	int count = 0, miss = 0, displayed = 0;
-	bool logOnce = true;
 
 	if( !decklink.startStreams() ) {
-			LOG(WARNING) << "Unable to startStreams";
+			LOG(WARNING) << "Unable to start streams";
 			exit(-1);
 	}
 

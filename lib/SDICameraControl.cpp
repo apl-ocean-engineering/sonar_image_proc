@@ -185,7 +185,10 @@ static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 	}
 }
 
-IDeckLinkMutableVideoFrame* AddSDICameraControlFrame( IDeckLinkOutput *deckLinkOutput, IDeckLinkMutableVideoFrame* frame, BMSDIBuffer *buffer )
+
+//=== Public functions ====
+
+IDeckLinkMutableVideoFrame* makeFrameWithSDIProtocol( IDeckLinkOutput *deckLinkOutput, IDeckLinkMutableVideoFrame* frame, BMSDIBuffer *buffer )
 {
 	HRESULT                         result;
 	IDeckLinkVideoFrameAncillary*	ancillaryData = nullptr;
@@ -197,7 +200,7 @@ IDeckLinkMutableVideoFrame* AddSDICameraControlFrame( IDeckLinkOutput *deckLinkO
 		goto bail;
 	}
 
-	SetVancData(ancillaryData, buffer );
+	SetVancData( ancillaryData, buffer );
 	result = frame->SetAncillaryData(ancillaryData);
 	if (result != S_OK)
 	{

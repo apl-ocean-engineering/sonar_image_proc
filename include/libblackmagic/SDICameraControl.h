@@ -6,7 +6,7 @@
 
 namespace libblackmagic {
 
-  IDeckLinkMutableVideoFrame* AddSDICameraControlFrame( IDeckLinkOutput *deckLinkOutput,
+  IDeckLinkMutableVideoFrame* makeFrameWithSDIProtocol( IDeckLinkOutput *deckLinkOutput,
                                                         IDeckLinkMutableVideoFrame* frame, BMSDIBuffer *buffer );
 
   IDeckLinkMutableVideoFrame* CreateBlueFrame( IDeckLinkOutput *deckLinkOutput, bool do3D );
