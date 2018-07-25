@@ -28,6 +28,7 @@ namespace libblackmagic {
     virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*, IDeckLinkAudioInputPacket*);
 
     active_object::shared_queue< cv::Mat > &queue() { return _queue; }
+
     IDeckLinkOutput *deckLinkOutput() { return _deckLinkOutput; }
 
     // ThreadSynchronizer &imageReady() { return _imageReady; }

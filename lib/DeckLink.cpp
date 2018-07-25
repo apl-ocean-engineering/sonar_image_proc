@@ -345,8 +345,6 @@ namespace libblackmagic {
     //          goto bail;
     //
 
-    CHECK( deckLinkInput() != nullptr );
-
     if( deckLinkOutput() ) {
       LOG(INFO) << "Starting DeckLink output";
 
@@ -370,10 +368,7 @@ namespace libblackmagic {
 
   void DeckLink::stopStreams( void )
   {
-
-    CHECK( _inputHandler != nullptr );
-
-    _inputHandler->stopStreams();
+    inputHandler().stopStreams();
 
     // LOG(INFO) << "Pausing DeckLinkInput streams";
     // if ( _deckLinkInput->PauseStreams() != S_OK) {
@@ -403,92 +398,39 @@ namespace libblackmagic {
     }
   }
 
-  // bool DeckLink::grab( void )
-  // {
-  //   // TODO.  Go back and check how many copies are being made...
-  //   _grabbedImage = cv::Mat();
-  //
-  //   if( _inputHandler ) {
-  //
-  //     while( _inputHandler->queue().try_and_pop(_grabbedImage) ) {;}
-  //
-  //     if( !_grabbedImage.empty() ) return true;
-  //
-  //     // If there was nothing in the queue, wait
-  //     if( _inputHandler->queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
-  //       LOG(WARNING) << "Timeout waiting for image in image queue";
-  //       return false;
-  //     }
-  //
-  //     return true;
-  //   }
-  //
-  //   return false;
-  // }
-  //
-  // bool DeckLink::queueSDIBuffer( BMSDIBuffer *buffer )
-  // {
-  //   if( !_deckLinkOutput ) return false;
-  //
-  //   CHECK( _outputHandler != nullptr );
-  //
-  //   LOG(INFO) << "Trying to send buffer of length " << (int)buffer->len;
-  //
-  //   // Should check to see if the buffer is full...
-  //   //_outputHandler->queue().push(buffer);
-  //
-  //   // IDeckLinkMutableVideoFrame *videoFrameBlue = CreateSDICameraControlFrame(_deckLinkOutput);
-  //   //
-  //   // // These are magic values for 1080i50   See SDK manual page 213
-  //   // const uint32_t kFrameDuration = 1000;
-  //   // const uint32_t kTimeScale = 25000;
-  //   //
-  //   // auto result = _deckLinkOutput->ScheduleVideoFrame(videoFrameBlue, 0, kFrameDuration, kTimeScale);
-  //   // if(result != S_OK)
-  //   // {
-  //   //   LOG(WARNING) << "Could not schedule video frame - result = " << std::hex << result;
-  //   //   return false;
-  //   // }
-  //   //
-  //   // //
-  //   // result = _deckLinkOutput->StartScheduledPlayback(0, kTimeScale, 1.0);
-  //   // if(result != S_OK)
-  //   // {
-  //   //   LOG(WARNING) << "Could not start video playback - result = " << std::hex << result;
-  //   //   return false;
-  //   // }
-  //   //
-  //   // // And stop after one frame
-  //   // BMDTimeValue stopTime;
-  //   // result = _deckLinkOutput->StopScheduledPlayback(kFrameDuration, &stopTime, kTimeScale);
-  //   // if(result != S_OK)
-  //   // {
-  //   //   LOG(WARNING) << "Could not stop video playback - result = " << std::hex << result;
-  //   //   return false;
-  //   // }
-  //
-  //
-  //   return true;
-  // }
+  bool DeckLink::grab( void )
+  {
+    // TODO.  Go back and check how many copies are being made...
+    _grabbedImage = cv::Mat();
 
+    while( inputHandler().queue().try_and_pop(_grabbedImage) ) {;}
 
+    if( !_grabbedImage.empty() ) return true;
 
+    // If there was nothing in the queue, wait
+    if( inputHandler().queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
+      LOG(WARNING) << "Timeout waiting for image in image queue";
+      return false;
+    }
 
-  // int DeckLink::getRawImage( int i, cv::Mat &mat )
-  // {
-  //   switch(i) {
-  //     case 0:
-  //       mat = _grabbedImage;
-  //       return 1;
-  //       break;
-  //
-  //     default:
-  //       return 0;
-  //   }
-  //
-  //   return 0;
-  // }
-  //
+    return false;
+  }
+
+    int DeckLink::getRawImage( int i, cv::Mat &mat )
+    {
+      switch(i) {
+        case 0:
+                mat = _grabbedImage;
+                return 1;
+                break;
+
+        default:
+                return 0;
+      }
+
+      return 0;
+    }
+
   // ImageSize DeckLink::imageSize( void ) const
   // {
   //   return _inputHandler->imageSize();

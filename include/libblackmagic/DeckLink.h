@@ -45,9 +45,9 @@ namespace libblackmagic {
     // virtual int numFrames( void ) const { return -1; }
 
     // // Pull images from _InputHandler
-    // virtual bool grab( void );
-    //
-    // virtual int getRawImage( int i, cv::Mat &mat );
+    virtual bool grab( void );
+    virtual int getRawImage( int i, cv::Mat &mat );
+    
     //
     // virtual ImageSize imageSize( void ) const;
 

@@ -121,7 +121,7 @@ namespace libblackmagic {
 
       mode->GetName((const char**)&displayModeName);
       LOG(INFO) << "Video format changed to " << displayModeName
-                << (formatFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV";
+                << ((formatFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV");
 
       if (displayModeName) free(displayModeName);
 
@@ -192,40 +192,40 @@ namespace libblackmagic {
       }
       default:
       {
-          //LOG(INFO) << "Converting through Blackmagic VideoConversionInstance";
-          IDeckLinkMutableVideoFrame*     dstFrame = NULL;
-
-          //CvMatDeckLinkVideoFrame cvMatWrapper(videoFrame->GetHeight(), videoFrame->GetWidth());
-          HRESULT result = _deckLinkOutput->CreateVideoFrame( videoFrame->GetWidth(), videoFrame->GetHeight(),
-                                      videoFrame->GetWidth() * 4, bmdFormat8BitBGRA, bmdFrameFlagDefault, &dstFrame);
-            if (result != S_OK)
-            {
-                    LOG(WARNING) << "Failed to create destination video frame";
-                    return false;
-            }
-
-
-          IDeckLinkVideoConversion *converter =  CreateVideoConversionInstance();
-
-          //LOG(WARNING) << "Converting " << std::hex << videoFrame->GetPixelFormat() << " to " << dstFrame->GetPixelFormat();
-          result =  converter->ConvertFrame(videoFrame, dstFrame);
-
-          if (result != S_OK ) {
-             LOG(WARNING) << "Failed to do conversion " << std::hex << result;
-            return false;
-          }
-
-          void *buffer = nullptr;
-          if( dstFrame->GetBytes( &buffer ) != S_OK ) {
-            LOG(WARNING) << "Unable to get bytes from dstFrame";
-            return false;
-          }
-          cv::Mat srcMat( cv::Size(dstFrame->GetWidth(), dstFrame->GetHeight()), CV_8UC4, buffer, dstFrame->GetRowBytes() );
-          //cv::cvtColor(srcMat, out, cv::COLOR_BGRA2BGR);
-          cv::resize( srcMat, out, cv::Size(), 0.25, 0.25  );
-
-          dstFrame->Release();
-          videoFrame->Release();
+          LOG(INFO) << "Converting through Blackmagic VideoConversionInstance";
+          // IDeckLinkMutableVideoFrame*     dstFrame = NULL;
+          //
+          // //CvMatDeckLinkVideoFrame cvMatWrapper(videoFrame->GetHeight(), videoFrame->GetWidth());
+          // HRESULT result = _deckLinkOutput->CreateVideoFrame( videoFrame->GetWidth(), videoFrame->GetHeight(),
+          //                             videoFrame->GetWidth() * 4, bmdFormat8BitBGRA, bmdFrameFlagDefault, &dstFrame);
+          //   if (result != S_OK)
+          //   {
+          //           LOG(WARNING) << "Failed to create destination video frame";
+          //           return false;
+          //   }
+          //
+          //
+          // IDeckLinkVideoConversion *converter =  CreateVideoConversionInstance();
+          //
+          // //LOG(WARNING) << "Converting " << std::hex << videoFrame->GetPixelFormat() << " to " << dstFrame->GetPixelFormat();
+          // result =  converter->ConvertFrame(videoFrame, dstFrame);
+          //
+          // if (result != S_OK ) {
+          //    LOG(WARNING) << "Failed to do conversion " << std::hex << result;
+          //   return false;
+          // }
+          //
+          // void *buffer = nullptr;
+          // if( dstFrame->GetBytes( &buffer ) != S_OK ) {
+          //   LOG(WARNING) << "Unable to get bytes from dstFrame";
+          //   return false;
+          // }
+          // cv::Mat srcMat( cv::Size(dstFrame->GetWidth(), dstFrame->GetHeight()), CV_8UC4, buffer, dstFrame->GetRowBytes() );
+          // //cv::cvtColor(srcMat, out, cv::COLOR_BGRA2BGR);
+          // cv::resize( srcMat, out, cv::Size(), 0.25, 0.25  );
+          //
+          // dstFrame->Release();
+          // videoFrame->Release();
         //  return true;
       }
     }
