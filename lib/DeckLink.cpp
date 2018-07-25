@@ -12,12 +12,11 @@ namespace libblackmagic {
   using std::string;
 
   DeckLink::DeckLink()
-  : _initialized( false ),
-    _deckLink( nullptr ),
+  : _deckLink( nullptr ),
     _deckLinkInput( nullptr ),
     _deckLinkOutput( nullptr ),
-    _InputHandler( nullptr ),
-    _OutputHandler(nullptr)
+    _inputHandler( nullptr ),
+    _outputHandler(nullptr)
   {
     //initialize();
   }
@@ -38,42 +37,71 @@ namespace libblackmagic {
   }
 
 
+  IDeckLink *DeckLink::deckLink()
+  {
+    if( !_deckLink && !createDeckLink() ) {
+      LOG(FATAL) << "Error creating Decklink card";
+      return NULL;
+    }
+    CHECK( (bool)_deckLink ) << "_deckLink not set";
+    return _deckLink;
+  }
+
+  IDeckLinkInput *DeckLink::deckLinkInput()
+  {
+    if( !_deckLinkInput && !createVideoInput() ) {
+      LOG(FATAL) << "Error creating video input";
+      return NULL;
+    }
+    CHECK( (bool)_deckLinkInput ) << "_deckLinkInput not set";
+    return _deckLinkInput;
+  }
+
+  IDeckLinkOutput *DeckLink::deckLinkOutput()
+  {
+    if( !_deckLinkOutput && !createVideoOutput() ) {
+      LOG(FATAL) << "Error creating video output";
+      return NULL;
+    }
+    CHECK( (bool)_deckLinkOutput ) << "_deckLinkOutput not set";
+    return _deckLinkOutput;
+  }
+
   //=================================================================
   // Configuration functions
-
-
-  bool DeckLink::setDeckLink( int cardno )
+  bool DeckLink::createDeckLink( int cardno )
   {
-
     LOG(INFO) << "Using Decklink API  " << BLACKMAGIC_DECKLINK_API_VERSION_STRING;
 
-
-    if( _deckLink ) _deckLink->Release();
+    if( _deckLink ) {
+      _deckLink->Release();
+      _deckLink = NULL;
+    }
 
     HRESULT result;
 
-    IDeckLink *deckLink = nullptr;
+    IDeckLink *dl = nullptr;
     IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
 
     // Index cards by number for now
     for( int i = 0; i <= cardno; i++ ) {
-      if( (result = deckLinkIterator->Next(&deckLink)) != S_OK) {
+      if( (result = deckLinkIterator->Next(&dl)) != S_OK) {
         LOG(WARNING) << "Couldn't get information on DeckLink card " << i;
         return false;
       }
     }
 
-    _deckLink = deckLink;
-    CHECK( _deckLink != nullptr );
+    _deckLink = dl;
+    CHECK( deckLink() != nullptr );
 
     free( deckLinkIterator );
 
     char *modelName, *displayName;
-    if( _deckLink->GetModelName( (const char **)&modelName ) != S_OK ) {
+    if( deckLink()->GetModelName( (const char **)&modelName ) != S_OK ) {
       LOG(WARNING) << "Unable to query model name.";
     }
 
-    if( _deckLink->GetDisplayName( (const char **)&displayName ) != S_OK ) {
+    if( deckLink()->GetDisplayName( (const char **)&displayName ) != S_OK ) {
       LOG(WARNING) << "Unable to query display name.";
     }
 
@@ -84,6 +112,7 @@ namespace libblackmagic {
 
     return true;
   }
+
   bool DeckLink::createVideoInput( const BMDDisplayMode desiredMode, bool do3D )
   {
     HRESULT result;
@@ -94,7 +123,7 @@ namespace libblackmagic {
     //BMDTimecodeFormat m_timecodeFormat;
 
     // Get the input (capture) interface of the DeckLink device
-    result = _deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&_deckLinkInput);
+    result = deckLink()->QueryInterface(IID_IDeckLinkInput, (void**)&_deckLinkInput);
     if (result != S_OK) {
       LOG(WARNING) << "Couldn't get input for Decklink";
       return false;
@@ -104,7 +133,7 @@ namespace libblackmagic {
     bool formatDetectionSupported;
 
     // Check the card supports format detection
-    result = _deckLink->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
+    result = deckLink()->QueryInterface(IID_IDeckLinkAttributes, (void**)&deckLinkAttributes);
     if (result == S_OK)
     {
 
@@ -134,7 +163,7 @@ namespace libblackmagic {
     IDeckLinkDisplayModeIterator* displayModeIterator = NULL;
     IDeckLinkDisplayMode *displayMode = NULL;
 
-    result = _deckLinkInput->GetDisplayModeIterator(&displayModeIterator);
+    result = deckLinkInput()->GetDisplayModeIterator(&displayModeIterator);
     if (result != S_OK) {
       LOG(WARNING) << "Unable to get DisplayModeIterator";
       return false;
@@ -182,10 +211,10 @@ namespace libblackmagic {
 
         // Check display mode is supported with given options
         BMDDisplayModeSupport displayModeSupported;
-        result = _deckLinkInput->DoesSupportVideoMode(displayMode->GetDisplayMode(),
-        pixelFormat,
-        inputFlags,
-        &displayModeSupported, NULL);
+        result = deckLinkInput()->DoesSupportVideoMode(displayMode->GetDisplayMode(),
+                                                        pixelFormat,
+                                                        inputFlags,
+                                                        &displayModeSupported, NULL);
 
         if (result != S_OK) {
           LOG(WARNING) << "Error checking if DeckLinkInput supports this mode";
@@ -198,7 +227,7 @@ namespace libblackmagic {
           return false;
         }
 
-        // If you've made it here, great
+        // If you've made it here, great!
         break;
       }
 
@@ -207,18 +236,18 @@ namespace libblackmagic {
 
     free( displayModeIterator );
 
-    if( ! _deckLinkInput ) {
+    if( ! deckLinkInput() ) {
       // Failed to find a good mode
       LOG(FATAL) << "Unable to find a video input mode with the desired properties";
       goto bail;
     }
 
     // Configure the capture callback ... needs an output to create frames for conversion
-    CHECK( _deckLinkOutput != nullptr );
-    _InputHandler = new InputHandler( _deckLinkInput, _deckLinkOutput,  displayMode );
+    CHECK( deckLinkOutput() != nullptr );
+    _inputHandler = new InputHandler( deckLinkInput(), deckLinkOutput(),  displayMode );
 
     // Made it this far?  Great!
-    result = _deckLinkInput->EnableVideoInput(displayMode->GetDisplayMode(),
+    result = deckLinkInput()->EnableVideoInput(displayMode->GetDisplayMode(),
                                               pixelFormat,
                                               inputFlags);
     if (result != S_OK)
@@ -230,7 +259,7 @@ namespace libblackmagic {
     return true;
 
     bail:
-    free( displayMode );
+      free( displayMode );
 
     return false;
   }
@@ -248,7 +277,7 @@ namespace libblackmagic {
     // Obtain the output interface for the DeckLink device
     {
       IDeckLinkOutput *deckLinkOutput = nullptr;
-      result = _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput);
+      result = deckLink()->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput);
       if(result != S_OK)
       {
         LOGF(WARNING, "Could not obtain the IDeckLinkInput interface - result = %08x\n", result);
@@ -257,7 +286,7 @@ namespace libblackmagic {
 
       _deckLinkOutput = deckLinkOutput;
     }
-    CHECK( _deckLinkOutput != nullptr );
+    CHECK( deckLinkOutput() != nullptr );
 
     if( do3D ) {
       outputFlags |= bmdVideoOutputDualStream3D;
@@ -265,7 +294,7 @@ namespace libblackmagic {
 
     BMDDisplayModeSupport support;
 
-    if( _deckLinkOutput->DoesSupportVideoMode( desiredMode, 0, outputFlags, &support, &displayMode ) != S_OK) {
+    if( deckLinkOutput()->DoesSupportVideoMode( desiredMode, 0, outputFlags, &support, &displayMode ) != S_OK) {
       LOG(WARNING) << "Unable to find a supported output mode";
       return false;
     }
@@ -277,7 +306,7 @@ namespace libblackmagic {
 
 
     // Enable video output
-    result = _deckLinkOutput->EnableVideoOutput(desiredMode, outputFlags);
+    result = deckLinkOutput()->EnableVideoOutput(desiredMode, outputFlags);
     if(result != S_OK)
     {
       LOGF(WARNING, "Could not enable video output - result = %08x\n", result);
@@ -291,8 +320,8 @@ namespace libblackmagic {
     }
 
     // Set the callback object to the DeckLink device's output interface
-    _OutputHandler = new OutputHandler( _deckLinkOutput, displayMode );
-    result = _deckLinkOutput->SetScheduledFrameCompletionCallback( _OutputHandler );
+    _outputHandler = new OutputHandler( deckLinkOutput(), displayMode );
+    result = deckLinkOutput()->SetScheduledFrameCompletionCallback( _outputHandler );
     if(result != S_OK)
     {
       LOGF(WARNING, "Could not set callback - result = %08x\n", result);
@@ -308,52 +337,20 @@ namespace libblackmagic {
 
   //=================================================================
 
-
-  bool DeckLink::initialize()
-  {
-    _initialized = false;
-
-    if( !_deckLink && !setDeckLink() ) {
-      LOG(FATAL) << "Error creating Decklink card";
-      return false;
-    }
-    CHECK( (bool)_deckLink ) << "_deckLink not set";
-
-    if( !_deckLinkOutput && !createVideoOutput() ) {
-      LOG(FATAL) << "Error creating video output";
-      return false;
-    }
-    CHECK( (bool)_deckLinkOutput ) << "_deckLinkOutput not set";
-
-    if( !_deckLinkInput && !createVideoInput() ) {
-      LOG(FATAL) << "Error creating video input";
-      return false;
-    }
-    CHECK( (bool)_deckLinkInput ) << "_deckLinkInput not set";
-
-    _initialized = true;
-
-    return _initialized;
-  }
-
   bool DeckLink::startStreams( void )
   {
-    // Automatically initialize if needed
-    if( !_initialized) {
-      if( !initialize() ) return false;
-    }
     //
     //  result = g_deckLinkInput->EnableAudioInput(bmdAudioSampleRate48kHz, g_config.m_audioSampleDepth, g_config.m_audioChannels);
     //  if (result != S_OK)
     //          goto bail;
     //
 
-    CHECK( _deckLinkInput != nullptr );
+    CHECK( deckLinkInput() != nullptr );
 
-    if( _deckLinkOutput ) {
+    if( deckLinkOutput() ) {
       LOG(INFO) << "Starting DeckLink output";
 
-      HRESULT result = _deckLinkOutput->StartScheduledPlayback(0, _outputTimeScale, 1.0);
+      HRESULT result = deckLinkOutput()->StartScheduledPlayback(0, _outputTimeScale, 1.0);
       if(result != S_OK)
       {
         LOG(WARNING) << "Could not start video output - result = " << std::hex << result;
@@ -362,7 +359,7 @@ namespace libblackmagic {
     }
 
 
-    HRESULT result = _deckLinkInput->StartStreams();
+    HRESULT result = deckLinkInput()->StartStreams();
     if (result != S_OK) {
       LOG(WARNING) << "Failed to start input streams";
       return false;
@@ -374,9 +371,9 @@ namespace libblackmagic {
   void DeckLink::stopStreams( void )
   {
 
-    CHECK( _InputHandler != nullptr );
+    CHECK( _inputHandler != nullptr );
 
-    _InputHandler->stopStreams();
+    _inputHandler->stopStreams();
 
     // LOG(INFO) << "Pausing DeckLinkInput streams";
     // if ( _deckLinkInput->PauseStreams() != S_OK) {
@@ -392,11 +389,11 @@ namespace libblackmagic {
     // }
 
 
-    if( _deckLinkOutput ) {
+    if( deckLinkOutput() ) {
       LOG(INFO) << "Stopping DeckLinkOutput streams";
       // // And stop after one frame
       BMDTimeValue actualStopTime;
-      HRESULT result = _deckLinkOutput->StopScheduledPlayback(0, &actualStopTime, _outputTimeScale);
+      HRESULT result = deckLinkOutput()->StopScheduledPlayback(0, &actualStopTime, _outputTimeScale);
       if(result != S_OK)
       {
         LOG(WARNING) << "Could not stop video playback - result = " << std::hex << result;
@@ -411,14 +408,14 @@ namespace libblackmagic {
   //   // TODO.  Go back and check how many copies are being made...
   //   _grabbedImage = cv::Mat();
   //
-  //   if( _InputHandler ) {
+  //   if( _inputHandler ) {
   //
-  //     while( _InputHandler->queue().try_and_pop(_grabbedImage) ) {;}
+  //     while( _inputHandler->queue().try_and_pop(_grabbedImage) ) {;}
   //
   //     if( !_grabbedImage.empty() ) return true;
   //
   //     // If there was nothing in the queue, wait
-  //     if( _InputHandler->queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
+  //     if( _inputHandler->queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
   //       LOG(WARNING) << "Timeout waiting for image in image queue";
   //       return false;
   //     }
@@ -428,51 +425,51 @@ namespace libblackmagic {
   //
   //   return false;
   // }
-
-  bool DeckLink::queueSDIBuffer( BMSDIBuffer *buffer )
-  {
-    if( !_deckLinkOutput ) return false;
-
-    CHECK( _OutputHandler != nullptr );
-
-    LOG(INFO) << "Trying to send buffer of length " << (int)buffer->len;
-
-    // Should check to see if the buffer is full...
-    //_OutputHandler->queue().push(buffer);
-
-    // IDeckLinkMutableVideoFrame *videoFrameBlue = CreateSDICameraControlFrame(_deckLinkOutput);
-    //
-    // // These are magic values for 1080i50   See SDK manual page 213
-    // const uint32_t kFrameDuration = 1000;
-    // const uint32_t kTimeScale = 25000;
-    //
-    // auto result = _deckLinkOutput->ScheduleVideoFrame(videoFrameBlue, 0, kFrameDuration, kTimeScale);
-    // if(result != S_OK)
-    // {
-    //   LOG(WARNING) << "Could not schedule video frame - result = " << std::hex << result;
-    //   return false;
-    // }
-    //
-    // //
-    // result = _deckLinkOutput->StartScheduledPlayback(0, kTimeScale, 1.0);
-    // if(result != S_OK)
-    // {
-    //   LOG(WARNING) << "Could not start video playback - result = " << std::hex << result;
-    //   return false;
-    // }
-    //
-    // // And stop after one frame
-    // BMDTimeValue stopTime;
-    // result = _deckLinkOutput->StopScheduledPlayback(kFrameDuration, &stopTime, kTimeScale);
-    // if(result != S_OK)
-    // {
-    //   LOG(WARNING) << "Could not stop video playback - result = " << std::hex << result;
-    //   return false;
-    // }
-
-
-    return true;
-  }
+  //
+  // bool DeckLink::queueSDIBuffer( BMSDIBuffer *buffer )
+  // {
+  //   if( !_deckLinkOutput ) return false;
+  //
+  //   CHECK( _outputHandler != nullptr );
+  //
+  //   LOG(INFO) << "Trying to send buffer of length " << (int)buffer->len;
+  //
+  //   // Should check to see if the buffer is full...
+  //   //_outputHandler->queue().push(buffer);
+  //
+  //   // IDeckLinkMutableVideoFrame *videoFrameBlue = CreateSDICameraControlFrame(_deckLinkOutput);
+  //   //
+  //   // // These are magic values for 1080i50   See SDK manual page 213
+  //   // const uint32_t kFrameDuration = 1000;
+  //   // const uint32_t kTimeScale = 25000;
+  //   //
+  //   // auto result = _deckLinkOutput->ScheduleVideoFrame(videoFrameBlue, 0, kFrameDuration, kTimeScale);
+  //   // if(result != S_OK)
+  //   // {
+  //   //   LOG(WARNING) << "Could not schedule video frame - result = " << std::hex << result;
+  //   //   return false;
+  //   // }
+  //   //
+  //   // //
+  //   // result = _deckLinkOutput->StartScheduledPlayback(0, kTimeScale, 1.0);
+  //   // if(result != S_OK)
+  //   // {
+  //   //   LOG(WARNING) << "Could not start video playback - result = " << std::hex << result;
+  //   //   return false;
+  //   // }
+  //   //
+  //   // // And stop after one frame
+  //   // BMDTimeValue stopTime;
+  //   // result = _deckLinkOutput->StopScheduledPlayback(kFrameDuration, &stopTime, kTimeScale);
+  //   // if(result != S_OK)
+  //   // {
+  //   //   LOG(WARNING) << "Could not stop video playback - result = " << std::hex << result;
+  //   //   return false;
+  //   // }
+  //
+  //
+  //   return true;
+  // }
 
 
 
@@ -494,7 +491,7 @@ namespace libblackmagic {
   //
   // ImageSize DeckLink::imageSize( void ) const
   // {
-  //   return _InputHandler->imageSize();
+  //   return _inputHandler->imageSize();
   // }
 
 }

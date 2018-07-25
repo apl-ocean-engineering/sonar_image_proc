@@ -14,11 +14,12 @@ namespace libblackmagic {
 			: buffer( bmNewBuffer() ), _writeMutex()
 		{;}
 
-
 		BMSDIBuffer *buffer;
 		std::mutex _writeMutex;
-
 	};
+
+
+
 
 	class OutputHandler: public IDeckLinkVideoOutputCallback
 	{
@@ -27,8 +28,11 @@ namespace libblackmagic {
 										IDeckLinkDisplayMode *mode );
 		virtual ~OutputHandler(void);
 
-		void setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer );
+		//void setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer );
+
+		std::shared_ptr<SharedBMBuffer> sdiProtocolBuffer();
 		void scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count = 1 );
+
 
 		HRESULT	STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 
@@ -38,8 +42,6 @@ namespace libblackmagic {
 		HRESULT	STDMETHODCALLTYPE QueryInterface (REFIID iid, LPVOID *ppv){ return E_NOINTERFACE; }
 		ULONG STDMETHODCALLTYPE AddRef() { return 1; }
 		ULONG STDMETHODCALLTYPE Release() { return 1; }
-
-		//active_object::shared_queue< BMSDIBuffer * > &queue() { return _queue; }
 
 	private:
 

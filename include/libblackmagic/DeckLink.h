@@ -13,8 +13,12 @@
 
 namespace libblackmagic {
 
-  // OO-ish abstraction around a Blackmagic "DeckLink" e.g. one capture card /
-  // source.
+  // OO-ish abstraction around a Blackmagic "DeckLink"
+  // e.g. one capture card / source.
+  // It's really just a container for Blackmagic API IDeckLink,
+  // IDeckLinkInput and IDeckLinkOutput instances, plus the callback handlers
+  // InputHandler and OutputHandler
+  //
   class DeckLink {
   public:
 
@@ -25,21 +29,18 @@ namespace libblackmagic {
     DeckLink( const DeckLink & ) = delete;
     DeckLink &operator=( const DeckLink & ) = delete;
 
-    // These can be called expicitly before initialize(),
-    // Otherwise it will assume defaults.
-    bool setDeckLink( int cardno = 0 );
-    bool createVideoInput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997, bool do3D = false );
+    // These can be called expicitly, otherwise a default will be
+    // lazy-constructed when needed
+    bool    createDeckLink( int cardno = 0 );
+    bool  createVideoInput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997, bool do3D = false );
     bool createVideoOutput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997, bool do3D = false );
-
-    bool initialize();
-    bool initialized() const { return _initialized; }
 
     // These start and stop the input streams
     bool startStreams();
     void stopStreams();
 
-    bool queueSDIBuffer( BMSDIBuffer *buffer );
-
+    InputHandler &inputHandler()    { return *_inputHandler; }
+    OutputHandler &outputHandler()  { return *_outputHandler; }
 
     // virtual int numFrames( void ) const { return -1; }
 
@@ -52,9 +53,16 @@ namespace libblackmagic {
 
   protected:
 
-    cv::Mat _grabbedImage;
+    // Lazy-constructors
+    IDeckLink *deckLink();
+    IDeckLinkInput *deckLinkInput();
+    IDeckLinkOutput *deckLinkOutput();
 
-    bool _initialized;
+
+
+  private:
+
+    cv::Mat _grabbedImage;
 
     // For now assume an object uses just one Decklink board
     // Stupid COM model precludes use of auto ptrs
@@ -65,8 +73,8 @@ namespace libblackmagic {
     BMDTimeScale _outputTimeScale;
     BMDTimeValue _outputTimeValue;
 
-    InputHandler *_InputHandler;
-    OutputHandler *_OutputHandler;
+    InputHandler *_inputHandler;
+    OutputHandler *_outputHandler;
 
   };
 

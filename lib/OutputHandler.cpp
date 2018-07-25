@@ -9,37 +9,42 @@
 namespace libblackmagic {
 
 
-		OutputHandler::OutputHandler( IDeckLinkOutput *deckLinkOutput, IDeckLinkDisplayMode *mode )
-		: _deckLinkOutput( deckLinkOutput ),
-		_mode( mode ),
-		_totalFramesScheduled(0),
-		_buffer(),
-		_blankFrame( CreateBlueFrame(deckLinkOutput, true ))
-		{
-			_deckLinkOutput->AddRef();
-			_mode->AddRef();
+	OutputHandler::OutputHandler( IDeckLinkOutput *deckLinkOutput, IDeckLinkDisplayMode *mode )
+				: _deckLinkOutput( deckLinkOutput ),
+				_mode( mode ),
+				_totalFramesScheduled(0),
+				_buffer( new SharedBMBuffer() ),
+				_blankFrame( CreateBlueFrame(deckLinkOutput, true ))
+	{
+		_deckLinkOutput->AddRef();
+		_mode->AddRef();
 
-			_mode->GetFrameRate( &_timeValue, &_timeScale );
+		_mode->GetFrameRate( &_timeValue, &_timeScale );
 
-			// Get timing information from mode
+		// Get timing information from mode
 
-			// Pre-roll a few blank frames
-			const int prerollFrames = 3;
-			for( int i = 0; i < prerollFrames ; ++i ) {
-				scheduleFrame(_blankFrame);
-			}
-
+		// Pre-roll a few blank frames
+		const int prerollFrames = 3;
+		for( int i = 0; i < prerollFrames ; ++i ) {
+			scheduleFrame(_blankFrame);
 		}
 
-		 OutputHandler::~OutputHandler(void)
-		{
-			if( _deckLinkOutput ) _deckLinkOutput->Release();
-		}
+	}
 
-		void OutputHandler::setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer )
-		{
-			_buffer = buffer;
-		}
+	 OutputHandler::~OutputHandler(void)
+	{
+		if( _deckLinkOutput ) _deckLinkOutput->Release();
+	}
+
+	std::shared_ptr<SharedBMBuffer> OutputHandler::sdiProtocolBuffer()
+	{
+		return _buffer;
+	}
+
+		// void OutputHandler::setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer )
+		// {
+		// 	_buffer = buffer;
+		// }
 
 		void OutputHandler::scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count )
 		{
