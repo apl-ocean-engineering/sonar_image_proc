@@ -1,6 +1,7 @@
 imports:
     fips-googletest:
         git: https://github.com/amarburg/fips-googletest.git
+        cond: "FIPS_UNITTESTS"
     libactive_object:
         git: https://github.com/amarburg/libactive_object.git
     liblogger:
@@ -9,6 +10,7 @@ imports:
         git: https://gitub.com/amarburg/lbbmsdi_protocol.git
     fips-CLI11:
         git: https://github.com/amarburg/fips-CLI11.git
+        cond: "NOT FIPS_IMPORT"    ## Only needed if building tools/
 
 exports:
   header-dirs:

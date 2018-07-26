@@ -39,8 +39,7 @@ fips_add_subdirectory("lib/")
 if( NOT FIPS_IMPORT )
   add_subdirectory("tools/")
 
-  option( BUILD_UNIT_TESTS "Build unit tests" OFF )
-  if( BUILD_UNIT_TESTS )
+	if( FIPS_UNITTESTS )
   #add_subdirectory( test/unit/ )
   endif()
 
