@@ -102,14 +102,14 @@ static void processKbInput( char c, DeckLink &decklink ) {
  					LOG(INFO) << "Sending gain increment to camera";
  					{
  						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
- 						bmAddGainOffset( sdiBuffer->buffer, 1, 1 );
+ 						bmAddSensorGainOffset( sdiBuffer->buffer, 1, 1 );
  					}
  					break;
  			case 'x':
  					LOG(INFO) << "Sending gain decrement to camera";
  					{
  						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddGainOffset( sdiBuffer->buffer, 1, -1 );
+						bmAddSensorGainOffset( sdiBuffer->buffer, 1, -1 );
  					}
  					break;
 
@@ -117,17 +117,11 @@ static void processKbInput( char c, DeckLink &decklink ) {
 
 		case 's':
 				// Toggle between reference sources
-				static uint8_t ref = 0;
-				LOG(INFO) << "Sending reference " << (int)ref;
-				LOG(INFO) << "Sending instantaneous autofocus to camera";
+				LOG(INFO) << "Switching reference source";
 				{
 					SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-					bmAddReferenceSource( sdiBuffer->buffer, 1, ref );
+					bmAddReferenceSourceOffset( sdiBuffer->buffer, 1, 1 );
 				}
-
-				//decklink.queueSDIBuffer( bmReferenceSource(1,ref) );
-
-				if( ++ref > 2 ) ref = 0;
 				break;
 		case 'q':
 				keepGoing = false;
@@ -148,6 +142,17 @@ int main( int argc, char** argv )
 	CLI::App app{"Simple BlackMagic camera recorder"};
 
 	CLI11_PARSE(app, argc, argv);
+
+
+	// Help string
+	cout << "Commands" << endl;
+	cout << "    q       quit" << endl;
+	cout << "   [ ]     Adjust focus" << endl;
+	cout << "    f      Set autofocus" << endl;
+	cout << "   ; '     Adjust aperture" << endl;
+	cout << "   . /     Adjust shutter speed" << endl;
+	cout << "   z x     Adjust sensor gain" << endl;
+	cout << "    s      Cycle through reference sources" << endl;
 
 	//videoOutput.setBMSDIBuffer(sdiBuffer);
 
