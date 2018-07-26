@@ -50,13 +50,13 @@ namespace libblackmagic {
 
 	HRESULT	STDMETHODCALLTYPE OutputHandler::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 	{
-		if( completedFrame != _blankFrame ) {
-			LOG(INFO) << "Completed frame != _blankFrame";
-		}
+		// if( completedFrame != _blankFrame ) {
+		// 	//LOG(INFO) << "Completed frame != _blankFrame";
+		// }
 
 		_buffer->getReadLock();
 		if( _buffer->buffer->len > 0 ) {
-			LOG(INFO) << "Scheduling frame with " << int(_buffer->buffer->len) << " bytes of BM SDI Commands";
+			//LOG(INFO) << "Scheduling frame with " << int(_buffer->buffer->len) << " bytes of BM SDI Commands";
 			scheduleFrame( makeFrameWithSDIProtocol( _deckLinkOutput, _buffer->buffer, true ) );
 			//scheduleFrame( addSDIProtocolToFrame( _deckLinkOutput, _blankFrame, _buffer->buffer ) );
 

@@ -33,9 +33,26 @@ void signal_handler( int sig )
 	}
 }
 
+class SDIBufferGuard {
+public:
+		SDIBufferGuard( const shared_ptr<SharedBMSDIBuffer> &buffer )
+			: _buffer(buffer) {}
+
+		void operator()( void (*f)( BMSDIBuffer *buffer ) ) {
+			SharedBMSDIBuffer::lock_guard lock( _buffer->writeMutex() );
+			f( _buffer->buffer );
+		}
+
+		shared_ptr<SharedBMSDIBuffer> _buffer;
+		int _camNum;
+};
+
+
 static void processKbInput( char c, DeckLink &decklink ) {
 
 	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.outputHandler().sdiProtocolBuffer() );
+
+	SDIBufferGuard guard( sdiBuffer );
 
 	switch(c) {
 		case 'f':
@@ -157,11 +174,8 @@ int main( int argc, char** argv )
 	cout << "   z x     Adjust sensor gain" << endl;
 	cout << "    s      Cycle through reference sources" << endl;
 
-	//videoOutput.setBMSDIBuffer(sdiBuffer);
-
 	DeckLink deckLink;
 	deckLink.set3D( do3D );
-
 
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
