@@ -14,7 +14,7 @@ namespace libblackmagic {
 				_mode( mode ),
 				_totalFramesScheduled(0),
 				_buffer( new SharedBMSDIBuffer() ),
-				_blankFrame( CreateBlueFrame(deckLinkOutput, true ))
+				_blankFrame( makeBlueFrame(deckLinkOutput, true ))
 		{
 			_deckLinkOutput->AddRef();
 			_mode->AddRef();
@@ -44,21 +44,26 @@ namespace libblackmagic {
 	void OutputHandler::scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count )
 	{
 		//LOG(INFO) << "Scheduled frame " << _totalFramesScheduled;
-		_deckLinkOutput->ScheduleVideoFrame(_blankFrame, _totalFramesScheduled*_timeValue, _timeValue*count, _timeScale );
+		_deckLinkOutput->ScheduleVideoFrame(frame, _totalFramesScheduled*_timeValue, _timeValue*count, _timeScale );
 		_totalFramesScheduled += count;
 	}
 
 	HRESULT	STDMETHODCALLTYPE OutputHandler::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 	{
+		if( completedFrame != _blankFrame ) {
+			LOG(INFO) << "Completed frame != _blankFrame";
+		}
+
 		_buffer->getReadLock();
 		if( _buffer->buffer->len > 0 ) {
 			LOG(INFO) << "Scheduling frame with " << int(_buffer->buffer->len) << " bytes of BM SDI Commands";
-			scheduleFrame( makeFrameWithSDIProtocol( _deckLinkOutput, _blankFrame, _buffer->buffer ) );
+			scheduleFrame( makeFrameWithSDIProtocol( _deckLinkOutput, _buffer->buffer, true ) );
+			//scheduleFrame( addSDIProtocolToFrame( _deckLinkOutput, _blankFrame, _buffer->buffer ) );
 
 			//TODO: How to share this between two outputs
 			bmResetBuffer( _buffer->buffer );
 		} else {
-			// Otherwise schedule a blank frame 
+			// Otherwise schedule a blank frame
 			scheduleFrame( _blankFrame  );
 		}
 		_buffer->releaseReadLock();

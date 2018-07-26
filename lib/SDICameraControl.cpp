@@ -188,15 +188,21 @@ static void FillBlue(IDeckLinkMutableVideoFrame* theFrame)
 
 //=== Public functions ====
 
-IDeckLinkMutableVideoFrame* makeFrameWithSDIProtocol( IDeckLinkOutput *deckLinkOutput, IDeckLinkMutableVideoFrame* frame, BMSDIBuffer *buffer )
+IDeckLinkMutableVideoFrame* makeFrameWithSDIProtocol( IDeckLinkOutput *deckLinkOutput, BMSDIBuffer *buffer, bool do3D )
 {
-	HRESULT                         result;
+	return addSDIProtocolToFrame( deckLinkOutput, makeBlueFrame( deckLinkOutput, do3D ), buffer );
+}
+
+
+IDeckLinkMutableVideoFrame* addSDIProtocolToFrame( IDeckLinkOutput *deckLinkOutput, IDeckLinkMutableVideoFrame* frame, BMSDIBuffer *buffer )
+{
+	HRESULT                       result;
 	IDeckLinkVideoFrameAncillary*	ancillaryData = nullptr;
 
 	result = deckLinkOutput->CreateAncillaryData(kPixelFormat, &ancillaryData);
 	if(result != S_OK)
 	{
-		fprintf(stderr, "Could not create Ancillary data - result = %08x\n", result);
+		LOGF(WARNING, "Could not create Ancillary data - result = %08x\n", result);
 		goto bail;
 	}
 
@@ -204,10 +210,12 @@ IDeckLinkMutableVideoFrame* makeFrameWithSDIProtocol( IDeckLinkOutput *deckLinkO
 	result = frame->SetAncillaryData(ancillaryData);
 	if (result != S_OK)
 	{
-		fprintf(stderr, "Fail to set ancillary data to the frame - result = %08x\n", result);
+		LOGF(WARNING, "Fail to set ancillary data to the frame - result = %08x\n", result);
 		goto bail;
 	}
+
 bail:
+
 	// Release the Ancillary object
 	if(ancillaryData != NULL)
 		ancillaryData->Release();
@@ -217,7 +225,7 @@ bail:
 
 
 
-IDeckLinkMutableVideoFrame* CreateBlueFrame( IDeckLinkOutput *deckLinkOutput, bool do3D )
+IDeckLinkMutableVideoFrame* makeBlueFrame( IDeckLinkOutput *deckLinkOutput, bool do3D )
 {
 	HRESULT                         result;
 	IDeckLinkMutableVideoFrame*     frame = nullptr;
@@ -225,7 +233,7 @@ IDeckLinkMutableVideoFrame* CreateBlueFrame( IDeckLinkOutput *deckLinkOutput, bo
 	result = deckLinkOutput->CreateVideoFrame(kFrameWidth, kFrameHeight, kRowBytes, kPixelFormat, bmdFrameFlagDefault, &frame);
 	if (result != S_OK)
 	{
-		fprintf(stderr, "Could not create a video frame - result = %08x\n", result);
+		LOGF(WARNING, "Could not create a video frame - result = %08x\n", result);
 		goto bail;
 	}
 

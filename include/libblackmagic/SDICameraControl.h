@@ -6,10 +6,15 @@
 
 namespace libblackmagic {
 
-  IDeckLinkMutableVideoFrame* makeFrameWithSDIProtocol( IDeckLinkOutput *deckLinkOutput,
+  // Makes an empty (blue) frame and inserts SDI protocol info
+  IDeckLinkMutableVideoFrame* makeFrameWithSDIProtocol( IDeckLinkOutput *deckLinkOutput, BMSDIBuffer *buffer, bool do3D=false );
+
+  // Add SDI protocol info to an existing frame
+  IDeckLinkMutableVideoFrame* addSDIProtocolToFrame( IDeckLinkOutput *deckLinkOutput,
                                                         IDeckLinkMutableVideoFrame* frame, BMSDIBuffer *buffer );
 
-  IDeckLinkMutableVideoFrame* CreateBlueFrame( IDeckLinkOutput *deckLinkOutput, bool do3D );
+  // Make a blank frame
+  IDeckLinkMutableVideoFrame* makeBlueFrame( IDeckLinkOutput *deckLinkOutput, bool do3D=false );
 
 
 }
