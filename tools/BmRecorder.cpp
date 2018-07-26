@@ -51,7 +51,7 @@ static void processKbInput( char c, DeckLink &decklink ) {
 					LOG(INFO) << "Sending focus increment to camera";
 					{
 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddFocusOffset( sdiBuffer->buffer, 1, 0.1 );
+						bmAddFocusOffset( sdiBuffer->buffer, 1, 0.05 );
 					}
 					break;
 			case ']':
@@ -59,12 +59,13 @@ static void processKbInput( char c, DeckLink &decklink ) {
 					LOG(INFO) << "Sending focus decrement to camera";
 					{
 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddFocusOffset( sdiBuffer->buffer, 1, -0.1 );
+						bmAddFocusOffset( sdiBuffer->buffer, 1, -0.05 );
 					}
 					break;
 
+			//=== Aperture increment/decrement ===
 			case ';':
- 					// Send positive focus increment
+ 					// Send positive aperture increment
  					LOG(INFO) << "Sending aperture increment to camera";
  					{
  						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
@@ -72,13 +73,46 @@ static void processKbInput( char c, DeckLink &decklink ) {
  					}
  					break;
  			case '\'':
- 					// Send negative focus increment
+ 					// Send negative aperture decrement
  					LOG(INFO) << "Sending aperture decrement to camera";
  					{
  						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
 						bmAddOrdinalApertureOffset( sdiBuffer->buffer, 1, -1 );
  					}
  					break;
+
+			//=== Shutter increment/decrement ===
+			case '.':
+ 					LOG(INFO) << "Sending shutter increment to camera";
+ 					{
+ 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+ 						bmAddOrdinalShutterOffset( sdiBuffer->buffer, 1, 1 );
+ 					}
+ 					break;
+ 			case '/':
+ 					LOG(INFO) << "Sending shutter decrement to camera";
+ 					{
+ 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+						bmAddOrdinalShutterOffset( sdiBuffer->buffer, 1, -1 );
+ 					}
+ 					break;
+
+			//=== Gain increment/decrement ===
+			case 'z':
+ 					LOG(INFO) << "Sending gain increment to camera";
+ 					{
+ 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+ 						bmAddGainOffset( sdiBuffer->buffer, 1, 1 );
+ 					}
+ 					break;
+ 			case 'x':
+ 					LOG(INFO) << "Sending gain decrement to camera";
+ 					{
+ 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
+						bmAddGainOffset( sdiBuffer->buffer, 1, -1 );
+ 					}
+ 					break;
+
 
 
 		case 's':
