@@ -207,9 +207,9 @@ namespace libblackmagic {
         if( do3D() ) {
           if( !(flags & bmdDisplayModeSupports3D ) )
           {
-            LOG(WARNING) << "3D Support requested but not available in this display mode";
+            LOG(WARNING) << "* 3D Support requested but not available in this display mode";
           } else {
-            LOG(INFO) << "Enabling 3D support detection on input card.";
+            LOG(INFO) << "* Enabling 3D support detection on input card.";
             inputFlags |= bmdVideoInputDualStream3D;
           }
 
@@ -218,9 +218,9 @@ namespace libblackmagic {
         // Check display mode is supported with given options
         BMDDisplayModeSupport displayModeSupported;
         result = deckLinkInput()->DoesSupportVideoMode(displayMode->GetDisplayMode(),
-        pixelFormat,
-        inputFlags,
-        &displayModeSupported, NULL);
+                                                        pixelFormat,
+                                                        inputFlags,
+                                                        &displayModeSupported, NULL);
 
         if (result != S_OK) {
           LOG(WARNING) << "Error checking if DeckLinkInput supports this mode";

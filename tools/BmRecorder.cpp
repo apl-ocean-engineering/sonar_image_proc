@@ -127,7 +127,7 @@ int main( int argc, char** argv )
 	CLI::App app{"Simple BlackMagic camera recorder"};
 
 	bool do3D = false;
-	app.add_option("--do-3d",do3D, "Enable 3D modes");
+	app.add_flag("--do-3d",do3D, "Enable 3D modes");
 
 	CLI11_PARSE(app, argc, argv);
 
@@ -144,6 +144,9 @@ int main( int argc, char** argv )
 
 	DeckLink deckLink;
 	deckLink.set3D( do3D );
+
+	CHECK( deckLink.createVideoOutput(bmdModeHD1080p2997) ) << "Unable to create VideoOutput";
+	CHECK( deckLink.createVideoInput(bmdModeHD1080p2997) ) << "Unable to create VideoInput";
 
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {

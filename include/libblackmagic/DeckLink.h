@@ -34,6 +34,10 @@ namespace libblackmagic {
 
     int cardNo() const    { return _cardNo; }
 
+    // Input and output will be created automatically with defaults unless these
+    // functions are called first.
+    bool  createVideoInput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
+    bool createVideoOutput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
 
     // These start and stop the input streams
     bool startStreams();
@@ -62,8 +66,7 @@ namespace libblackmagic {
     // These can be called expicitly, otherwise a default will be
     // lazy-constructed when needed
     bool    createDeckLink();
-    bool  createVideoInput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
-    bool createVideoOutput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
+
 
   private:
 
