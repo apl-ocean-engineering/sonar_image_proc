@@ -137,7 +137,6 @@ namespace libblackmagic {
     // Hardcode some parameters for now
     BMDVideoInputFlags inputFlags = bmdVideoInputFlagDefault;
     BMDPixelFormat pixelFormat = bmdFormat10BitYUV;
-    //BMDTimecodeFormat m_timecodeFormat;
 
     // Get the input (capture) interface of the DeckLink device
     result = deckLink()->QueryInterface(IID_IDeckLinkInput, (void**)&_deckLinkInput);
@@ -158,24 +157,14 @@ namespace libblackmagic {
       result = deckLinkAttributes->GetFlag(BMDDeckLinkSupportsInputFormatDetection, &formatDetectionSupported);
       if (result != S_OK || !formatDetectionSupported)
       {
-        LOG(WARNING) << "Format detection is not supported on this device";
+        LOG(WARNING) << "* Format detection is not supported on this device";
         return false;
       } else {
-        LOG(INFO) << "Enabling automatic format detection on input card.";
+        LOG(INFO) << "* Enabling automatic format detection on input card.";
         inputFlags |= bmdVideoInputEnableFormatDetection;
       }
 
     }
-
-
-    // Format detection still needs a valid mode to start with
-    //idx = 0;
-    //         }
-    //         else
-    //         {
-    //                 idx = g_config.mdisplayModeIndex;
-    //         }
-
 
     IDeckLinkDisplayModeIterator* displayModeIterator = NULL;
     IDeckLinkDisplayMode *displayMode = NULL;

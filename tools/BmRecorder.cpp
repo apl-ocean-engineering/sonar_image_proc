@@ -38,7 +38,7 @@ public:
 		SDIBufferGuard( const shared_ptr<SharedBMSDIBuffer> &buffer )
 			: _buffer(buffer) {}
 
-		void operator()( void (*f)( BMSDIBuffer *buffer ) ) {
+		void operator()( void (*f)( BMSDIBuffer * ) ) {
 			SharedBMSDIBuffer::lock_guard lock( _buffer->writeMutex() );
 			f( _buffer->buffer );
 		}
@@ -58,87 +58,55 @@ static void processKbInput( char c, DeckLink &decklink ) {
 		case 'f':
 					// Send absolute focus value
 					LOG(INFO) << "Sending instantaneous autofocus to camera";
-					{
-						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddInstantaneousAutofocus( sdiBuffer->buffer, 1 );
-					}
+					guard( []( BMSDIBuffer *buffer ){ bmAddInstantaneousAutofocus( buffer, 1 ); });
 					break;
 		 case '[':
 					// Send positive focus increment
 					LOG(INFO) << "Sending focus increment to camera";
-					{
-						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddFocusOffset( sdiBuffer->buffer, 1, 0.05 );
-					}
+					guard( []( BMSDIBuffer *buffer ){	bmAddFocusOffset( buffer, 1, 0.05 ); });
 					break;
 			case ']':
 					// Send negative focus increment
 					LOG(INFO) << "Sending focus decrement to camera";
-					{
-						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddFocusOffset( sdiBuffer->buffer, 1, -0.05 );
-					}
+					guard( []( BMSDIBuffer *buffer ){ bmAddFocusOffset( buffer, 1, -0.05 ); });
 					break;
 
 			//=== Aperture increment/decrement ===
 			case ';':
  					// Send positive aperture increment
  					LOG(INFO) << "Sending aperture increment to camera";
- 					{
- 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
- 						bmAddOrdinalApertureOffset( sdiBuffer->buffer, 1, 1 );
- 					}
+ 					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, 1, 1 ); });
  					break;
  			case '\'':
  					// Send negative aperture decrement
  					LOG(INFO) << "Sending aperture decrement to camera";
- 					{
- 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddOrdinalApertureOffset( sdiBuffer->buffer, 1, -1 );
- 					}
+					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, 1, -1 ); });
  					break;
 
 			//=== Shutter increment/decrement ===
 			case '.':
  					LOG(INFO) << "Sending shutter increment to camera";
- 					{
- 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
- 						bmAddOrdinalShutterOffset( sdiBuffer->buffer, 1, 1 );
- 					}
+					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, 1, 1 ); });
  					break;
  			case '/':
  					LOG(INFO) << "Sending shutter decrement to camera";
- 					{
- 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddOrdinalShutterOffset( sdiBuffer->buffer, 1, -1 );
- 					}
+					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, 1, -1 ); });
  					break;
 
 			//=== Gain increment/decrement ===
 			case 'z':
  					LOG(INFO) << "Sending gain increment to camera";
- 					{
- 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
- 						bmAddSensorGainOffset( sdiBuffer->buffer, 1, 1 );
- 					}
+					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, 1, 1 ); });
  					break;
  			case 'x':
  					LOG(INFO) << "Sending gain decrement to camera";
- 					{
- 						SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-						bmAddSensorGainOffset( sdiBuffer->buffer, 1, -1 );
- 					}
+					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, 1, -1 ); });
  					break;
-
-
 
 		case 's':
 				// Toggle between reference sources
 				LOG(INFO) << "Switching reference source";
-				{
-					SharedBMSDIBuffer::lock_guard lock( sdiBuffer->writeMutex() );
-					bmAddReferenceSourceOffset( sdiBuffer->buffer, 1, 1 );
-				}
+				guard( []( BMSDIBuffer *buffer ){	bmAddReferenceSourceOffset( buffer, 1, 1 ); });
 				break;
 		case 'q':
 				keepGoing = false;

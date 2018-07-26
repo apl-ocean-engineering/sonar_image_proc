@@ -40,7 +40,7 @@ namespace libblackmagic {
           // If 3D mode is enabled we retreive the 3D extensions interface which gives.
           // us access to the right eye frame by calling GetFrameForRightEye() .
           if ( (videoFrame->QueryInterface(IID_IDeckLinkVideoFrame3DExtensions, (void **) &threeDExtensions) != S_OK) ||
-          (threeDExtensions->GetFrameForRightEye(&rightEyeFrame) != S_OK)) {
+               (threeDExtensions->GetFrameForRightEye(&rightEyeFrame) != S_OK)) {
             rightEyeFrame = nullptr;
           }
 
@@ -49,8 +49,8 @@ namespace libblackmagic {
           if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
           {
             LOG(WARNING) << "(" << std::this_thread::get_id()
-            << ") Frame received (" << _frameCount
-            << ") - No input signal detected";
+                          << ") Frame received (" << _frameCount
+                          << ") - No input signal detected";
           }
           else
           {
@@ -106,12 +106,13 @@ namespace libblackmagic {
         return S_OK;
       }
 
+
+
+      // Callback if bmdVideoInputEnableFormatDetection was set when
+      // enabling video input
       HRESULT InputHandler::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode, BMDDetectedVideoInputFormatFlags formatFlags)
       {
         LOG(INFO) << "(" << std::this_thread::get_id() << ") Received Video Input Format Changed";
-
-        // This only gets called if bmdVideoInputEnableFormatDetection was set
-        // when enabling video input
 
         HRESULT result;
         char*   displayModeName = nullptr;
