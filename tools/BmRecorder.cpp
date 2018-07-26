@@ -141,6 +141,9 @@ int main( int argc, char** argv )
 
 	CLI::App app{"Simple BlackMagic camera recorder"};
 
+	bool do3D = false;
+	app.add_option("--do-3d",do3D, "Enable 3D modes");
+
 	CLI11_PARSE(app, argc, argv);
 
 
@@ -156,7 +159,8 @@ int main( int argc, char** argv )
 
 	//videoOutput.setBMSDIBuffer(sdiBuffer);
 
-	DeckLink decklink;
+	DeckLink deckLink;
+	deckLink.set3D( do3D );
 
 
 	// Need to wait for initialization
@@ -171,7 +175,7 @@ int main( int argc, char** argv )
 
 	int count = 0, miss = 0, displayed = 0;
 
-	if( !decklink.startStreams() ) {
+	if( !deckLink.startStreams() ) {
 			LOG(WARNING) << "Unable to start streams";
 			exit(-1);
 	}
@@ -181,9 +185,9 @@ int main( int argc, char** argv )
 		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
 		//if( (duration > 0) && (loopStart > end) ) { keepGoing = false;  break; }
 
-		if( decklink.grab() ) {
+		if( deckLink.grab() ) {
 			cv::Mat image;
-			decklink.getRawImage(0, image);
+			deckLink.getRawImage(0, image);
 
 			cv::imshow("Image", image);
 			LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
@@ -193,7 +197,7 @@ int main( int argc, char** argv )
 			++displayed;
 
 			// Take action on character
-			processKbInput( c, decklink );
+			processKbInput( c, deckLink );
 
 	 		++count;
 
@@ -210,7 +214,7 @@ int main( int argc, char** argv )
 
 	LOG(INFO) << "End of main loop, stopping streams...";
 
-	decklink.stopStreams();
+	deckLink.stopStreams();
 
 
 	// LOG(INFO) << "Recorded " << count << " frames in " <<   dur.count();

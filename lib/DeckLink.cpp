@@ -11,12 +11,14 @@ namespace libblackmagic {
 
   using std::string;
 
-  DeckLink::DeckLink()
-  : _deckLink( nullptr ),
-  _deckLinkInput( nullptr ),
-  _deckLinkOutput( nullptr ),
-  _inputHandler( nullptr  ),
-  _outputHandler(nullptr)
+  DeckLink::DeckLink( int cardNo )
+  : _cardNo(cardNo),
+    _do3D(false),
+    _deckLink( nullptr ),
+    _deckLinkInput( nullptr ),
+    _deckLinkOutput( nullptr ),
+    _inputHandler( nullptr  ),
+    _outputHandler(nullptr)
   {
     //initialize();
   }
@@ -66,7 +68,7 @@ namespace libblackmagic {
 
   InputHandler &DeckLink::inputHandler()
   {
-    // Handler is created in parallel with deckLinkInput
+    // InputHandler is created in parallel with deckLinkInput
     if( !_inputHandler ) { deckLinkInput(); }
     CHECK( (bool)_inputHandler ) << "_inputHandler not set";
 
@@ -75,7 +77,7 @@ namespace libblackmagic {
 
   OutputHandler &DeckLink::outputHandler()
   {
-    // Handler is create in parallel with deckLinkOutput
+    // OutputHandler is create in parallel with deckLinkOutput
     if( !_outputHandler ) { deckLinkOutput(); }
     CHECK( (bool)_outputHandler ) << "_outputHandler not set";
 
@@ -84,7 +86,7 @@ namespace libblackmagic {
 
   //=================================================================
   // Configuration functions
-  bool DeckLink::createDeckLink( int cardno )
+  bool DeckLink::createDeckLink()
   {
     LOG(INFO) << "Using Decklink API  " << BLACKMAGIC_DECKLINK_API_VERSION_STRING;
 
@@ -99,7 +101,7 @@ namespace libblackmagic {
     IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
 
     // Index cards by number for now
-    for( int i = 0; i <= cardno; i++ ) {
+    for( int i = 0; i <= cardNo(); i++ ) {
       if( (result = deckLinkIterator->Next(&dl)) != S_OK) {
         LOG(WARNING) << "Couldn't get information on DeckLink card " << i;
         return false;
@@ -120,7 +122,7 @@ namespace libblackmagic {
       LOG(WARNING) << "Unable to query display name.";
     }
 
-    LOG(INFO) << "Using card " << cardno << " model name: " << modelName << "; display name: " << displayName;
+    LOG(INFO) << "Using card " << cardNo() << " model name: " << modelName << "; display name: " << displayName;
 
     free(modelName);
     free(displayName);
@@ -128,7 +130,7 @@ namespace libblackmagic {
     return true;
   }
 
-  bool DeckLink::createVideoInput( const BMDDisplayMode desiredMode, bool do3D )
+  bool DeckLink::createVideoInput( const BMDDisplayMode desiredMode )
   {
     HRESULT result;
 
@@ -213,7 +215,7 @@ namespace libblackmagic {
         //Check flags
         BMDDisplayModeFlags flags = displayMode->GetFlags();
 
-        if( do3D ) {
+        if( do3D() ) {
           if( !(flags & bmdDisplayModeSupports3D ) )
           {
             LOG(WARNING) << "3D Support requested but not available in this display mode";
@@ -263,9 +265,9 @@ namespace libblackmagic {
 
     // Made it this far?  Great!
     result = deckLinkInput()->EnableVideoInput(displayMode->GetDisplayMode(),
-    pixelFormat,
-    inputFlags);
-    if (result != S_OK)
+                                              pixelFormat,
+                                              inputFlags);
+                                              if (result != S_OK)
     {
       LOG(WARNING) << "Failed to enable video input. Is another application using the card?";
       goto bail;
@@ -280,7 +282,7 @@ namespace libblackmagic {
   }
 
 
-  bool DeckLink::createVideoOutput( const BMDDisplayMode desiredMode, bool do3D )
+  bool DeckLink::createVideoOutput( const BMDDisplayMode desiredMode )
   {
     // Video mode parameters
     //    const BMDDisplayMode      kDisplayMode = bmdModeHD1080i50;
@@ -303,7 +305,7 @@ namespace libblackmagic {
     }
     CHECK( deckLinkOutput() != nullptr );
 
-    if( do3D ) {
+    if( do3D() ) {
       outputFlags |= bmdVideoOutputDualStream3D;
     }
 
