@@ -100,8 +100,28 @@ namespace libblackmagic {
     IDeckLink *dl = nullptr;
     IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
 
+    {
+      int i = 0;
+      while( (deckLinkIterator->Next(&dl)) == S_OK ) {
+        char *modelName, *displayName;
+        if( dl->GetModelName( (const char **)&modelName ) != S_OK ) {
+          LOG(WARNING) << "Unable to query model name.";
+        }
+        if( dl->GetDisplayName( (const char **)&displayName ) != S_OK ) {
+          LOG(WARNING) << "Unable to query display name.";
+        }
 
-    IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
+        LOG(INFO) << i << " model name: " << modelName << "; display name: " << displayName;
+
+        free(modelName);
+        free(displayName);
+        i++;
+      }
+    }
+    deckLinkIterator->Release();
+
+
+    deckLinkIterator = CreateDeckLinkIteratorInstance();
     // Index cards by number for now
     for( int i = 0; i <= cardNo(); i++ ) {
       if( (result = deckLinkIterator->Next(&dl)) != S_OK) {
@@ -251,7 +271,7 @@ namespace libblackmagic {
 
     // Configure the capture callback ... needs an output to create frames for conversion
     CHECK( deckLinkOutput() != nullptr );
-    _inputHandler = new InputHandler( deckLinkInput(), deckLinkOutput(),  displayMode, do3D() );
+    _inputHandler = new InputHandler( deckLinkInput(), deckLinkOutput(),  displayMode );
 
     // Made it this far?  Great!
     //LOG_IF(INFO, bool(inputFlags & bmdVideoInputDualStream3D) ) << "3DInput set in input flags";

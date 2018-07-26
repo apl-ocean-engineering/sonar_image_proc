@@ -12,12 +12,11 @@ namespace libblackmagic {
 
   InputHandler::InputHandler( IDeckLinkInput *input,
     IDeckLinkOutput *output,
-    IDeckLinkDisplayMode *mode, bool do3D )
+    IDeckLinkDisplayMode *mode )
     : _frameCount(0),
     _deckLinkInput(input),
     _deckLinkOutput(output),
-    _mode(mode),
-    _do3D( do3D )
+    _mode(mode)
     {
       _deckLinkInput->SetCallback(this);
     }

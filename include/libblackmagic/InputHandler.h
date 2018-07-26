@@ -19,7 +19,7 @@ namespace libblackmagic {
   public:
     InputHandler(  IDeckLinkInput *input,
                     IDeckLinkOutput *output,
-                    IDeckLinkDisplayMode *mode, bool do3D = false );
+                    IDeckLinkDisplayMode *mode );
 
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) { return E_NOINTERFACE; }
     virtual ULONG STDMETHODCALLTYPE AddRef(void);
@@ -50,8 +50,6 @@ namespace libblackmagic {
 
     // bool _stop;
     // int32_t _refCount;
-
-    bool _do3D;
 
     unsigned long _frameCount;
 
