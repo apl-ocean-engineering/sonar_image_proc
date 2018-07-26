@@ -100,6 +100,8 @@ namespace libblackmagic {
     IDeckLink *dl = nullptr;
     IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
 
+
+    IDeckLinkIterator *deckLinkIterator = CreateDeckLinkIteratorInstance();
     // Index cards by number for now
     for( int i = 0; i <= cardNo(); i++ ) {
       if( (result = deckLinkIterator->Next(&dl)) != S_OK) {
@@ -207,12 +209,11 @@ namespace libblackmagic {
         if( do3D() ) {
           if( !(flags & bmdDisplayModeSupports3D ) )
           {
-            LOG(WARNING) << "* 3D Support requested but not available in this display mode";
+            LOG(WARNING) << "!! 3D Support requested but not available in this display mode";
           } else {
-            LOG(INFO) << "* Enabling 3D support detection on input card.";
             inputFlags |= bmdVideoInputDualStream3D;
+            LOG(INFO) << "* Enabling 3D support detection on input card.  " << inputFlags;
           }
-
         }
 
         // Check display mode is supported with given options
@@ -250,18 +251,20 @@ namespace libblackmagic {
 
     // Configure the capture callback ... needs an output to create frames for conversion
     CHECK( deckLinkOutput() != nullptr );
-    _inputHandler = new InputHandler( deckLinkInput(), deckLinkOutput(),  displayMode );
+    _inputHandler = new InputHandler( deckLinkInput(), deckLinkOutput(),  displayMode, do3D() );
 
     // Made it this far?  Great!
+    //LOG_IF(INFO, bool(inputFlags & bmdVideoInputDualStream3D) ) << "3DInput set in input flags";
     result = deckLinkInput()->EnableVideoInput(displayMode->GetDisplayMode(),
                                               pixelFormat,
                                               inputFlags);
-                                              if (result != S_OK)
+    if (result != S_OK)
     {
       LOG(WARNING) << "Failed to enable video input. Is another application using the card?";
       goto bail;
     }
 
+    LOG(INFO) << "DeckLinkInput complete!";
     return true;
 
     bail:
@@ -294,9 +297,10 @@ namespace libblackmagic {
     }
     CHECK( deckLinkOutput() != nullptr );
 
-    if( do3D() ) {
-      outputFlags |= bmdVideoOutputDualStream3D;
-    }
+    // Don't use 3D for output
+    // if( do3D() ) {
+    //   outputFlags |= bmdVideoOutputDualStream3D;
+    // }
 
     BMDDisplayModeSupport support;
 
@@ -336,7 +340,7 @@ namespace libblackmagic {
 
     displayMode->Release();
 
-
+    LOG(INFO) << "DeckLinkOutput complete!";
     return true;
   }
 

@@ -12,11 +12,12 @@ namespace libblackmagic {
 
   InputHandler::InputHandler( IDeckLinkInput *input,
     IDeckLinkOutput *output,
-    IDeckLinkDisplayMode *mode )
+    IDeckLinkDisplayMode *mode, bool do3D )
     : _frameCount(0),
     _deckLinkInput(input),
     _deckLinkOutput(output),
-    _mode(mode)
+    _mode(mode),
+    _do3D( do3D )
     {
       _deckLinkInput->SetCallback(this);
     }
@@ -32,19 +33,23 @@ namespace libblackmagic {
       {
         IDeckLinkVideoFrame *rightEyeFrame = nullptr;
         IDeckLinkVideoFrame3DExtensions *threeDExtensions = nullptr;
-        //      void *audioFrameBytes;
 
         // Handle Video Frame
         if (videoFrame)
         {
+
           // If 3D mode is enabled we retreive the 3D extensions interface which gives.
           // us access to the right eye frame by calling GetFrameForRightEye() .
-          if ( (videoFrame->QueryInterface(IID_IDeckLinkVideoFrame3DExtensions, (void **) &threeDExtensions) != S_OK) ||
-               (threeDExtensions->GetFrameForRightEye(&rightEyeFrame) != S_OK)) {
-            rightEyeFrame = nullptr;
-          }
+          if( videoFrame->QueryInterface(IID_IDeckLinkVideoFrame3DExtensions, (void **) &threeDExtensions) == S_OK ) {
+            LOG(INFO) << "Checking 3D extensions";
 
+            if(threeDExtensions->GetFrameForRightEye(&rightEyeFrame) != S_OK) {
+                LOG(INFO) << "Error getting right eye frame";
+            }
+          }
           if (threeDExtensions) threeDExtensions->Release();
+
+
 
           if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
           {
@@ -77,32 +82,19 @@ namespace libblackmagic {
             std::thread t = processInThread( videoFrame );
             t.detach();
 
-            // if (timecodeString)
-            // free((void*)timecodeString);
+            if( rightEyeFrame ) {
+              rightEyeFrame->AddRef();
+
+              std::thread t = processInThread( rightEyeFrame, true );
+              t.detach();
+
+              //rightEyeFrame->Release();
+            }
 
           }
         }
 
-        //   if (rightEyeFrame)
-        //   rightEyeFrame->Release();
-        //   _frameCount++;
-        // }
 
-        // Handle Audio Frame
-        // if (audioFrame)
-        // {
-        //   if (g_audioOutputFile != -1)
-        //   {
-        //     audioFrame->GetBytes(&audioFrameBytes);
-        //     write(g_audioOutputFile, audioFrameBytes, audioFrame->GetSampleFrameCount() * g_config.m_audioChannels * (g_config.m_audioSampleDepth / 8));
-        //   }
-        // }
-
-        // if ( _maxFrames > 0 && videoFrame && _frameCount >= _maxFrames)
-        // {
-        //   g_do_exit = true;
-        //   pthread_cond_signal(&g_sleepCond);
-        // }
         return S_OK;
       }
 
@@ -110,7 +102,8 @@ namespace libblackmagic {
 
       // Callback if bmdVideoInputEnableFormatDetection was set when
       // enabling video input
-      HRESULT InputHandler::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode, BMDDetectedVideoInputFormatFlags formatFlags)
+      HRESULT InputHandler::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode,
+                                                    BMDDetectedVideoInputFormatFlags formatFlags)
       {
         LOG(INFO) << "(" << std::this_thread::get_id() << ") Received Video Input Format Changed";
 
@@ -120,21 +113,27 @@ namespace libblackmagic {
 
         if (formatFlags & bmdDetectedVideoInputRGB444) pixelFormat = bmdFormat10BitRGB;
 
+
+
         mode->GetName((const char**)&displayModeName);
-        LOG(INFO) << "Video format changed to " << displayModeName
-        << ((formatFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV");
+        LOG(INFO) << "Video format changed to " << displayModeName << " "
+                  << ((formatFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV")
+                  << ((formatFlags & bmdDetectedVideoInputDualStream3D) ? " with 3D" : "");
 
         if (displayModeName) free(displayModeName);
 
-        if(_deckLinkInput)
-        {
+        if(_deckLinkInput) {
           _deckLinkInput->StopStreams();
 
           BMDVideoInputFlags m_inputFlags = bmdVideoInputFlagDefault | bmdVideoInputEnableFormatDetection;
 
+          if( formatFlags & bmdDetectedVideoInputDualStream3D ) {
+            LOG(INFO) << "Enabled 3D at new input format";
+            m_inputFlags != bmdVideoInputDualStream3D;
+          }
+
           result = _deckLinkInput->EnableVideoInput(mode->GetDisplayMode(), pixelFormat, m_inputFlags);
-          if (result != S_OK)
-          {
+          if (result != S_OK) {
             LOG(WARNING) << "Failed to switch video mode";
             return result;
           }
@@ -164,8 +163,11 @@ namespace libblackmagic {
 
 
 
-      bool InputHandler::process(  IDeckLinkVideoFrame *videoFrame )
+      bool InputHandler::process(  IDeckLinkVideoFrame *videoFrame, bool isRight )
       {
+
+        LOG_IF(INFO, isRight) << "Processing right frame...";
+
         cv::Mat out;
 
         switch (videoFrame->GetPixelFormat()) {

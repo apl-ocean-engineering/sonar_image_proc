@@ -19,7 +19,7 @@ namespace libblackmagic {
   public:
     InputHandler(  IDeckLinkInput *input,
                     IDeckLinkOutput *output,
-                    IDeckLinkDisplayMode *mode );
+                    IDeckLinkDisplayMode *mode, bool do3D = false );
 
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) { return E_NOINTERFACE; }
     virtual ULONG STDMETHODCALLTYPE AddRef(void);
@@ -40,16 +40,18 @@ namespace libblackmagic {
 
   protected:
 
-    bool process( IDeckLinkVideoFrame *frame );
+    bool process( IDeckLinkVideoFrame *frame, bool isRight = false );
 
-    std::thread processInThread( IDeckLinkVideoFrame *frame ) {
-          return std::thread([=] { process(frame); });
+    std::thread processInThread( IDeckLinkVideoFrame *frame, bool isRight = false ) {
+          return std::thread([=] { process(frame, isRight); });
       }
 
   private:
 
     // bool _stop;
     // int32_t _refCount;
+
+    bool _do3D;
 
     unsigned long _frameCount;
 
@@ -59,7 +61,7 @@ namespace libblackmagic {
 
     //IDeckLinkVideoConversion *_deckLinkConversion;
 
-    active_object::shared_queue< cv::Mat > _queue;
+    active_object::shared_queue< cv::Mat > _queue, rightQueue;
   };
 
 }
