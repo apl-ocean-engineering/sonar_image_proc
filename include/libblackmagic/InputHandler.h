@@ -11,15 +11,47 @@
 #include <DeckLinkAPI.h>
 #include "ThreadSynchronizer.h"
 
+#include "DataTypes.h"
 
 namespace libblackmagic {
+
+  class InputConfig {
+  public:
+    InputConfig()
+      : _do3D(false),
+        _mode( bmdModeDetect )
+    {;}
+
+    InputConfig &set3D( bool do3D = true )
+      { _do3D = do3D;  return *this; }
+
+    InputConfig &setMode( BMDDisplayMode m )
+      { _mode = m; return *this; }
+
+
+    bool           do3D()         { return _do3D; }
+    BMDDisplayMode mode()         { return _mode; }
+
+  private:
+    bool _do3D;
+    BMDDisplayMode _mode;
+  };
 
   class InputHandler : public IDeckLinkInputCallback
   {
   public:
-    InputHandler(  IDeckLinkInput *input,
-                    IDeckLinkOutput *output,
-                    IDeckLinkDisplayMode *mode );
+    InputHandler(  IDeckLink *deckLink );
+
+    // Retrieve the current configuration
+    InputConfig &config() { return _config; }
+
+    // Attempts to configure the input stream.   If not called explicitly,
+    // will be called automatically by startStreams()
+    bool enable( void );
+
+    // Lazy initializer
+    IDeckLinkInput *deckLinkInput();
+    IDeckLinkOutput *deckLinkOutput();
 
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) { return E_NOINTERFACE; }
     virtual ULONG STDMETHODCALLTYPE AddRef(void);
@@ -29,14 +61,10 @@ namespace libblackmagic {
 
     active_object::shared_queue< cv::Mat > &queue() { return _queue; }
 
-    IDeckLinkOutput *deckLinkOutput() { return _deckLinkOutput; }
+    //IDeckLinkOutput *deckLinkOutput() { return _deckLinkOutput; }
 
-    // ThreadSynchronizer &imageReady() { return _imageReady; }
-    // cv::Mat popImage();
-
-    void stopStreams();
-
-    //libvideoio::ImageSize imageSize() const;
+    bool startStreams();
+    bool stopStreams();
 
   protected:
 
@@ -53,9 +81,15 @@ namespace libblackmagic {
 
     unsigned long _frameCount;
 
+    InputConfig _config;
+    bool _enabled;
+
+    IDeckLink *_deckLink;
     IDeckLinkInput *_deckLinkInput;
-    IDeckLinkOutput *_deckLinkOutput;
-    IDeckLinkDisplayMode *_mode;
+    IDeckLinkOutput *_deckLinkOutput;   /// N.b. this doesn't need to be the same as the card output,
+                                        // It's used to make new frames for conversion.
+
+    // IDeckLinkDisplayMode *_mode;
 
     //IDeckLinkVideoConversion *_deckLinkConversion;
 

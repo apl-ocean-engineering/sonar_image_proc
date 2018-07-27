@@ -29,24 +29,23 @@ namespace libblackmagic {
     DeckLink( const DeckLink & ) = delete;
     DeckLink &operator=( const DeckLink & ) = delete;
 
-    bool do3D() const     { return _do3D; }
-    void set3D(bool s)    { _do3D = s; }
-
-    int cardNo() const    { return _cardNo; }
-
     // Input and output will be created automatically with defaults unless these
     // functions are called first.
-    bool  createVideoInput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
-    bool createVideoOutput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
+    // bool  createVideoInput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
+    // bool createVideoOutput( const BMDDisplayMode desiredMode = bmdModeHD1080p2997 );
+
+    void listCards();
+    void listInputModes();
+
+
 
     // These start and stop the input streams
     bool startStreams();
     void stopStreams();
 
     // Lazy constructors
-    InputHandler &inputHandler();
-    OutputHandler &outputHandler();
-
+    InputHandler &input();
+    OutputHandler &output();
 
     // // Pull images from _InputHandler
     virtual bool grab( void );
@@ -55,15 +54,7 @@ namespace libblackmagic {
 
   protected:
 
-    // Lazy constructors
-    IDeckLink *deckLink();
-    IDeckLinkInput *deckLinkInput();
-    IDeckLinkOutput *deckLinkOutput();
-
-    // These can be called expicitly, otherwise a default will be
-    // lazy-constructed when needed
-    bool    createDeckLink();
-
+    IDeckLink *createDeckLink( int cardNo );
 
   private:
 
@@ -73,7 +64,7 @@ namespace libblackmagic {
     bool _do3D;
 
     // For now assume an object uses just one Decklink board
-    // Stupid COM model precludes use of auto ptrs
+    // COM model precludes use of auto ptrs
     IDeckLink *_deckLink;
     IDeckLinkInput *_deckLinkInput;
     IDeckLinkOutput *_deckLinkOutput;

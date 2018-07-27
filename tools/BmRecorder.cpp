@@ -12,6 +12,7 @@ using namespace std;
 #include <libg3logger/g3logger.h>
 
 #include "libblackmagic/DeckLink.h"
+#include "libblackmagic/DataTypes.h"
 using namespace libblackmagic;
 
 #include "libbmsdi/helpers.h"
@@ -129,8 +130,27 @@ int main( int argc, char** argv )
 	bool do3D = false;
 	app.add_flag("--do-3d",do3D, "Enable 3D modes");
 
+	bool noDisplay = false;
+	app.add_flag("--no-display,-x", noDisplay, "Disable display");
+
+	string desiredModeString = "auto";
+	app.add_option("--mode,-m", desiredModeString, "Desired mode");
+
+	bool doListCards = false;
+	app.add_flag("--list-cards", doListCards, "List Decklink cards in the system then exit");
+
+	bool doListInputModes = false;
+	app.add_flag("--list-input-modes", doListInputModes, "List Input modes then exit");
+
 	CLI11_PARSE(app, argc, argv);
 
+	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
+	if( mode == bmdModeUnknown ) {
+		LOG(WARNING) << "Didn't understand mode \"" << desiredModeString << "\"";
+		return -1;
+	} else if ( mode == bmdModeDetect ) {
+		LOG(WARNING) << "Will attempt input format detection";
+	}
 
 	// Help string
 	cout << "Commands" << endl;
@@ -144,6 +164,13 @@ int main( int argc, char** argv )
 
 	DeckLink deckLink;
 	deckLink.set3D( do3D );
+
+	if( doListCards || doListInputModes ) {
+			if(doListCards) deckLink.listCards();
+			if(doListInputModes) deckLink.listInputModes();
+		return 0;
+	}
+
 
 	CHECK( deckLink.createVideoOutput(bmdModeHD1080p2997) ) << "Unable to create VideoOutput";
 	CHECK( deckLink.createVideoInput(bmdMode4K2160p2997) ) << "Unable to create VideoInput";

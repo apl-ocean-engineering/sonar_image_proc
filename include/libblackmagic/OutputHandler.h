@@ -50,13 +50,16 @@ namespace libblackmagic {
 	class OutputHandler: public IDeckLinkVideoOutputCallback
 	{
 	public:
-		OutputHandler( IDeckLinkOutput *deckLinkOutput,
-									 IDeckLinkDisplayMode *mode );
+		OutputHandler( IDeckLink *deckLink );
 		virtual ~OutputHandler(void);
+
+		// Lazy initializer
+		void deckLinkOutput();
 
 		//void setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer );
 
-		const std::shared_ptr<SharedBMSDIBuffer> &sdiProtocolBuffer();
+		const std::shared_ptr<SharedBMSDIBuffer> &sdiProtocolBuffer()
+			{ return _buffer; }
 
 		HRESULT	STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
 
@@ -66,6 +69,9 @@ namespace libblackmagic {
 		HRESULT	STDMETHODCALLTYPE QueryInterface (REFIID iid, LPVOID *ppv){ return E_NOINTERFACE; }
 		ULONG STDMETHODCALLTYPE AddRef() { return 1; }
 		ULONG STDMETHODCALLTYPE Release() { return 1; }
+
+		bool startStreams( void );
+		bool stopStreams( void );
 
 	protected:
 
