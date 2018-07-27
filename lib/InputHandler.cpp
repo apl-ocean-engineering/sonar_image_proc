@@ -112,12 +112,10 @@ namespace libblackmagic {
 
         if (formatFlags & bmdDetectedVideoInputRGB444) pixelFormat = bmdFormat10BitRGB;
 
-
-
         mode->GetName((const char**)&displayModeName);
         LOG(INFO) << "Video format changed to " << displayModeName << " "
                   << ((formatFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV")
-                  << ((formatFlags & bmdDetectedVideoInputDualStream3D) ? " with 3D" : "");
+                  << ((formatFlags & bmdDetectedVideoInputDualStream3D) ? " with 3D" : " not 3D");
 
         if (displayModeName) free(displayModeName);
 

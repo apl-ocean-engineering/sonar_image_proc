@@ -146,7 +146,7 @@ int main( int argc, char** argv )
 	deckLink.set3D( do3D );
 
 	CHECK( deckLink.createVideoOutput(bmdModeHD1080p2997) ) << "Unable to create VideoOutput";
-	CHECK( deckLink.createVideoInput(bmdModeHD1080p2997) ) << "Unable to create VideoInput";
+	CHECK( deckLink.createVideoInput(bmdMode4K2160p2997) ) << "Unable to create VideoInput";
 
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
