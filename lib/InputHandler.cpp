@@ -18,7 +18,6 @@ namespace libblackmagic {
   _deckLinkInput(  nullptr ),
   _deckLinkOutput( nullptr )
   {
-    _deckLinkInput->SetCallback(this);
   }
 
   ULONG InputHandler::AddRef(void) { return 1; }
@@ -39,6 +38,7 @@ namespace libblackmagic {
     //}
 
     CHECK( _deckLinkInput != NULL ) << "Couldn't get input for Decklink";
+
     return _deckLinkInput;
   }
 
@@ -105,6 +105,8 @@ namespace libblackmagic {
 
       CHECK( displayMode != nullptr ) << "Unable to find a video input mode with the desired properties";
 
+      deckLinkInput()->SetCallback(this);
+
       // Made it this far?  Great!
       if( S_OK != deckLinkInput()->EnableVideoInput(displayMode->GetDisplayMode(),
                                                     pixelFormat,
@@ -120,6 +122,8 @@ namespace libblackmagic {
       // Update config with values
       _config.setMode( displayMode->GetDisplayMode() );
       _config.set3D( displayMode->GetFlags() & bmdDetectedVideoInputDualStream3D );
+
+      displayMode->Release();
 
       _enabled = true;
       return true;
@@ -183,18 +187,18 @@ namespace libblackmagic {
       // }
 
 
-      IDeckLinkOutput *InputHandler::deckLinkOutput()
-      {
-        if( _deckLinkOutput ) return _deckLinkOutput;
-
-        HRESULT result = _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&_deckLinkOutput);
-        if (result != S_OK) {
-          LOG(WARNING) << "Couldn't get output for Decklink";
-          return nullptr;
-        }
-
-        return _deckLinkOutput;
-      }
+      // IDeckLinkOutput *InputHandler::deckLinkOutput()
+      // {
+      //   if( _deckLinkOutput ) return _deckLinkOutput;
+      //
+      //   HRESULT result = _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&_deckLinkOutput);
+      //   if (result != S_OK) {
+      //     LOG(WARNING) << "Couldn't get output for Decklink";
+      //     return nullptr;
+      //   }
+      //
+      //   return _deckLinkOutput;
+      // }
 
 
       bool InputHandler::startStreams() {
@@ -221,6 +225,48 @@ namespace libblackmagic {
 
         return true;
       }
+
+
+
+      bool InputHandler::grab( void )
+      {
+      //   // TODO.  Go back and check how many copies are being made...
+      //   _grabbedImage = cv::Mat();
+      //
+      //   // while( inputHandler().queue().try_and_pop(_grabbedImage) ) { LOG(INFO) << "Pop!  Queue now " << inputHandler().queue().size(); }
+      //   //
+      //   // if( !_grabbedImage.empty() ) return true;
+      //
+      //   // If there was nothing in the queue, wait
+      //   if( inputHandler().queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
+      //     LOG(WARNING) << "Timeout waiting for image in image queue";
+      //     return false;
+      //   }
+      //
+      //   if( !_grabbedImage.empty() ) return true;
+      //
+        return false;
+      }
+
+      int InputHandler::getRawImage( int i, cv::Mat &mat )
+      {
+      //   switch(i) {
+      //     case 0:
+      //             mat = _grabbedImage;
+      //             return 1;
+      //             break;
+      //
+      //     default:
+      //             return 0;
+      //   }
+      //
+         return 0;
+      }
+
+      // ImageSize InputHandler::imageSize( void ) const
+      // {
+      // //   return _inputHandler->imageSize();
+      // }
 
 
 
@@ -428,6 +474,8 @@ namespace libblackmagic {
             //LOG(INFO) << "Finishing process in thread " << std::this_thread::get_id();
 
           }
+
+
 
 
 

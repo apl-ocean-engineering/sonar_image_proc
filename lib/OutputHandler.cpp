@@ -10,25 +10,14 @@ namespace libblackmagic {
 
 
 	OutputHandler::OutputHandler( IDeckLink *deckLink )
-			:  _deckLink(deckLink),
+			:  _config( bmdModeHD1080p2997 ),				// Specify a different default
+				_enabled(false),
+				_deckLink(deckLink),
 				_deckLinkOutput( nullptr ),
-				_mode( nullptr ),
 				_totalFramesScheduled(0),
 				_buffer( new SharedBMSDIBuffer() ),
-				_blankFrame( makeBlueFrame(deckLinkOutput, true ))
+				_blankFrame( nullptr )
 		{
-			// _mode->AddRef();
-			//
-			// _mode->GetFrameRate( &_timeValue, &_timeScale );
-
-			// Get timing information from mode
-
-			// Pre-roll a few blank frames
-			const int prerollFrames = 3;
-			for( int i = 0; i < prerollFrames ; ++i ) {
-				scheduleFrame(_blankFrame);
-			}
-
 		}
 
 	OutputHandler::~OutputHandler(void)
@@ -37,76 +26,63 @@ namespace libblackmagic {
 	}
 
 
-	  IDeckLinkOutput *OutputHandler::deckLinkOutput()
-	  {
-			// 	if( _deckLinkOutput ) { return _deckLinkOutput; }
-			//
-	    // // Video mode parameters
-	    // //    const BMDDisplayMode      kDisplayMode = bmdModeHD1080i50;
-	    // BMDVideoOutputFlags outputFlags  = bmdVideoOutputVANC;
-	    // IDeckLinkDisplayMode *displayMode = nullptr;
-			//
-	    // HRESULT result;
-			//
-	    // // Obtain the output interface for the DeckLink device
-	    // {
-	    //   IDeckLinkOutput *deckLinkOutput = nullptr;
-	    //   result = deckLink()->QueryInterface(IID_IDeckLinkOutput, (void**)&deckLinkOutput);
-	    //   if(result != S_OK)
-	    //   {
-	    //     LOGF(WARNING, "Could not obtain the IDeckLinkInput interface - result = %08x\n", result);
-	    //     return false;
-	    //   }
-			//
-	    //   _deckLinkOutput = deckLinkOutput;
-	    // }
-	    // CHECK( deckLinkOutput() != nullptr );
-			//
-	    // // Don't use 3D for output
-	    // // if( do3D() ) {
-	    // //   outputFlags |= bmdVideoOutputDualStream3D;
-	    // // }
-			//
-	    // BMDDisplayModeSupport support;
-			//
-	    // if( deckLinkOutput()->DoesSupportVideoMode( desiredMode, 0, outputFlags, &support, &displayMode ) != S_OK) {
-	    //   LOG(WARNING) << "Unable to find a supported output mode";
-	    //   return false;
-	    // }
-			//
-	    // if( support == bmdDisplayModeNotSupported ) {
-	    //   LOG(WARNING) << "Display mode not supported";
-	    //   return false;
-	    // }
-			//
-			//
-	    // // Enable video output
-	    // result = deckLinkOutput()->EnableVideoOutput(desiredMode, outputFlags);
-	    // if(result != S_OK)
-	    // {
-	    //   LOGF(WARNING, "Could not enable video output - result = %08x\n", result);
-	    //   return false;
-	    // }
-			//
-	    // result = displayMode->GetFrameRate( &_outputTimeValue, &_outputTimeScale );
-	    // if( result != S_OK ) {
-	    //   LOG(WARNING) << "Unable to get time rate information for output...";
-	    //   return false;
-	    // }
-			//
-	    // // Set the callback object to the DeckLink device's output interface
-	    // _outputHandler = new OutputHandler( deckLinkOutput(), displayMode );
-	    // result = deckLinkOutput()->SetScheduledFrameCompletionCallback( _outputHandler );
-	    // if(result != S_OK)
-	    // {
-	    //   LOGF(WARNING, "Could not set callback - result = %08x\n", result);
-	    //   return false;
-	    // }
-			//
-	    // displayMode->Release();
-			//
-	    // LOG(INFO) << "DeckLinkOutput complete!";
-	    // return true;
+	IDeckLinkOutput *OutputHandler::deckLinkOutput()
+	{
+		if( _deckLinkOutput ) return _deckLinkOutput;
+
+		CHECK( S_OK == _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&_deckLinkOutput) )
+									<< "Could not obtain the IDeckLinkInput interface - result = %08x";
+
+		return _deckLinkOutput;
+	}
+
+bool OutputHandler::enable()
+{
+
+	    BMDVideoOutputFlags outputFlags  = bmdVideoOutputVANC;
+	    HRESULT result;
+
+	    BMDDisplayModeSupport support;
+			IDeckLinkDisplayMode *displayMode = nullptr;
+
+	    if( deckLinkOutput()->DoesSupportVideoMode( _config.mode(), 0, outputFlags, &support, &displayMode ) != S_OK) {
+	      LOG(WARNING) << "Unable to find a query output modes";
+	      return false;
+	    }
+
+	    if( support == bmdDisplayModeNotSupported ) {
+	      LOG(WARNING) << "Display mode not supported";
+	      return false;
+	    }
+
+
+	    // Enable video output
+	    if( S_OK != deckLinkOutput()->EnableVideoOutput(_config.mode(), outputFlags) ) {
+	      LOGF(WARNING, "Could not enable video output");
+	      return false;
+	    }
+
+	    if( S_OK != displayMode->GetFrameRate( &_timeValue, &_timeScale ) ) {
+	      LOG(WARNING) << "Unable to get time rate information for output...";
+	      return false;
+	    }
+
+	    // Set the callback object to the DeckLink device's output interface
+	    //_outputHandler = new OutputHandler( _deckLinkOutput, displayMode );
+	    result = _deckLinkOutput->SetScheduledFrameCompletionCallback( this );
+	    if(result != S_OK)
+	    {
+	      LOGF(WARNING, "Could not set callback - result = %08x\n", result);
+	      return false;
+	    }
+
+			_config.setMode( displayMode->GetDisplayMode() );
+
+	    displayMode->Release();
+
+	    LOG(INFO) << "DeckLinkOutput complete!";
+			_enabled = true;
+	    return true;
 	  }
 
 	void OutputHandler::scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count )
@@ -132,7 +108,7 @@ namespace libblackmagic {
 			bmResetBuffer( _buffer->buffer );
 		} else {
 			// Otherwise schedule a blank frame
-			scheduleFrame( _blankFrame  );
+			scheduleFrame( blankFrame() );
 		}
 		_buffer->releaseReadLock();
 
@@ -141,13 +117,19 @@ namespace libblackmagic {
 		return S_OK;
 	}
 
-bool OutputHandler::startStreams()
-{
-	if( !_deckLinkInp)
+	bool OutputHandler::startStreams()
+	{
+		if( !_enabled && !enable() ) return false;
 
 		LOG(INFO) << "Starting DeckLink output";
 
-		HRESULT result = _deckLinkOutput->StartScheduledPlayback(0, _outputTimeScale, 1.0);
+		// Pre-roll a few blank frames
+		const int prerollFrames = 3;
+		for( int i = 0; i < prerollFrames ; ++i ) {
+			scheduleFrame(blankFrame());
+		}
+
+		HRESULT result = _deckLinkOutput->StartScheduledPlayback(0, _timeScale, 1.0);
 		if(result != S_OK)
 		{
 			LOG(WARNING) << "Could not start video output - result = " << std::hex << result;
@@ -162,7 +144,7 @@ bool OutputHandler::stopStreams()
 		LOG(INFO) << "Stopping DeckLinkOutput streams";
 		// // And stop after one frame
 		BMDTimeValue actualStopTime;
-		HRESULT result = deckLinkOutput()->StopScheduledPlayback(0, &actualStopTime, _outputTimeScale);
+		HRESULT result = deckLinkOutput()->StopScheduledPlayback(0, &actualStopTime, _timeScale);
 		if(result != S_OK)
 		{
 			LOG(WARNING) << "Could not stop video playback - result = " << std::hex << result;

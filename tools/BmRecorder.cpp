@@ -34,24 +34,13 @@ void signal_handler( int sig )
 	}
 }
 
-class SDIBufferGuard {
-public:
-		SDIBufferGuard( const shared_ptr<SharedBMSDIBuffer> &buffer )
-			: _buffer(buffer) {}
+const int CamNum = 1;
 
-		void operator()( void (*f)( BMSDIBuffer * ) ) {
-			SharedBMSDIBuffer::lock_guard lock( _buffer->writeMutex() );
-			f( _buffer->buffer );
-		}
-
-		shared_ptr<SharedBMSDIBuffer> _buffer;
-		int _camNum;
-};
 
 
 static void processKbInput( char c, DeckLink &decklink ) {
 
-	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.outputHandler().sdiProtocolBuffer() );
+	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.output().sdiProtocolBuffer() );
 
 	SDIBufferGuard guard( sdiBuffer );
 
@@ -59,55 +48,55 @@ static void processKbInput( char c, DeckLink &decklink ) {
 		case 'f':
 					// Send absolute focus value
 					LOG(INFO) << "Sending instantaneous autofocus to camera";
-					guard( []( BMSDIBuffer *buffer ){ bmAddInstantaneousAutofocus( buffer, 1 ); });
+					guard( []( BMSDIBuffer *buffer ){ bmAddInstantaneousAutofocus( buffer, CamNum ); });
 					break;
 		 case '[':
 					// Send positive focus increment
 					LOG(INFO) << "Sending focus increment to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddFocusOffset( buffer, 1, 0.05 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddFocusOffset( buffer, CamNum, 0.05 ); });
 					break;
 			case ']':
 					// Send negative focus increment
 					LOG(INFO) << "Sending focus decrement to camera";
-					guard( []( BMSDIBuffer *buffer ){ bmAddFocusOffset( buffer, 1, -0.05 ); });
+					guard( []( BMSDIBuffer *buffer ){ bmAddFocusOffset( buffer, CamNum, -0.05 ); });
 					break;
 
 			//=== Aperture increment/decrement ===
 			case ';':
  					// Send positive aperture increment
  					LOG(INFO) << "Sending aperture increment to camera";
- 					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, 1, 1 ); });
+ 					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, 1 ); });
  					break;
  			case '\'':
  					// Send negative aperture decrement
  					LOG(INFO) << "Sending aperture decrement to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, 1, -1 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, -1 ); });
  					break;
 
 			//=== Shutter increment/decrement ===
 			case '.':
  					LOG(INFO) << "Sending shutter increment to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, 1, 1 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, CamNum, 1 ); });
  					break;
  			case '/':
  					LOG(INFO) << "Sending shutter decrement to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, 1, -1 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, CamNum, -1 ); });
  					break;
 
 			//=== Gain increment/decrement ===
 			case 'z':
  					LOG(INFO) << "Sending gain increment to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, 1, 1 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, CamNum, 1 ); });
  					break;
  			case 'x':
  					LOG(INFO) << "Sending gain decrement to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, 1, -1 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, CamNum, -1 ); });
  					break;
 
 		case 's':
 				// Toggle between reference sources
 				LOG(INFO) << "Switching reference source";
-				guard( []( BMSDIBuffer *buffer ){	bmAddReferenceSourceOffset( buffer, 1, 1 ); });
+				guard( []( BMSDIBuffer *buffer ){	bmAddReferenceSourceOffset( buffer, CamNum, 1 ); });
 				break;
 		case 'q':
 				keepGoing = false;
@@ -136,6 +125,9 @@ int main( int argc, char** argv )
 	string desiredModeString = "auto";
 	app.add_option("--mode,-m", desiredModeString, "Desired mode");
 
+	bool doConfigCamera = false;
+	app.add_flag("--config-camera,-c", doConfigCamera, "If enabled, send initialization info to the cameras");
+
 	bool doListCards = false;
 	app.add_flag("--list-cards", doListCards, "List Decklink cards in the system then exit");
 
@@ -163,17 +155,39 @@ int main( int argc, char** argv )
 	cout << "    s      Cycle through reference sources" << endl;
 
 	DeckLink deckLink;
-	deckLink.set3D( do3D );
 
+	// Handle the one-off commands
 	if( doListCards || doListInputModes ) {
 			if(doListCards) deckLink.listCards();
 			if(doListInputModes) deckLink.listInputModes();
 		return 0;
 	}
 
+	deckLink.input().config().setMode( mode );
+	deckLink.input().config().set3D( do3D );
 
-	CHECK( deckLink.createVideoOutput(bmdModeHD1080p2997) ) << "Unable to create VideoOutput";
-	CHECK( deckLink.createVideoInput(bmdMode4K2160p2997) ) << "Unable to create VideoInput";
+	if ( doConfigCamera ) {
+		// Be careful not to exceed 255 byte buffer length
+		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+		guard( [mode]( BMSDIBuffer *buffer ) {
+
+			bmAddOrdinalAperture( buffer, CamNum, 0 );
+			bmAddSensorGain( buffer, CamNum, 0 );
+			bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+
+			if(mode != bmdModeDetect) {
+				//bmAddSetMode( buffer, mode );
+			}
+
+		});
+
+		/* code */
+	}
+
+
+
+	// CHECK( deckLink.createVideoOutput(bmdModeHD1080p2997) ) << "Unable to create VideoOutput";
+	// CHECK( deckLink.createVideoInput(bmdMode4K2160p2997) ) << "Unable to create VideoInput";
 
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
@@ -197,9 +211,9 @@ int main( int argc, char** argv )
 		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
 		//if( (duration > 0) && (loopStart > end) ) { keepGoing = false;  break; }
 
-		if( deckLink.grab() ) {
+		if( deckLink.input().grab() ) {
 			cv::Mat image;
-			deckLink.getRawImage(0, image);
+			deckLink.input().getRawImage(0, image);
 
 			cv::imshow("Image", image);
 			LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;

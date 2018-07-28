@@ -12,35 +12,16 @@
 #include "ThreadSynchronizer.h"
 
 #include "DataTypes.h"
+#include "InputConfig.h"
 
 namespace libblackmagic {
 
-  class InputConfig {
-  public:
-    InputConfig()
-      : _do3D(false),
-        _mode( bmdModeDetect )
-    {;}
 
-    InputConfig &set3D( bool do3D = true )
-      { _do3D = do3D;  return *this; }
-
-    InputConfig &setMode( BMDDisplayMode m )
-      { _mode = m; return *this; }
-
-
-    bool           do3D()         { return _do3D; }
-    BMDDisplayMode mode()         { return _mode; }
-
-  private:
-    bool _do3D;
-    BMDDisplayMode _mode;
-  };
 
   class InputHandler : public IDeckLinkInputCallback
   {
   public:
-    InputHandler(  IDeckLink *deckLink );
+    InputHandler( IDeckLink *deckLink );
 
     // Retrieve the current configuration
     InputConfig &config() { return _config; }
@@ -49,9 +30,8 @@ namespace libblackmagic {
     // will be called automatically by startStreams()
     bool enable( void );
 
-    // Lazy initializer
+    // Lazy initializers
     IDeckLinkInput *deckLinkInput();
-    IDeckLinkOutput *deckLinkOutput();
 
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) { return E_NOINTERFACE; }
     virtual ULONG STDMETHODCALLTYPE AddRef(void);
@@ -61,10 +41,12 @@ namespace libblackmagic {
 
     active_object::shared_queue< cv::Mat > &queue() { return _queue; }
 
-    //IDeckLinkOutput *deckLinkOutput() { return _deckLinkOutput; }
-
     bool startStreams();
     bool stopStreams();
+
+    bool grab( void );
+    int getRawImage( int i, cv::Mat &mat );
+
 
   protected:
 

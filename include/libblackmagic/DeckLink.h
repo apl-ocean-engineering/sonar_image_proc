@@ -44,12 +44,12 @@ namespace libblackmagic {
     void stopStreams();
 
     // Lazy constructors
-    InputHandler &input();
-    OutputHandler &output();
+    InputHandler &input()     { return *_inputHandler; }
+    OutputHandler &output()   { return *_outputHandler; }
 
     // // Pull images from _InputHandler
-    virtual bool grab( void );
-    virtual int getRawImage( int i, cv::Mat &mat );
+    // virtual bool grab( void );
+    // virtual int getRawImage( int i, cv::Mat &mat );
 
 
   protected:
@@ -58,19 +58,13 @@ namespace libblackmagic {
 
   private:
 
-    cv::Mat _grabbedImage;
-
-    int _cardNo;
-    bool _do3D;
+    // int _cardNo;
 
     // For now assume an object uses just one Decklink board
     // COM model precludes use of auto ptrs
     IDeckLink *_deckLink;
-    IDeckLinkInput *_deckLinkInput;
-    IDeckLinkOutput *_deckLinkOutput;
-
-    BMDTimeScale _outputTimeScale;
-    BMDTimeValue _outputTimeValue;
+    // IDeckLinkInput *_deckLinkInput;
+    // IDeckLinkOutput *_deckLinkOutput;
 
     InputHandler *_inputHandler;
     OutputHandler *_outputHandler;

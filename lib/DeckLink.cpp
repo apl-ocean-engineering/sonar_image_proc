@@ -236,45 +236,5 @@ namespace libblackmagic {
     _outputHandler->stopStreams();
 
   }
-  //
-  // bool DeckLink::grab( void )
-  // {
-  //   // TODO.  Go back and check how many copies are being made...
-  //   _grabbedImage = cv::Mat();
-  //
-  //   // while( inputHandler().queue().try_and_pop(_grabbedImage) ) { LOG(INFO) << "Pop!  Queue now " << inputHandler().queue().size(); }
-  //   //
-  //   // if( !_grabbedImage.empty() ) return true;
-  //
-  //   // If there was nothing in the queue, wait
-  //   if( inputHandler().queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
-  //     LOG(WARNING) << "Timeout waiting for image in image queue";
-  //     return false;
-  //   }
-  //
-  //   if( !_grabbedImage.empty() ) return true;
-  //
-  //   return false;
-  // }
-  //
-  // int DeckLink::getRawImage( int i, cv::Mat &mat )
-  // {
-  //   switch(i) {
-  //     case 0:
-  //             mat = _grabbedImage;
-  //             return 1;
-  //             break;
-  //
-  //     default:
-  //             return 0;
-  //   }
-  //
-  //   return 0;
-  // }
-
-  // ImageSize DeckLink::imageSize( void ) const
-  // {
-  //   return _inputHandler->imageSize();
-  // }
-
+  
 }

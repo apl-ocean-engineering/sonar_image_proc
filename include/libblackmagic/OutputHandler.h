@@ -1,9 +1,13 @@
 #pragma once
 
+#include <memory>
+
 #include <DeckLinkAPI.h>
 #include <active_object/active.h>
 
 #include "SDICameraControl.h"
+
+#include "InputConfig.h"
 
 namespace libblackmagic {
 
@@ -45,6 +49,23 @@ namespace libblackmagic {
 	};
 
 
+	class SDIBufferGuard {
+	public:
+			SDIBufferGuard( const std::shared_ptr<SharedBMSDIBuffer> &buffer )
+				: _buffer(buffer) {}
+
+				//void operator()( void (*f)( BMSDIBuffer * ) ) {
+
+
+			template<typename Func>
+			void operator()( Func f ) {
+				SharedBMSDIBuffer::lock_guard lock( _buffer->writeMutex() );
+				f( _buffer->buffer );
+			}
+
+			std::shared_ptr<SharedBMSDIBuffer> _buffer;
+	};
+
 
 
 	class OutputHandler: public IDeckLinkVideoOutputCallback
@@ -53,8 +74,13 @@ namespace libblackmagic {
 		OutputHandler( IDeckLink *deckLink );
 		virtual ~OutputHandler(void);
 
+		// Retrieve the current configuration
+    InputConfig &config() { return _config; }
+
 		// Lazy initializer
-		void deckLinkOutput();
+		IDeckLinkOutput *deckLinkOutput();
+
+		bool enable( void );
 
 		//void setBMSDIBuffer( const std::shared_ptr<SharedBMBuffer> &buffer );
 
@@ -75,12 +101,19 @@ namespace libblackmagic {
 
 	protected:
 
+		// Lazy initializer
+		IDeckLinkMutableVideoFrame *blankFrame()
+			{		if( !_blankFrame ) _blankFrame = makeBlueFrame(deckLinkOutput(), true ); return _blankFrame; }
+
 		void scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count = 1 );
 
 	private:
 
+		InputConfig _config;
+		bool _enabled;
+
+		IDeckLink *_deckLink;
 		IDeckLinkOutput *_deckLinkOutput;
-		IDeckLinkDisplayMode *_mode;
 
 		// Cached values
 		BMDTimeValue _timeValue;
