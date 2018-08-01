@@ -127,11 +127,13 @@ using cv::Mat;
 int main( int argc, char** argv )
 {
 	libg3log::G3Logger logger("bmRecorder");
-	logger.stderrHandle->call( &ColorStderrSink::setThreshold, DEBUG );
 
 	signal( SIGINT, signal_handler );
 
 	CLI::App app{"Simple BlackMagic camera recorder"};
+
+	int verbosity = 0;
+	app.add_flag("-v", verbosity, "Additional output (use -vv for even more!)");
 
 	bool do3D = false;
 	app.add_flag("--do-3d",do3D, "Enable 3D modes");
@@ -155,6 +157,17 @@ int main( int argc, char** argv )
 	app.add_option("--stop-after", stopAfter, "Stop after N frames");
 
 	CLI11_PARSE(app, argc, argv);
+
+	switch(verbosity) {
+		case 1:
+			logger.stderrHandle->call( &ColorStderrSink::setThreshold, INFO );
+			break;
+		case 2:
+			logger.stderrHandle->call( &ColorStderrSink::setThreshold, DEBUG );
+			break;
+	}
+
+
 
 	// Help string
 	cout << "Commands" << endl;
