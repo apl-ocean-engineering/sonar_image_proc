@@ -104,13 +104,15 @@ namespace libblackmagic {
 
       deckLinkInput()->SetCallback(this);
 
+      deckLinkInput()->DisableAudioInput();
+
       // Made it this far?  Great!
       if( S_OK != deckLinkInput()->EnableVideoInput(displayMode->GetDisplayMode(),
                                                     pixelFormat,
                                                     inputFlags) ) {
           LOG(WARNING) << "Failed to enable video input. Is another application using the card?";
           return false;
-        }
+      }
 
       // Feed results
 
@@ -215,32 +217,18 @@ HRESULT InputHandler::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFram
   IDeckLinkVideoFrame *rightEyeFrame = nullptr;
   IDeckLinkVideoFrame3DExtensions *threeDExtensions = nullptr;
 
-  LOG(DEBUG) << "videoInputFrameArrives";
+  // Drop audio first thing
+  if( audioFrame ) audioFrame->Release();
+
+  uint32_t availFrames;
+  if( deckLinkInput()->GetAvailableVideoFrameCount( &availFrames ) == S_OK ) {
+    LOG(DEBUG) << "videoInputFrameArrives; " << availFrames << " still available";
+  } else {
+    LOG(DEBUG) << "videoInputFrameArrives";
+  }
 
   // Handle Video Frame
   if (videoFrame) {
-
-    // If 3D mode is enabled we retreive the 3D extensions interface which gives.
-    // us access to the right eye frame by calling GetFrameForRightEye() .
-    if( videoFrame->QueryInterface(IID_IDeckLinkVideoFrame3DExtensions, (void **) &threeDExtensions) == S_OK ) {
-      if(threeDExtensions->GetFrameForRightEye(&rightEyeFrame) != S_OK) {
-        LOG(INFO) << "Error getting right eye frame";
-      }
-
-      LOG(DEBUG) << "(" << std::this_thread::get_id()
-                  << ") Right frame received (" << _frameCount
-                  << ") " << rightEyeFrame->GetRowBytes() * rightEyeFrame->GetHeight()
-                  << " bytes, " << rightEyeFrame->GetWidth()
-                  << " x " << rightEyeFrame->GetHeight();
-
-      // The AddRef will ensure the frame is valid after the end of the callback.
-      rightEyeFrame->AddRef();
-      std::thread t = processInThread( rightEyeFrame, 1 );
-      t.detach();
-    }
-    if (threeDExtensions) threeDExtensions->Release();
-
-
 
     if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
     {
@@ -250,8 +238,6 @@ HRESULT InputHandler::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFram
     }
     else
     {
-      _frameCount++;
-
       // const char *timecodeString = nullptr;
       // if (g_config.m_timecodeFormat != 0)
       // {
@@ -273,6 +259,27 @@ HRESULT InputHandler::VideoInputFrameArrived(IDeckLinkVideoInputFrame* videoFram
       std::thread t = processInThread( videoFrame );
       t.detach();
 
+      // If 3D mode is enabled we retreive the 3D extensions interface which gives.
+      // us access to the right eye frame by calling GetFrameForRightEye() .
+      if( videoFrame->QueryInterface(IID_IDeckLinkVideoFrame3DExtensions, (void **) &threeDExtensions) == S_OK ) {
+        if(threeDExtensions->GetFrameForRightEye(&rightEyeFrame) != S_OK) {
+          LOG(INFO) << "Error getting right eye frame";
+        }
+
+        LOG(DEBUG) << "(" << std::this_thread::get_id()
+                    << ") Right frame received (" << _frameCount
+                    << ") " << rightEyeFrame->GetRowBytes() * rightEyeFrame->GetHeight()
+                    << " bytes, " << rightEyeFrame->GetWidth()
+                    << " x " << rightEyeFrame->GetHeight();
+
+        // The AddRef will ensure the frame is valid after the end of the callback.
+        //rightEyeFrame->AddRef();
+        std::thread t = processInThread( rightEyeFrame, 1 );
+        t.detach();
+      }
+      if (threeDExtensions) threeDExtensions->Release();
+
+      _frameCount++;
     }
   }
 
@@ -303,7 +310,7 @@ HRESULT InputHandler::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents e
 
     if (displayModeName) free(displayModeName);
 
-    deckLinkInput()->StopStreams();
+    deckLinkInput()->PauseStreams();
 
       BMDVideoInputFlags m_inputFlags = bmdVideoInputFlagDefault | bmdVideoInputEnableFormatDetection;
 
@@ -319,13 +326,14 @@ HRESULT InputHandler::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents e
         return result;
       }
 
+      _queues[0].flush();
+      _queues[1].flush();
+
+      _config.setMode( mode->GetDisplayMode() );
+      _config.set3D( formatFlags & bmdDetectedVideoInputDualStream3D );
+
+      deckLinkInput()->FlushStreams();
       deckLinkInput()->StartStreams();
-
-    _config.setMode( mode->GetDisplayMode() );
-    _config.set3D( formatFlags & bmdDetectedVideoInputDualStream3D );
-
-    _queues[0].flush();
-    _queues[1].flush();
 
     return S_OK;
   }
@@ -398,6 +406,8 @@ HRESULT InputHandler::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents e
         dstFrame->Release();
       }
     }
+
+    LOG(DEBUG) << frameName << " Release; " << videoFrame->Release() << " references remain";
 
     if( out.empty() ) {
       LOG(WARNING) << frameName << " Frame is empty?";

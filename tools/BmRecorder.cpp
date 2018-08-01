@@ -265,8 +265,6 @@ int main( int argc, char** argv )
 					cv::Mat rightROI( composite, cv::Rect(images[0].size().width, 0, images[1].size().width, images[1].size().height) );
 					images[1].copyTo( rightROI );
 
-					if( !images[0].empty() ) cv::imshow("Images 0", images[0]);
-					if( !images[1].empty() ) cv::imshow("Images 1", images[1]);
 					cv::imshow("Composite", composite );
 
 				}
