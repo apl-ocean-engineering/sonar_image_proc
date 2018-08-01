@@ -9,7 +9,7 @@ namespace libblackmagic {
 class InputConfig {
 public:
   InputConfig( BMDDisplayMode defaultMode = bmdModeDetect )
-    : _do3D(false),
+    : _do3D( false ),
       _mode( defaultMode )
   {;}
 

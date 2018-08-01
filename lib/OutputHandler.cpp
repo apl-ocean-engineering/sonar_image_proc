@@ -10,7 +10,7 @@ namespace libblackmagic {
 
 
 	OutputHandler::OutputHandler( IDeckLink *deckLink )
-			:  _config( bmdModeHD1080p2997 ),				// Specify a different default
+			:  _config( bmdModeHD1080p2997 ),								// Set a default
 				_enabled(false),
 				_deckLink(deckLink),
 				_deckLinkOutput( nullptr ),
@@ -54,10 +54,8 @@ bool OutputHandler::enable()
 	      LOG(WARNING) << "Display mode not supported";
 	      return false;
 	    }
-
-
 	    // Enable video output
-	    if( S_OK != deckLinkOutput()->EnableVideoOutput(_config.mode(), outputFlags) ) {
+	    if( S_OK != deckLinkOutput()->EnableVideoOutput(_config.mode(), outputFlags ) ) {
 	      LOGF(WARNING, "Could not enable video output");
 	      return false;
 	    }
@@ -67,18 +65,20 @@ bool OutputHandler::enable()
 	      return false;
 	    }
 
+			//LOG(INFO) << "Time value " << _timeValue << " ; " << _timeScale;
+
 	    // Set the callback object to the DeckLink device's output interface
 	    //_outputHandler = new OutputHandler( _deckLinkOutput, displayMode );
 	    result = _deckLinkOutput->SetScheduledFrameCompletionCallback( this );
-	    if(result != S_OK)
-	    {
+	    if(result != S_OK) {
 	      LOGF(WARNING, "Could not set callback - result = %08x\n", result);
 	      return false;
 	    }
 
 			_config.setMode( displayMode->GetDisplayMode() );
-
 	    displayMode->Release();
+
+			scheduleFrame( blankFrame() );
 
 	    LOG(INFO) << "DeckLinkOutput complete!";
 			_enabled = true;
@@ -87,20 +87,22 @@ bool OutputHandler::enable()
 
 	void OutputHandler::scheduleFrame( IDeckLinkVideoFrame *frame, uint8_t count )
 	{
-		//LOG(INFO) << "Scheduled frame " << _totalFramesScheduled;
+		LOG(DEBUG) << "Scheduling frame " << _totalFramesScheduled;
 		_deckLinkOutput->ScheduleVideoFrame(frame, _totalFramesScheduled*_timeValue, _timeValue*count, _timeScale );
 		_totalFramesScheduled += count;
 	}
 
 	HRESULT	STDMETHODCALLTYPE OutputHandler::ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result)
 	{
-		// if( completedFrame != _blankFrame ) {
-		// 	//LOG(INFO) << "Completed frame != _blankFrame";
-		// }
+		// LOG(INFO) << "Scheduling another frame";
+
+		if( completedFrame != _blankFrame ) {
+			LOG(INFO) << "Completed frame != _blankFrame";
+		}
 
 		_buffer->getReadLock();
 		if( _buffer->buffer->len > 0 ) {
-			//LOG(INFO) << "Scheduling frame with " << int(_buffer->buffer->len) << " bytes of BM SDI Commands";
+			LOG(INFO) << "Scheduling frame with " << int(_buffer->buffer->len) << " bytes of BM SDI Commands";
 			scheduleFrame( makeFrameWithSDIProtocol( _deckLinkOutput, _buffer->buffer, true ) );
 			//scheduleFrame( addSDIProtocolToFrame( _deckLinkOutput, _blankFrame, _buffer->buffer ) );
 
@@ -121,21 +123,21 @@ bool OutputHandler::enable()
 	{
 		if( !_enabled && !enable() ) return false;
 
-		LOG(INFO) << "Starting DeckLink output";
+		LOG(INFO) << "Starting DeckLink output ...";
 
-		// Pre-roll a few blank frames
-		const int prerollFrames = 3;
-		for( int i = 0; i < prerollFrames ; ++i ) {
-			scheduleFrame(blankFrame());
-		}
+		// // Pre-roll a few blank frames
+		// const int prerollFrames = 3;
+		// for( int i = 0; i < prerollFrames ; ++i ) {
+		// 	scheduleFrame(blankFrame());
+		// }
 
 		HRESULT result = _deckLinkOutput->StartScheduledPlayback(0, _timeScale, 1.0);
-		if(result != S_OK)
-		{
+		if(result != S_OK) {
 			LOG(WARNING) << "Could not start video output - result = " << std::hex << result;
 			return false;
-}
+		}
 
+		LOG(INFO) << "     ... done";
 		return true;
 }
 

@@ -93,6 +93,27 @@ static void processKbInput( char c, DeckLink &decklink ) {
 					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, CamNum, -1 ); });
  					break;
 
+			//== Increment/decrement white balance
+			case 'w':
+					LOG(INFO) << "Auto white balance";
+					guard( []( BMSDIBuffer *buffer ){	bmAddAutoWhiteBalance( buffer, CamNum ); });
+					break;
+
+			case 'e':
+					LOG(INFO) << "Restore white balance";
+					guard( []( BMSDIBuffer *buffer ){	bmAddRestoreWhiteBalance( buffer, CamNum ); });
+					break;
+
+			case 'r':
+					LOG(INFO) << "Sending decrement to white balance";
+					guard( []( BMSDIBuffer *buffer ){	bmAddWhiteBalanceOffset( buffer, CamNum, -1000, 0 ); });
+					break;
+
+			case 't':
+					LOG(INFO) << "Sending increment to white balance";
+					guard( []( BMSDIBuffer *buffer ){	bmAddWhiteBalanceOffset( buffer, CamNum, 1000, 0 ); });
+					break;
+
 		case 's':
 				// Toggle between reference sources
 				LOG(INFO) << "Switching reference source";
@@ -134,6 +155,9 @@ int main( int argc, char** argv )
 	bool doListInputModes = false;
 	app.add_flag("--list-input-modes", doListInputModes, "List Input modes then exit");
 
+	int stopAfter = -1;
+	app.add_option("--stop-after", stopAfter, "Stop after N frames");
+
 	CLI11_PARSE(app, argc, argv);
 
 	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
@@ -165,26 +189,7 @@ int main( int argc, char** argv )
 
 	deckLink.input().config().setMode( mode );
 	deckLink.input().config().set3D( do3D );
-
-	if ( doConfigCamera ) {
-		// Be careful not to exceed 255 byte buffer length
-		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
-		guard( [mode]( BMSDIBuffer *buffer ) {
-
-			bmAddOrdinalAperture( buffer, CamNum, 0 );
-			bmAddSensorGain( buffer, CamNum, 0 );
-			bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
-
-			if(mode != bmdModeDetect) {
-				//bmAddSetMode( buffer, mode );
-			}
-
-		});
-
 		/* code */
-	}
-
-
 
 	// CHECK( deckLink.createVideoOutput(bmdModeHD1080p2997) ) << "Unable to create VideoOutput";
 	// CHECK( deckLink.createVideoInput(bmdMode4K2160p2997) ) << "Unable to create VideoInput";
@@ -206,6 +211,27 @@ int main( int argc, char** argv )
 			exit(-1);
 	}
 
+
+		if ( doConfigCamera ) {
+			LOG(INFO) << "Sending configuration to cameras";
+
+			// Be careful not to exceed 255 byte buffer length
+			SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+			guard( [mode]( BMSDIBuffer *buffer ) {
+
+				bmAddOrdinalAperture( buffer, CamNum, 0 );
+				bmAddSensorGain( buffer, CamNum, 8 );
+				bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+				bmAddAutoWhiteBalance( buffer, CamNum );
+
+				if(mode != bmdModeDetect) {
+					LOG(INFO) << "Setting video mode";
+					bmAddVideoMode( buffer, CamNum, bmdModeHD1080p2997 );
+				}
+
+			});
+		}
+
 	while( keepGoing ) {
 
 		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
@@ -215,17 +241,17 @@ int main( int argc, char** argv )
 			cv::Mat image;
 			deckLink.input().getRawImage(0, image);
 
-			cv::imshow("Image", image);
-			LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
+			if( !noDisplay ) {
+				cv::imshow("Image", image);
+				LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
+				char c = cv::waitKey(1);
 
-			char c = cv::waitKey(1);
+				++displayed;
 
-			++displayed;
+				// Take action on character
+				processKbInput( c, deckLink );
+			}
 
-			// Take action on character
-			processKbInput( c, deckLink );
-
-	 		++count;
 
 		} else {
 			// if grab() fails
@@ -233,6 +259,10 @@ int main( int argc, char** argv )
 			++miss;
 			std::this_thread::sleep_for(std::chrono::microseconds(1000));
 		}
+
+		++count;
+
+		if((stopAfter > 0) && (count >= stopAfter)) keepGoing = false;
 
 	}
 

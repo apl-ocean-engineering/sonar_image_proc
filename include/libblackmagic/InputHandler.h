@@ -32,6 +32,7 @@ namespace libblackmagic {
 
     // Lazy initializers
     IDeckLinkInput *deckLinkInput();
+    IDeckLinkOutput *deckLinkOutput();
 
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID *ppv) { return E_NOINTERFACE; }
     virtual ULONG STDMETHODCALLTYPE AddRef(void);
@@ -70,6 +71,8 @@ namespace libblackmagic {
     IDeckLinkInput *_deckLinkInput;
     IDeckLinkOutput *_deckLinkOutput;   /// N.b. this doesn't need to be the same as the card output,
                                         // It's used to make new frames for conversion.
+
+    cv::Mat _grabbedImage;
 
     // IDeckLinkDisplayMode *_mode;
 

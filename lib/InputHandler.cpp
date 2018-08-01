@@ -187,28 +187,32 @@ namespace libblackmagic {
       // }
 
 
-      // IDeckLinkOutput *InputHandler::deckLinkOutput()
-      // {
-      //   if( _deckLinkOutput ) return _deckLinkOutput;
-      //
-      //   HRESULT result = _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&_deckLinkOutput);
-      //   if (result != S_OK) {
-      //     LOG(WARNING) << "Couldn't get output for Decklink";
-      //     return nullptr;
-      //   }
-      //
-      //   return _deckLinkOutput;
-      // }
+      IDeckLinkOutput *InputHandler::deckLinkOutput()
+      {
+        if( _deckLinkOutput ) return _deckLinkOutput;
+
+        HRESULT result = _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&_deckLinkOutput);
+        if (result != S_OK) {
+          CHECK( _deckLinkOutput != nullptr ) << "Couldn't get output for Decklink";
+          return nullptr;
+        }
+
+        return _deckLinkOutput;
+      }
 
 
       bool InputHandler::startStreams() {
-        if( _enabled && !enable() ) return false;
+        if( !_enabled && !enable() ) return false;
 
-        HRESULT result = _deckLinkInput->StartStreams();
+        LOG(INFO) << "Starting DeckLink inputs ....";
+
+        HRESULT result = deckLinkInput()->StartStreams();
         if (result != S_OK) {
           LOG(WARNING) << "Failed to start input streams";
           return false;
         }
+
+        LOG(INFO) << "     ... done";
 
         return true;
       }
@@ -216,7 +220,7 @@ namespace libblackmagic {
       bool InputHandler::stopStreams() {
 
         LOG(INFO) << "(" << std::this_thread::get_id() << ") Stopping DeckLinkInput streams";
-        if (_deckLinkInput->StopStreams() != S_OK) {
+        if (deckLinkInput()->StopStreams() != S_OK) {
           LOG(WARNING) << "Failed to stop input streams";
         }
         LOG(INFO) << "    ...done";
@@ -230,36 +234,36 @@ namespace libblackmagic {
 
       bool InputHandler::grab( void )
       {
-      //   // TODO.  Go back and check how many copies are being made...
-      //   _grabbedImage = cv::Mat();
-      //
-      //   // while( inputHandler().queue().try_and_pop(_grabbedImage) ) { LOG(INFO) << "Pop!  Queue now " << inputHandler().queue().size(); }
-      //   //
-      //   // if( !_grabbedImage.empty() ) return true;
-      //
-      //   // If there was nothing in the queue, wait
-      //   if( inputHandler().queue().wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
-      //     LOG(WARNING) << "Timeout waiting for image in image queue";
-      //     return false;
-      //   }
-      //
-      //   if( !_grabbedImage.empty() ) return true;
-      //
+        // TODO.  Go back and check how many copies are being made...
+        _grabbedImage = cv::Mat();
+
+        // while( inputHandler().queue().try_and_pop(_grabbedImage) ) { LOG(INFO) << "Pop!  Queue now " << inputHandler().queue().size(); }
+        //
+        // if( !_grabbedImage.empty() ) return true;
+
+        // If there was nothing in the queue, wait
+        if( _queue.wait_for_pop(_grabbedImage, std::chrono::milliseconds(100) ) == false ) {
+          LOG(WARNING) << "Timeout waiting for image in image queue";
+          return false;
+        }
+
+        if( !_grabbedImage.empty() ) return true;
+
         return false;
       }
 
       int InputHandler::getRawImage( int i, cv::Mat &mat )
       {
-      //   switch(i) {
-      //     case 0:
-      //             mat = _grabbedImage;
-      //             return 1;
-      //             break;
-      //
-      //     default:
-      //             return 0;
-      //   }
-      //
+        switch(i) {
+          case 0:
+                  mat = _grabbedImage;
+                  return 1;
+                  break;
+
+          default:
+                  return 0;
+        }
+
          return 0;
       }
 
@@ -298,8 +302,8 @@ namespace libblackmagic {
             if (videoFrame->GetFlags() & bmdFrameHasNoInputSource)
             {
               LOG(WARNING) << "(" << std::this_thread::get_id()
-              << ") Frame received (" << _frameCount
-              << ") - No input signal detected";
+                                  << ") Frame received (" << _frameCount
+                                  << ") - No input signal detected";
             }
             else
             {
@@ -316,24 +320,22 @@ namespace libblackmagic {
               // }
 
               LOG(DEBUG) << "(" << std::this_thread::get_id()
-              << ") Frame received (" << _frameCount
-              << ") " << videoFrame->GetRowBytes() * videoFrame->GetHeight()
-              << " bytes, " << videoFrame->GetWidth()
-              << " x " << videoFrame->GetHeight();
+                          << ") Frame received (" << _frameCount
+                          << ") " << videoFrame->GetRowBytes() * videoFrame->GetHeight()
+                          << " bytes, " << videoFrame->GetWidth()
+                          << " x " << videoFrame->GetHeight();
 
               // The AddRef will ensure the frame is valid after the end of the callback.
               videoFrame->AddRef();
               std::thread t = processInThread( videoFrame );
               t.detach();
 
-              if( rightEyeFrame ) {
-                rightEyeFrame->AddRef();
-
-                std::thread t = processInThread( rightEyeFrame, true );
-                t.detach();
-
-                //rightEyeFrame->Release();
-              }
+              // if( rightEyeFrame ) {
+              //   rightEyeFrame->AddRef();
+              //   std::thread t = processInThread( rightEyeFrame, true );
+              //   t.detach();
+              //   //rightEyeFrame->Release();
+              // }
 
             }
           }
@@ -347,7 +349,7 @@ namespace libblackmagic {
         // Callback if bmdVideoInputEnableFormatDetection was set when
         // enabling video input
         HRESULT InputHandler::VideoInputFormatChanged(BMDVideoInputFormatChangedEvents events, IDeckLinkDisplayMode *mode,
-          BMDDetectedVideoInputFormatFlags formatFlags)
+                                                        BMDDetectedVideoInputFormatFlags formatFlags)
           {
             LOG(INFO) << "(" << std::this_thread::get_id() << ") Received Video Input Format Changed";
 
@@ -359,13 +361,12 @@ namespace libblackmagic {
 
             mode->GetName((const char**)&displayModeName);
             LOG(INFO) << "Video format changed to " << displayModeName << " "
-            << ((formatFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV")
-            << ((formatFlags & bmdDetectedVideoInputDualStream3D) ? " with 3D" : " not 3D");
+                                << ((formatFlags & bmdDetectedVideoInputRGB444) ? "RGB" : "YUV")
+                                << ((formatFlags & bmdDetectedVideoInputDualStream3D) ? " with 3D" : " not 3D");
 
             if (displayModeName) free(displayModeName);
 
-            if(_deckLinkInput) {
-              _deckLinkInput->StopStreams();
+            deckLinkInput()->StopStreams();
 
               BMDVideoInputFlags m_inputFlags = bmdVideoInputFlagDefault | bmdVideoInputEnableFormatDetection;
 
@@ -374,20 +375,20 @@ namespace libblackmagic {
                 m_inputFlags |= bmdVideoInputDualStream3D;
               }
 
-              result = _deckLinkInput->EnableVideoInput(mode->GetDisplayMode(), pixelFormat, m_inputFlags);
+              result = deckLinkInput()->EnableVideoInput(mode->GetDisplayMode(), pixelFormat, m_inputFlags);
               if (result != S_OK) {
                 LOG(WARNING) << "Failed to switch video mode";
                 return result;
               }
 
-              _deckLinkInput->StartStreams();
-            }
+              deckLinkInput()->StartStreams();
 
             _config.setMode( mode->GetDisplayMode() );
             _config.set3D( formatFlags & bmdDetectedVideoInputDualStream3D );
 
             return S_OK;
           }
+
           bool InputHandler::process(  IDeckLinkVideoFrame *videoFrame, bool isRight )
           {
 
@@ -418,12 +419,12 @@ namespace libblackmagic {
               }
               default:
               {
-                //LOG(INFO) << "Converting through Blackmagic VideoConversionInstance";
                 IDeckLinkMutableVideoFrame*     dstFrame = NULL;
 
                 //CvMatDeckLinkVideoFrame cvMatWrapper(videoFrame->GetHeight(), videoFrame->GetWidth());
-                HRESULT result = _deckLinkOutput->CreateVideoFrame( videoFrame->GetWidth(), videoFrame->GetHeight(),
-                videoFrame->GetWidth() * 4, bmdFormat8BitBGRA, bmdFrameFlagDefault, &dstFrame);
+                LOG(DEBUG) << "Converting through Blackmagic VideoConversionInstance to " << videoFrame->GetWidth() << " x " << videoFrame->GetHeight();
+                HRESULT result = deckLinkOutput()->CreateVideoFrame( videoFrame->GetWidth(), videoFrame->GetHeight(),
+                                                                    videoFrame->GetWidth() * 4, bmdFormat8BitBGRA, bmdFrameFlagDefault, &dstFrame);
                 if (result != S_OK)
                 {
                   LOG(WARNING) << "Failed to create destination video frame";

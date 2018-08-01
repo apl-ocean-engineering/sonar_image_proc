@@ -63,7 +63,7 @@ namespace libblackmagic {
         LOG(WARNING) << "Unable to query display name.";
       }
 
-      LOG(INFO) << i << " model name: " << modelName << "; display name: " << displayName;
+      LOG(INFO) << "#" << i << " model name: " << modelName << "; display name: " << displayName;
 
       free(modelName);
       free(displayName);
@@ -113,7 +113,8 @@ namespace libblackmagic {
 
       LOG(INFO) << "Card supports display mode \"" << displayModeName << "\"    "
                     << displayMode->GetWidth() << " x " << displayMode->GetHeight()
-                    << ", " << 1.0/frameRate << " FPS";
+                    << ", " << 1.0/frameRate << " FPS"
+		    << ( (displayMode->GetFlags() & bmdDisplayModeSupports3D) ? " (3D)" : "" );;
 
   }
 
@@ -192,11 +193,6 @@ namespace libblackmagic {
       }
     }
 
-    if( i >= cardNo ) {
-      LOG(WARNING) << "System has " << cardNo << " cards";
-      return nullptr;
-    }
-
     free( deckLinkIterator );
 
     char *modelName, *displayName;
@@ -223,9 +219,8 @@ namespace libblackmagic {
   {
 
     // TODO.  Check responses
-    _outputHandler->startStreams();
-    _inputHandler->startStreams();
-
+    if( !_outputHandler->startStreams() ) return false;
+    if( !_inputHandler->startStreams() ) return false;;
 
     return true;
   }

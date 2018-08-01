@@ -88,7 +88,6 @@ namespace libblackmagic {
 			{ return _buffer; }
 
 		HRESULT	STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completedFrame, BMDOutputFrameCompletionResult result);
-
 		HRESULT	STDMETHODCALLTYPE ScheduledPlaybackHasStopped(void) {	return S_OK; }
 
 		// Dummy implementations
