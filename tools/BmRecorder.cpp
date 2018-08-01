@@ -132,6 +132,7 @@ using cv::Mat;
 int main( int argc, char** argv )
 {
 	libg3log::G3Logger logger("bmRecorder");
+	logger.stderrHandle->call( &ColorStderrSink::setThreshold, DEBUG );
 
 	signal( SIGINT, signal_handler );
 
@@ -187,7 +188,8 @@ int main( int argc, char** argv )
 		return 0;
 	}
 
-	deckLink.input().config().setMode( mode );
+	//  Input should always auto-detect
+	deckLink.input().config().setMode( bmdModeDetect );
 	deckLink.input().config().set3D( do3D );
 		/* code */
 
@@ -237,12 +239,38 @@ int main( int argc, char** argv )
 		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
 		//if( (duration > 0) && (loopStart > end) ) { keepGoing = false;  break; }
 
-		if( deckLink.input().grab() ) {
-			cv::Mat image;
-			deckLink.input().getRawImage(0, image);
+		int numImages = 0;
+		if( (numImages = deckLink.input().grab()) > 0 ) {
+
+			LOG(INFO) << "Got " << numImages << " images";
+
+			std::array<cv::Mat,2> images;
+
+			for( auto i=0; i < count && i < images.size(); ++i ) {
+				deckLink.input().getRawImage(i, images[i]);
+			}
 
 			if( !noDisplay ) {
-				cv::imshow("Image", image);
+
+				if( numImages == 1 ) {
+					cv::imshow("Image", images[0]);
+				} else if ( numImages == 2 ) {
+
+					cv::Mat composite( cv::Size( images[0].size().width + images[0].size().width,
+					std::max(images[0].size().height, images[1].size().height )), images[0].type() );
+
+					cv::Mat leftROI( composite, cv::Rect(0,0,images[0].size().width,images[0].size().height) );
+					images[0].copyTo( leftROI );
+
+					cv::Mat rightROI( composite, cv::Rect(images[0].size().width, 0, images[1].size().width, images[1].size().height) );
+					images[1].copyTo( rightROI );
+
+					if( !images[0].empty() ) cv::imshow("Images 0", images[0]);
+					if( !images[1].empty() ) cv::imshow("Images 1", images[1]);
+					cv::imshow("Composite", composite );
+
+				}
+
 				LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
 				char c = cv::waitKey(1);
 

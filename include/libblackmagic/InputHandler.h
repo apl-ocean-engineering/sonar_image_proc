@@ -40,21 +40,21 @@ namespace libblackmagic {
     virtual HRESULT STDMETHODCALLTYPE VideoInputFormatChanged(BMDVideoInputFormatChangedEvents, IDeckLinkDisplayMode*, BMDDetectedVideoInputFormatFlags);
     virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame*, IDeckLinkAudioInputPacket*);
 
-    active_object::shared_queue< cv::Mat > &queue() { return _queue; }
+    active_object::shared_queue< cv::Mat > &queue( int i = 0 ) { return _queues[i]; }
 
     bool startStreams();
     bool stopStreams();
 
-    bool grab( void );
+    int grab( void );
     int getRawImage( int i, cv::Mat &mat );
 
 
   protected:
 
-    bool process( IDeckLinkVideoFrame *frame, bool isRight = false );
+    bool process( IDeckLinkVideoFrame *frame, int input = 0 );
 
-    std::thread processInThread( IDeckLinkVideoFrame *frame, bool isRight = false ) {
-          return std::thread([=] { process(frame, isRight); });
+    std::thread processInThread( IDeckLinkVideoFrame *frame, int input = 0 ) {
+          return std::thread([=] { process(frame, input); });
       }
 
   private:
@@ -72,13 +72,8 @@ namespace libblackmagic {
     IDeckLinkOutput *_deckLinkOutput;   /// N.b. this doesn't need to be the same as the card output,
                                         // It's used to make new frames for conversion.
 
-    cv::Mat _grabbedImage;
-
-    // IDeckLinkDisplayMode *_mode;
-
-    //IDeckLinkVideoConversion *_deckLinkConversion;
-
-    active_object::shared_queue< cv::Mat > _queue, rightQueue;
+    std::array<cv::Mat,2> _grabbedImages;
+    std::array<active_object::shared_queue< cv::Mat >,2> _queues;
   };
 
 }
