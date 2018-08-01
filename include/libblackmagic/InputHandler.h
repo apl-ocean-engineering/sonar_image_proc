@@ -22,6 +22,7 @@ namespace libblackmagic {
   {
   public:
     InputHandler( IDeckLink *deckLink );
+    virtual ~InputHandler();
 
     // Retrieve the current configuration
     InputConfig &config() { return _config; }

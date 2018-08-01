@@ -168,7 +168,6 @@ int main( int argc, char** argv )
 	}
 
 
-
 	// Help string
 	cout << "Commands" << endl;
 	cout << "    q       quit" << endl;
@@ -248,12 +247,9 @@ int main( int argc, char** argv )
 
 		int numImages = 0;
 		if( (numImages = deckLink.input().grab()) > 0 ) {
-
-			LOG(INFO) << "Got " << numImages << " images";
-
 			std::array<cv::Mat,2> images;
 
-			for( auto i=0; i < count && i < images.size(); ++i ) {
+			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
 				deckLink.input().getRawImage(i, images[i]);
 			}
 

@@ -18,20 +18,23 @@ namespace libblackmagic {
 				_buffer( new SharedBMSDIBuffer() ),
 				_blankFrame( nullptr )
 		{
+			_deckLink->AddRef();
 		}
 
 	OutputHandler::~OutputHandler(void)
 	{
 		if( _deckLinkOutput ) _deckLinkOutput->Release();
+		if( _deckLink ) _deckLink->Release();
 	}
 
 
 	IDeckLinkOutput *OutputHandler::deckLinkOutput()
 	{
-		if( _deckLinkOutput ) return _deckLinkOutput;
-
-		CHECK( S_OK == _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&_deckLinkOutput) )
-									<< "Could not obtain the IDeckLinkInput interface - result = %08x";
+		if( !_deckLinkOutput ) {
+			CHECK( S_OK == _deckLink->QueryInterface(IID_IDeckLinkOutput, (void**)&_deckLinkOutput) )
+										<< "Could not obtain the IDeckLinkInput interface - result = %08x";
+			CHECK(_deckLinkOutput != nullptr );
+		}
 
 		return _deckLinkOutput;
 	}
@@ -80,7 +83,7 @@ bool OutputHandler::enable()
 
 			scheduleFrame( blankFrame() );
 
-	    LOG(INFO) << "DeckLinkOutput complete!";
+	    LOG(DEBUG) << "DeckLinkOutput initialized!";
 			_enabled = true;
 	    return true;
 	  }
@@ -97,7 +100,7 @@ bool OutputHandler::enable()
 		// LOG(INFO) << "Scheduling another frame";
 
 		if( completedFrame != _blankFrame ) {
-			LOG(INFO) << "Completed frame != _blankFrame";
+			LOG(DEBUG) << "Completed frame != _blankFrame";
 		}
 
 		_buffer->getReadLock();
@@ -119,41 +122,38 @@ bool OutputHandler::enable()
 		return S_OK;
 	}
 
-	bool OutputHandler::startStreams()
-	{
-		if( !_enabled && !enable() ) return false;
+bool OutputHandler::startStreams() {
+	if( !_enabled && !enable() ) return false;
 
-		LOG(INFO) << "Starting DeckLink output ...";
+	LOG(DEBUG) << "Starting DeckLinkOutput streams ...";
 
-		// // Pre-roll a few blank frames
-		// const int prerollFrames = 3;
-		// for( int i = 0; i < prerollFrames ; ++i ) {
-		// 	scheduleFrame(blankFrame());
-		// }
+	// // Pre-roll a few blank frames
+	// const int prerollFrames = 3;
+	// for( int i = 0; i < prerollFrames ; ++i ) {
+	// 	scheduleFrame(blankFrame());
+	// }
 
-		HRESULT result = _deckLinkOutput->StartScheduledPlayback(0, _timeScale, 1.0);
-		if(result != S_OK) {
-			LOG(WARNING) << "Could not start video output - result = " << std::hex << result;
-			return false;
-		}
+	HRESULT result = _deckLinkOutput->StartScheduledPlayback(0, _timeScale, 1.0);
+	if(result != S_OK) {
+		LOG(WARNING) << "Could not start video output - result = " << std::hex << result;
+		return false;
+	}
 
-		LOG(INFO) << "     ... done";
-		return true;
+	return true;
 }
 
 bool OutputHandler::stopStreams()
 {
-		LOG(INFO) << "Stopping DeckLinkOutput streams";
-		// // And stop after one frame
-		BMDTimeValue actualStopTime;
-		HRESULT result = deckLinkOutput()->StopScheduledPlayback(0, &actualStopTime, _timeScale);
-		if(result != S_OK)
-		{
-			LOG(WARNING) << "Could not stop video playback - result = " << std::hex << result;
-		}
+	LOG(DEBUG) << "Stopping DeckLinkOutput streams";
+	// // And stop after one frame
+	BMDTimeValue actualStopTime;
+	HRESULT result = deckLinkOutput()->StopScheduledPlayback(0, &actualStopTime, _timeScale);
+	if(result != S_OK)
+	{
+		LOG(WARNING) << "Could not stop video playback - result = " << std::hex << result;
+	}
 
-		LOG(INFO) << "     ...done";
-return true;
+	return true;
 }
 
 

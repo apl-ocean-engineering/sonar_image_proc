@@ -19,7 +19,14 @@ namespace libblackmagic {
     _deckLinkOutput( nullptr ),
     _grabbedImages(),
     _queues()
-  {;}
+  {
+    deckLink->AddRef(); }
+
+  InputHandler::~InputHandler() {
+    if( _deckLinkInput ) _deckLinkInput->Release();
+    if( _deckLinkOutput ) _deckLinkOutput->Release();
+    if( _deckLink ) _deckLink->Release();
+  }
 
   ULONG InputHandler::AddRef(void) {
     return 1;
@@ -32,7 +39,7 @@ namespace libblackmagic {
   // Create based on current configuration
   IDeckLinkInput *InputHandler::deckLinkInput() {
     if( !_deckLinkInput ) {
-      auto result = _deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&_deckLinkInput);
+      CHECK( _deckLink->QueryInterface(IID_IDeckLinkInput, (void**)&_deckLinkInput) == S_OK );
       CHECK( _deckLinkInput != NULL ) << "Couldn't get input for Decklink";
     }
 
@@ -159,16 +166,13 @@ namespace libblackmagic {
   }
 
 bool InputHandler::stopStreams() {
+  LOG(INFO) << " Stopping DeckLinkInput streams";
+  if (deckLinkInput()->StopStreams() != S_OK) {
+    LOG(WARNING) << "Failed to stop input streams";
+  }
+  LOG(INFO) << "    ...done";
 
-LOG(INFO) << "(" << std::this_thread::get_id() << ") Stopping DeckLinkInput streams";
-if (deckLinkInput()->StopStreams() != S_OK) {
-  LOG(WARNING) << "Failed to stop input streams";
-}
-LOG(INFO) << "    ...done";
-
-//_thread.doDone();
-
-return true;
+  return true;
 }
 
 
