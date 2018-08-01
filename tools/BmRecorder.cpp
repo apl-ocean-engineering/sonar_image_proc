@@ -106,19 +106,14 @@ static void processKbInput( char c, DeckLink &decklink ) {
 
 			case 'r':
 					LOG(INFO) << "Sending decrement to white balance";
-					guard( []( BMSDIBuffer *buffer ){	bmAddWhiteBalanceOffset( buffer, CamNum, -1000, 0 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddWhiteBalanceOffset( buffer, CamNum, -500, 0 ); });
 					break;
 
 			case 't':
 					LOG(INFO) << "Sending increment to white balance";
-					guard( []( BMSDIBuffer *buffer ){	bmAddWhiteBalanceOffset( buffer, CamNum, 1000, 0 ); });
+					guard( []( BMSDIBuffer *buffer ){	bmAddWhiteBalanceOffset( buffer, CamNum, 500, 0 ); });
 					break;
 
-		case 's':
-				// Toggle between reference sources
-				LOG(INFO) << "Switching reference source";
-				guard( []( BMSDIBuffer *buffer ){	bmAddReferenceSourceOffset( buffer, CamNum, 1 ); });
-				break;
 		case 'q':
 				keepGoing = false;
 				break;
@@ -144,7 +139,7 @@ int main( int argc, char** argv )
 	bool noDisplay = false;
 	app.add_flag("--no-display,-x", noDisplay, "Disable display");
 
-	string desiredModeString = "auto";
+	string desiredModeString = "1080p2997";
 	app.add_option("--mode,-m", desiredModeString, "Desired mode");
 
 	bool doConfigCamera = false;
@@ -160,14 +155,6 @@ int main( int argc, char** argv )
 	app.add_option("--stop-after", stopAfter, "Stop after N frames");
 
 	CLI11_PARSE(app, argc, argv);
-
-	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
-	if( mode == bmdModeUnknown ) {
-		LOG(WARNING) << "Didn't understand mode \"" << desiredModeString << "\"";
-		return -1;
-	} else if ( mode == bmdModeDetect ) {
-		LOG(WARNING) << "Will attempt input format detection";
-	}
 
 	// Help string
 	cout << "Commands" << endl;
@@ -193,9 +180,6 @@ int main( int argc, char** argv )
 	deckLink.input().config().set3D( do3D );
 		/* code */
 
-	// CHECK( deckLink.createVideoOutput(bmdModeHD1080p2997) ) << "Unable to create VideoOutput";
-	// CHECK( deckLink.createVideoInput(bmdMode4K2160p2997) ) << "Unable to create VideoInput";
-
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
 	// if( !decklink.initialize() ) {
@@ -216,6 +200,16 @@ int main( int argc, char** argv )
 
 		if ( doConfigCamera ) {
 			LOG(INFO) << "Sending configuration to cameras";
+
+			BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
+			if( mode == bmdModeUnknown ) {
+				LOG(WARNING) << "Didn't understand mode \"" << desiredModeString << "\"";
+				return -1;
+			} else if ( mode == bmdModeDetect ) {
+				LOG(WARNING) << "Will attempt input format detection";
+			} else {
+				LOG(WARNING) << "Setting mode " << desiredModeString;
+			}
 
 			// Be careful not to exceed 255 byte buffer length
 			SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
@@ -259,11 +253,15 @@ int main( int argc, char** argv )
 					cv::Mat composite( cv::Size( images[0].size().width + images[0].size().width,
 					std::max(images[0].size().height, images[1].size().height )), images[0].type() );
 
-					cv::Mat leftROI( composite, cv::Rect(0,0,images[0].size().width,images[0].size().height) );
-					images[0].copyTo( leftROI );
+					if( !images[0].empty() ) {
+						cv::Mat leftROI( composite, cv::Rect(0,0,images[0].size().width,images[0].size().height) );
+						images[0].copyTo( leftROI );
+					}
 
-					cv::Mat rightROI( composite, cv::Rect(images[0].size().width, 0, images[1].size().width, images[1].size().height) );
-					images[1].copyTo( rightROI );
+					if( !images[1].empty() ) {
+						cv::Mat rightROI( composite, cv::Rect(images[0].size().width, 0, images[1].size().width, images[1].size().height) );
+						images[1].copyTo( rightROI );
+					}
 
 					cv::imshow("Composite", composite );
 
