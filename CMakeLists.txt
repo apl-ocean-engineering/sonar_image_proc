@@ -40,8 +40,11 @@ if( NOT FIPS_IMPORT )
   add_subdirectory("tools/")
 
 	if( FIPS_UNITTESTS )
-  #add_subdirectory( test/unit/ )
-  endif()
+			gtest_begin( blackmagic )
+			    fips_src( test/unit/ )
+			    fips_deps( blackmagic )
+			gtest_end()
+	endif()
 
   fips_finish()
 endif()
