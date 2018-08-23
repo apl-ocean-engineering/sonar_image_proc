@@ -2,21 +2,10 @@ imports:
     fips-googletest:
         git: https://github.com/amarburg/fips-googletest.git
         cond: "FIPS_UNITTESTS"
-    libactive_object:
+    libblackmagic:
         git: https://github.com/amarburg/libactive_object.git
-    liblogger:
-        git: https://github.com/amarburg/liblogger.git
-    libbmsdi_protocol:
-        git: https://gitub.com/amarburg/lbbmsdi_protocol.git
-    fips-CLI11:
-        git: https://github.com/amarburg/fips-CLI11.git
-        cond: "NOT FIPS_IMPORT"    ## Only needed if building tools/
-
-exports:
-  header-dirs:
-    - include/
-  modules:
-    libblackmagic: .
+    liboculus:
+        git: https://github.com/amarburg/liboculus.git
 
 defines:
   FIPS_EXCEPTIONS: ON

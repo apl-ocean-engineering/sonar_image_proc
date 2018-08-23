@@ -5,7 +5,7 @@ if( NOT FIPS_IMPORT )
 	get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)
 	include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
 
-	fips_setup(PROJECT videoio_bm)
+	fips_setup(PROJECT recorder)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -34,16 +34,14 @@ fips_include_directories(
  )
 
 
-fips_add_subdirectory("lib/")
-
 if( NOT FIPS_IMPORT )
   add_subdirectory("tools/")
 
 	if( FIPS_UNITTESTS )
-			gtest_begin( blackmagic )
-			    fips_src( test/unit/ )
-			    fips_deps( blackmagic )
-			gtest_end()
+			# gtest_begin( blackmagic )
+			#     fips_src( test/unit/ )
+			#     fips_deps( blackmagic )
+			# gtest_end()
 	endif()
 
   fips_finish()

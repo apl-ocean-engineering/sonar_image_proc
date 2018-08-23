@@ -7,15 +7,24 @@ using namespace std;
 
 #include <signal.h>
 
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+
 #include <CLI/CLI.hpp>
 
 #include <libg3logger/g3logger.h>
+
+#include "liboculus/StatusRx.h"
+#include "liboculus/SonarClient.h"
+using namespace liboculus;
 
 #include "libblackmagic/DeckLink.h"
 #include "libblackmagic/DataTypes.h"
 using namespace libblackmagic;
 
 #include "libbmsdi/helpers.h"
+
+#include "IoServiceThread.h"
 
 bool keepGoing = true;
 
@@ -122,6 +131,8 @@ static void processKbInput( char c, DeckLink &decklink ) {
 }
 
 
+
+
 using cv::Mat;
 
 int main( int argc, char** argv )
@@ -155,6 +166,10 @@ int main( int argc, char** argv )
 
 	int stopAfter = -1;
 	app.add_option("--stop-after", stopAfter, "Stop after N frames");
+
+  string sonarIp("auto");
+  app.add_option("-s,--sonar-ip", sonarIp, "IP address of sonar or \"auto\" to automatically detect.");
+
 
 	CLI11_PARSE(app, argc, argv);
 
@@ -315,3 +330,58 @@ int main( int argc, char** argv )
 
 		return 0;
 	}
+
+
+
+	//
+	//
+	//   try {
+	//     IoServiceThread ioSrv;
+	//
+	//     OsStatusRx statusRx( ioSrv.service() );
+	//     std::unique_ptr<SonarClient> sonarClient( nullptr );
+	//
+	//     if( ipAddr != "auto" ) {
+	//       LOG(INFO) << "Connecting to sonar with IP address " << ipAddr;
+	//       auto addr( boost::asio::ip::address_v4::from_string( ipAddr ) );
+	//
+	//       LOG_IF(FATAL,addr.is_unspecified()) << "Hm, couldn't parse IP address";
+	//
+	//       sonarClient.reset( new SonarClient( ioSrv.service(), addr ) );
+	//     }
+	//
+	//     ioSrv.start();
+	//
+	//     while(true) {
+	//
+	//       if( !sonarClient && ipAddr == "auto") {
+	//         if( statusRx.status().valid() ) {
+	//           auto addr( statusRx.status().ipAddr() );
+	//
+	//           LOG(INFO) << "Using detected sonar at IP address " << addr;
+	//
+	//           if( verbosity > 0 ) statusRx.status().dump();
+	//
+	//           sonarClient.reset( new SonarClient( ioSrv.service(), addr ) );
+	//
+	//         }
+	//       }
+	//
+	//       if( sonarClient ) {
+	//         // Do some stuff
+	//         sleep(1);
+	//       }
+	//
+	//     }
+	//
+	//     ioSrv.stop();
+	//
+	//   }
+	//   catch (std::exception& e)
+	//   {
+	//     LOG(WARNING) << "Exception: " << e.what();
+	//   }
+	//
+	//
+	//
+	// }
