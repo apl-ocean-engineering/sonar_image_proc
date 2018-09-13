@@ -13,6 +13,23 @@ namespace Encoder {
   class VideoEncoder {
   public:
 
+    struct OutputStream {
+        AVStream *st;
+        AVCodecContext *enc;
+
+        /* pts of the next frame that will be generated */
+        // int64_t next_pts;
+        // int samples_count;
+
+        AVFrame *frame;
+        AVFrame *tmp_frame;
+
+        // float t, tincr, tincr2;
+        // struct SwsContext *sws_ctx;
+        // struct SwrContext *swr_ctx;
+    };
+
+
     VideoEncoder();
 
     virtual ~VideoEncoder()
@@ -33,26 +50,27 @@ namespace Encoder {
     AVFrame * CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, int nHeight);
 
     // Add video stream
-    AVStream *AddVideoStream(AVFormatContext *pContext, AVCodecID codec_id);
+    static bool AddVideoStream(OutputStream *ost, AVFormatContext *pContext, AVCodecID codec_id);
     // Open Video Stream
-    bool OpenVideo(AVFormatContext *oc, AVStream *pStream);
+    static bool OpenVideo(AVFormatContext *oc, OutputStream *ost);
+
     // Close video stream
-    void CloseVideo(AVFormatContext *pContext, AVStream *pStream);
+    void CloseVideo(AVFormatContext *oc, OutputStream *ost);
 
     // Add audio stream
-    AVStream * AddAudioStream(AVFormatContext *pContext, AVCodecID codec_id);
-    // Open audio stream
-    bool OpenAudio(AVFormatContext *pContext, AVStream *pStream);
-    // close audio stream
-    void CloseAudio(AVFormatContext *pContext, AVStream *pStream);
+    // AVStream * AddAudioStream(AVFormatContext *pContext, AVCodecID codec_id);
+    // // Open audio stream
+    // bool OpenAudio(AVFormatContext *pContext, AVStream *pStream);
+    // // close audio stream
+    // void CloseAudio(AVFormatContext *pContext, AVStream *pStream);
 
     //== Add frames to movie ==
 
     // Add video frame to stream
-    bool AddVideoFrame(AVFrame * frame, AVCodecContext *pVideoCodec);
+    bool AddVideoFrame(AVFrame *data, OutputStream *ost);
 
     // Add audio samples to stream
-    bool AddAudioSample(AVFormatContext *_pFormatContext, AVStream *pStream, const char* soundBuffer, int soundBufferSize);
+    //bool AddAudioSample(AVFormatContext *_pFormatContext, AVStream *pStream, const char* soundBuffer, int soundBufferSize);
 
 
     // Free all resourses.
@@ -62,13 +80,18 @@ namespace Encoder {
 
     // output file name
     std::string     outputFilename;
+
     // output format.
     AVOutputFormat  *_pOutFormat;
+
     // format context
     AVFormatContext *_pFormatContext;
+
+    OutputStream *_vost;
+
     // video stream context
-    AVStream * _pVideoStream;
-    // audio streams context
+    // AVStream * _pVideoStream;
+    // // audio streams context
     AVStream * pAudioStream;
 
     // convert context context
