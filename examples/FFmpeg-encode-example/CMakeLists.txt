@@ -33,7 +33,8 @@ set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 fips_begin_app( encode cmdline )
 
-	fips_files(VideoEncoder.cpp)
+	fips_files( main.cpp VideoEncoder.cpp)
+	fips_libs( avutil avcodec swscale avformat )
 
 fips_end_app()
 

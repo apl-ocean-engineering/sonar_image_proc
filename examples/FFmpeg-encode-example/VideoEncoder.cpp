@@ -4,16 +4,43 @@ FFmpeg simple Encoder
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "ffmpegInclude.h"
+#include <stdint.h>
 #include <math.h>
+#include <algorithm>
+
+#include <iostream>
+
+#include "ffmpegInclude.h"
+
+
 #include "VideoEncoder.h"
 #include "Settings.h"
 
 
 #define MAX_AUDIO_PACKET_SIZE (128 * 1024)
 
+namespace Encoder {
 
-bool VideoEncoder::InitFile(std::string& inputFile, std::string& container)
+	using namespace std;
+
+	VideoEncoder::VideoEncoder()
+		: _pOutFormat( nullptr )
+  {
+    _pFormatContext = NULL;
+    pVideoStream = NULL;
+    pImgConvertCtx = NULL;
+    pCurrentPicture = NULL;
+    pVideoEncodeBuffer = NULL;
+    nSizeVideoEncodeBuffer = 0;
+    pAudioEncodeBuffer = NULL;
+    nSizeAudioEncodeBuffer = 0;
+    nAudioBufferSize = 1024 * 1024 * 4;
+    audioBuffer      = new char[nAudioBufferSize];
+    nAudioBufferSizeCurrent = 0;
+  }
+
+
+bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &container)
 {
 	bool res = false;
 
@@ -21,50 +48,49 @@ bool VideoEncoder::InitFile(std::string& inputFile, std::string& container)
 	outputFilename = inputFile;
 
 	// Initialize libavcodec
-	av_register_all();
+	avcodec_register_all();
+	av_register_all();					// Initializes libavformat
 
-	if (container == std::string("auto"))
-	{
+	if (container == std::string("auto")) {
 		// Create format
-		pOutFormat = av_guess_format(NULL, filename, NULL);
-	}
-	else
-	{
-		// use contanier
-		pOutFormat = av_guess_format(container.c_str(), NULL, NULL);
+		_pOutFormat = av_guess_format(NULL, filename, NULL);
+	} else {
+		// use container
+		_pOutFormat = av_guess_format(container.c_str(), NULL, NULL);
 	}
 
-	if (pOutFormat) 
-	{
+	if (_pOutFormat) {
+
+			cout << "Using container format " << _pOutFormat->name << " (" << _pOutFormat->long_name << ")" << endl;
+
 		// allocate context
-		pFormatContext = avformat_alloc_context();
-		if (pFormatContext) 
-		{    
-			pFormatContext->oformat = pOutFormat;
-			memcpy(pFormatContext->filename, filename, min(strlen(filename), 
-				sizeof(pFormatContext->filename)));
+		_pFormatContext = avformat_alloc_context();
+		if (_pFormatContext)
+		{
+			_pFormatContext->oformat = _pOutFormat;
+			memcpy(_pFormatContext->filename, filename, std::min(strlen(filename), sizeof(_pFormatContext->filename)));
 
 			// Add video and audio stream
-			pVideoStream   = AddVideoStream(pFormatContext, pOutFormat->video_codec);
-			pAudioStream   = AddAudioStream(pFormatContext, pOutFormat->audio_codec);
+			pVideoStream   = AddVideoStream(_pFormatContext, _pOutFormat->video_codec);
+			//pAudioStream   = AddAudioStream(_pFormatContext, _pOutFormat->audio_codec);
 
 			// Set the output parameters (must be done even if no
 			// parameters).
 			{
-				av_dump_format(pFormatContext, 0, filename, 1);
+				av_dump_format(_pFormatContext, 0, filename, 1);
 
 				// Open Video and Audio stream
 				res = false;
 				if (pVideoStream)
 				{
-					res = OpenVideo(pFormatContext, pVideoStream);
+					res = OpenVideo(_pFormatContext, pVideoStream);
 				}
 
-				res = OpenAudio(pFormatContext, pAudioStream);
+				res = OpenAudio(_pFormatContext, pAudioStream);
 
-				if (res && !(pOutFormat->flags & AVFMT_NOFILE)) 
+				if (res && !(_pOutFormat->flags & AVFMT_NOFILE))
 				{
-					if (avio_open(&pFormatContext->pb, filename, AVIO_FLAG_WRITE) < 0) 
+					if (avio_open(&_pFormatContext->pb, filename, AVIO_FLAG_WRITE) < 0)
 					{
 						res = false;
 						printf("Cannot open file\n");
@@ -74,11 +100,17 @@ bool VideoEncoder::InitFile(std::string& inputFile, std::string& container)
 				if (res)
 				{
 					// Write file header.
-					avformat_write_header(pFormatContext, NULL);
+					avformat_write_header(_pFormatContext, NULL);
 					res = true;
 				}
-			}    
-		}   
+			}
+		} else {
+			cerr << "Unable to allocate avformat context" << endl;
+			return false;
+		}
+	} else {
+		cerr << "Unable to determine output format." << endl;
+		return false;
 	}
 
 	if (!res)
@@ -101,13 +133,13 @@ bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBu
 	{
 		pVideoCodec = pVideoStream->codec;
 
-		if (NeedConvert()) 
+		if (NeedConvert())
 		{
 			// RGB to YUV420P.
-			if (!pImgConvertCtx) 
+			if (!pImgConvertCtx)
 			{
 				pImgConvertCtx = sws_getContext(pVideoCodec->width, pVideoCodec->height,
-					PIX_FMT_RGB24,
+					AV_PIX_FMT_RGB24,
 					pVideoCodec->width, pVideoCodec->height,
 					pVideoCodec->pix_fmt,
 					SWS_BICUBLIN, NULL, NULL, NULL);
@@ -115,14 +147,14 @@ bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBu
 		}
 
 		// Allocate picture.
-		pCurrentPicture = CreateFFmpegPicture(pVideoCodec->pix_fmt, pVideoCodec->width, 
+		pCurrentPicture = CreateFFmpegPicture(pVideoCodec->pix_fmt, pVideoCodec->width,
 			pVideoCodec->height);
 
-		if (NeedConvert() && pImgConvertCtx) 
+		if (NeedConvert() && pImgConvertCtx)
 		{
 			// Convert RGB to YUV.
 			sws_scale(pImgConvertCtx, frame->data, frame->linesize,
-				0, pVideoCodec->height, pCurrentPicture->data, pCurrentPicture->linesize);      
+				0, pVideoCodec->height, pCurrentPicture->data, pCurrentPicture->linesize);
 		}
 
 		res = AddVideoFrame(pCurrentPicture, pVideoStream->codec);
@@ -136,7 +168,7 @@ bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBu
 	// Add sound
 	if (soundBuffer && soundBufferSize > 0)
 	{
-		res = AddAudioSample(pFormatContext, pAudioStream, soundBuffer, soundBufferSize);
+		res = AddAudioSample(_pFormatContext, pAudioStream, soundBuffer, soundBufferSize);
 	}
 
 	return res;
@@ -148,9 +180,9 @@ bool VideoEncoder::Finish()
 	bool res = true;
 	// Todo: Maybe you need write audio samples from audioBuffer to file before cloasing.
 
-	if (pFormatContext)
+	if (_pFormatContext)
 	{
-		av_write_trailer(pFormatContext);
+		av_write_trailer(_pFormatContext);
 		Free();
 	}
 
@@ -168,35 +200,35 @@ void VideoEncoder::Free()
 {
 	bool res = true;
 
-	if (pFormatContext)
+	if (_pFormatContext)
 	{
 		// close video stream
 		if (pVideoStream)
 		{
-			CloseVideo(pFormatContext, pVideoStream);
+			CloseVideo(_pFormatContext, pVideoStream);
 		}
 
 		// close audio stream.
 		if (pAudioStream)
 		{
-			CloseAudio(pFormatContext, pAudioStream);
+			CloseAudio(_pFormatContext, pAudioStream);
 		}
 
 		// Free the streams.
-		for(size_t i = 0; i < pFormatContext->nb_streams; i++) 
+		for(size_t i = 0; i < _pFormatContext->nb_streams; i++)
 		{
-			av_freep(&pFormatContext->streams[i]->codec);
-			av_freep(&pFormatContext->streams[i]);
+			av_freep(&_pFormatContext->streams[i]->codec);
+			av_freep(&_pFormatContext->streams[i]);
 		}
 
-		if (!(pFormatContext->flags & AVFMT_NOFILE) && pFormatContext->pb) 
+		if (!(_pFormatContext->flags & AVFMT_NOFILE) && _pFormatContext->pb)
 		{
-			avio_close(pFormatContext->pb);
+			avio_close(_pFormatContext->pb);
 		}
 
 		// Free the stream.
-		av_free(pFormatContext);
-		pFormatContext = NULL;
+		av_free(_pFormatContext);
+		_pFormatContext = NULL;
 	}
 }
 
@@ -206,7 +238,7 @@ AVFrame * VideoEncoder::CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, i
 	uint8_t *picture_buf = NULL;
 	int size;
 
-	picture = avcodec_alloc_frame();
+	picture = av_frame_alloc();   ///avcodec_alloc_frame();
 	if ( !picture)
 	{
 		printf("Cannot create frame\n");
@@ -217,7 +249,7 @@ AVFrame * VideoEncoder::CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, i
 
 	picture_buf = (uint8_t *) av_malloc(size);
 
-	if (!picture_buf) 
+	if (!picture_buf)
 	{
 		av_free(picture);
 		printf("Cannot allocate buffer\n");
@@ -240,21 +272,21 @@ bool VideoEncoder::OpenVideo(AVFormatContext *oc, AVStream *pStream)
 
 	// Find the video encoder.
 	pCodec = avcodec_find_encoder(pContext->codec_id);
-	if (!pCodec) 
+	if (!pCodec)
 	{
 		printf("Cannot found video codec\n");
 		return false;
 	}
 
 	// Open the codec.
-	if (avcodec_open2(pContext, pCodec, NULL) < 0) 
+	if (avcodec_open2(pContext, pCodec, NULL) < 0)
 	{
 		printf("Cannot open video codec\n");
 		return false;
 	}
 
-	pVideoEncodeBuffer = NULL;      
-	if (!(pFormatContext->oformat->flags & AVFMT_RAWPICTURE)) 
+	pVideoEncodeBuffer = NULL;
+	if (!(_pFormatContext->oformat->flags & AVFMT_RAWPICTURE))
 	{
 		/* allocate output buffer */
 		nSizeVideoEncodeBuffer = 10000000;
@@ -293,7 +325,7 @@ bool VideoEncoder::NeedConvert()
 	bool res = false;
 	if (pVideoStream && pVideoStream->codec)
 	{
-		res = (pVideoStream->codec->pix_fmt != PIX_FMT_RGB24);
+		res = (pVideoStream->codec->pix_fmt != AV_PIX_FMT_RGB24);
 	}
 	return res;
 }
@@ -305,7 +337,7 @@ AVStream *VideoEncoder::AddVideoStream(AVFormatContext *pContext, AVCodecID code
 	AVStream *st    = NULL;
 
 	st = avformat_new_stream(pContext, 0);
-	if (!st) 
+	if (!st)
 	{
 		printf("Cannot add new vidoe stream\n");
 		return NULL;
@@ -328,10 +360,10 @@ AVStream *VideoEncoder::AddVideoStream(AVFormatContext *pContext, AVCodecID code
 	pCodecCxt->time_base.num = 1;
 	pCodecCxt->gop_size = 12; // emit one intra frame every twelve frames at most
 
-	pCodecCxt->pix_fmt = PIX_FMT_YUV420P;
-	if (pCodecCxt->codec_id == AV_CODEC_ID_MPEG2VIDEO) 
+	pCodecCxt->pix_fmt = AV_PIX_FMT_YUV420P;
+	if (pCodecCxt->codec_id == AV_CODEC_ID_MPEG2VIDEO)
 	{
-		// Just for testing, we also add B frames 
+		// Just for testing, we also add B frames
 		pCodecCxt->max_b_frames = 2;
 	}
 	if (pCodecCxt->codec_id == AV_CODEC_ID_MPEG1VIDEO)
@@ -359,7 +391,7 @@ AVStream * VideoEncoder::AddAudioStream(AVFormatContext *pContext, AVCodecID cod
 
 	// Try create stream.
 	pStream = avformat_new_stream(pContext, NULL);
-	if (!pStream) 
+	if (!pStream)
 	{
 		printf("Cannot add new audio stream\n");
 		return NULL;
@@ -377,7 +409,7 @@ AVStream * VideoEncoder::AddAudioStream(AVFormatContext *pContext, AVCodecID cod
 
 	nSizeAudioEncodeBuffer = 4 * MAX_AUDIO_PACKET_SIZE;
 	if (pAudioEncodeBuffer == NULL)
-	{      
+	{
 		pAudioEncodeBuffer = (uint8_t * )av_malloc(nSizeAudioEncodeBuffer);
 	}
 
@@ -399,25 +431,25 @@ bool VideoEncoder::OpenAudio(AVFormatContext *pContext, AVStream *pStream)
 
 	// Find the audio encoder.
 	pCodec = avcodec_find_encoder(pCodecCxt->codec_id);
-	if (!pCodec) 
+	if (!pCodec)
 	{
 		printf("Cannot open audio codec\n");
 		return false;
 	}
 
 	// Open it.
-	if (avcodec_open2(pCodecCxt, pCodec, NULL) < 0) 
+	if (avcodec_open2(pCodecCxt, pCodec, NULL) < 0)
 	{
 		printf("Cannot open audio codec\n");
 		return false;
 	}
 
-	if (pCodecCxt->frame_size <= 1) 
+	if (pCodecCxt->frame_size <= 1)
 	{
 		// Ugly hack for PCM codecs (will be removed ASAP with new PCM
-		// support to compute the input frame size in samples. 
+		// support to compute the input frame size in samples.
 		audioInputSampleSize = nSizeAudioEncodeBuffer / pCodecCxt->channels;
-		switch (pStream->codec->codec_id) 
+		switch (pStream->codec->codec_id)
 		{
 		case AV_CODEC_ID_PCM_S16LE:
 		case AV_CODEC_ID_PCM_S16BE:
@@ -429,8 +461,8 @@ bool VideoEncoder::OpenAudio(AVFormatContext *pContext, AVStream *pStream)
 			break;
 		}
 		pCodecCxt->frame_size = audioInputSampleSize;
-	} 
-	else 
+	}
+	else
 	{
 		audioInputSampleSize = pCodecCxt->frame_size;
 	}
@@ -455,7 +487,7 @@ bool VideoEncoder::AddVideoFrame(AVFrame * pOutputFrame, AVCodecContext *pVideoC
 {
 	bool res = false;
 
-	if (pFormatContext->oformat->flags & AVFMT_RAWPICTURE) 
+	if (_pFormatContext->oformat->flags & AVFMT_RAWPICTURE)
 	{
 		// Raw video case. The API will change slightly in the near
 		// future for that.
@@ -467,20 +499,20 @@ bool VideoEncoder::AddVideoFrame(AVFrame * pOutputFrame, AVCodecContext *pVideoC
 		pkt.data= (uint8_t *) pOutputFrame;
 		pkt.size= sizeof(AVPicture);
 
-		res = av_interleaved_write_frame(pFormatContext, &pkt);
+		res = av_interleaved_write_frame(_pFormatContext, &pkt);
 		res = true;
-	} 
-	else 
+	}
+	else
 	{
 		// Encode
 		AVPacket packet;
 		packet.data = pVideoEncodeBuffer;
-		packet.size = nSizeVideoEncodeBuffer; 
+		packet.size = nSizeVideoEncodeBuffer;
 
 		int nOutputSize = 0;
 		// Encode frame to packet.
 		int error = avcodec_encode_video2(pVideoCodec, &packet, pOutputFrame, &nOutputSize);
-		if (!error && nOutputSize > 0) 
+		if (!error && nOutputSize > 0)
 		{
 			AVPacket pkt;
 			av_init_packet(&pkt);
@@ -503,9 +535,9 @@ bool VideoEncoder::AddVideoFrame(AVFrame * pOutputFrame, AVCodecContext *pVideoC
 			pkt.size         = packet.size;
 
 			// Write packet with frame.
-			res = (av_interleaved_write_frame(pFormatContext, &pkt) == 0);
+			res = (av_interleaved_write_frame(_pFormatContext, &pkt) == 0);
 		}
-		else 
+		else
 		{
 			res = false;
 		}
@@ -515,17 +547,17 @@ bool VideoEncoder::AddVideoFrame(AVFrame * pOutputFrame, AVCodecContext *pVideoC
 }
 
 
-bool VideoEncoder::AddAudioSample(AVFormatContext *pFormatContext, AVStream *pStream, 
+bool VideoEncoder::AddAudioSample(AVFormatContext *_pFormatContext, AVStream *pStream,
 								  const char* soundBuffer, int soundBufferSize)
 {
-	AVCodecContext *pCodecCxt = NULL;    
-	bool res = true;  
+	AVCodecContext *pCodecCxt = NULL;
+	bool res = true;
 
 	pCodecCxt       = pStream->codec;
 
 	// Size of packet on bytes.
 	// FORMAT s16
-	DWORD packSizeInSize = soundBufferSize;
+	uint32_t packSizeInSize = soundBufferSize;
 
 	int nCountSamples    = soundBufferSize / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
@@ -535,22 +567,22 @@ bool VideoEncoder::AddAudioSample(AVFormatContext *pFormatContext, AVStream *pSt
 
 	int nCurrentSize    = nAudioBufferSizeCurrent;
 	int nWriteSamples   = 0;
-	BYTE * pSoundBuffer = (BYTE *)audioBuffer;
+	uint8_t *pSoundBuffer = (uint8_t *)audioBuffer;
 
 	while (nCurrentSize >= packSizeInSize)
 	{
 		AVFrame*  pAudioFrame = NULL;
 
-		pAudioFrame = avcodec_alloc_frame();
+		pAudioFrame = av_frame_alloc();   ///avcodec_alloc_frame();
 
 		// Audio frame should be equal or smaller pCodecCxt->frame_size.
-		pAudioFrame->nb_samples = min(pCodecCxt->frame_size / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16), nCountSamples);
+		pAudioFrame->nb_samples = std::min(pCodecCxt->frame_size / av_get_bytes_per_sample(AV_SAMPLE_FMT_S16), nCountSamples);
 		int nBufferShift        = nWriteSamples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 		int nCurrentBufferSize  = pAudioFrame->nb_samples * av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
 
-		if (avcodec_fill_audio_frame(pAudioFrame, 1, 
-			AV_SAMPLE_FMT_S16, 
-			(uint8_t *)pSoundBuffer, 
+		if (avcodec_fill_audio_frame(pAudioFrame, 1,
+			AV_SAMPLE_FMT_S16,
+			(uint8_t *)pSoundBuffer,
 			nCurrentBufferSize, 1) != 0)
 		{
 			res = false;
@@ -579,24 +611,25 @@ bool VideoEncoder::AddAudioSample(AVFormatContext *pFormatContext, AVStream *pSt
 			pkt.stream_index = pStream->index;
 
 			// Write the compressed frame in the media file.
-			if (av_interleaved_write_frame(pFormatContext, &pkt) != 0) 
+			if (av_interleaved_write_frame(_pFormatContext, &pkt) != 0)
 			{
 				res = false;
 				break;
 			}
 		}
 
-		nCurrentSize  -= nCurrentBufferSize;  
-		pSoundBuffer  += nCurrentBufferSize;      
+		nCurrentSize  -= nCurrentBufferSize;
+		pSoundBuffer  += nCurrentBufferSize;
 
 		nWriteSamples += pAudioFrame->nb_samples;
-		avcodec_free_frame(&pAudioFrame);
+		av_frame_free(&pAudioFrame);     //was: avcodec_free_frame(&pAudioFrame);
 	}
 
 	// save excess
 	memcpy(audioBuffer, audioBuffer + nAudioBufferSizeCurrent - nCurrentSize, nCurrentSize);
-	nAudioBufferSizeCurrent = nCurrentSize; 
+	nAudioBufferSizeCurrent = nCurrentSize;
 
 	return res;
 }
 
+};
