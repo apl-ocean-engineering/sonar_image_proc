@@ -31,8 +31,10 @@ namespace Encoder {
 
     // Add video stream
     AVStream *AddVideoStream(AVFormatContext *pContext, AVCodecID codec_id);
+
     // Open Video Stream
     bool OpenVideo(AVFormatContext *oc, AVStream *pStream);
+
     // Allocate memory
     AVFrame * CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, int nHeight);
     // Close video stream
