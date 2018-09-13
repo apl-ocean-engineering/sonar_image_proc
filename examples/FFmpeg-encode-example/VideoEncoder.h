@@ -29,26 +29,33 @@ namespace Encoder {
 
   private:
 
+    // Allocate memory
+    AVFrame * CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, int nHeight);
+
     // Add video stream
     AVStream *AddVideoStream(AVFormatContext *pContext, AVCodecID codec_id);
     // Open Video Stream
     bool OpenVideo(AVFormatContext *oc, AVStream *pStream);
-    // Allocate memory
-    AVFrame * CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, int nHeight);
     // Close video stream
     void CloseVideo(AVFormatContext *pContext, AVStream *pStream);
+
     // Add audio stream
     AVStream * AddAudioStream(AVFormatContext *pContext, AVCodecID codec_id);
     // Open audio stream
     bool OpenAudio(AVFormatContext *pContext, AVStream *pStream);
     // close audio stream
     void CloseAudio(AVFormatContext *pContext, AVStream *pStream);
-    // Add video frame
+
+    //== Add frames to movie ==
+
+    // Add video frame to stream
     bool AddVideoFrame(AVFrame * frame, AVCodecContext *pVideoCodec);
-    // Add audio samples
+
+    // Add audio samples to stream
     bool AddAudioSample(AVFormatContext *_pFormatContext, AVStream *pStream, const char* soundBuffer, int soundBufferSize);
 
-    // Free resourses.
+
+    // Free all resourses.
     void Free();
     bool NeedConvert();
 
@@ -60,11 +67,12 @@ namespace Encoder {
     // format context
     AVFormatContext *_pFormatContext;
     // video stream context
-    AVStream * pVideoStream;
+    AVStream * _pVideoStream;
     // audio streams context
     AVStream * pAudioStream;
+
     // convert context context
-    struct SwsContext *pImgConvertCtx;
+    struct SwsContext *_pImgConvertCtx;
     // encode buffer and size
     uint8_t * pVideoEncodeBuffer;
     int nSizeVideoEncodeBuffer;

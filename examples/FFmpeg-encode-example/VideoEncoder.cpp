@@ -24,13 +24,13 @@ namespace Encoder {
 	using namespace std;
 
 	VideoEncoder::VideoEncoder()
-		: _pOutFormat( nullptr )
+		: _pOutFormat( nullptr ),
+			_pFormatContext( nullptr ),
+			_pVideoStream( nullptr ),
+			_pImgConvertCtx( nullptr ),
+	    pCurrentPicture( nullptr ),
+	    pVideoEncodeBuffer( nullptr )
   {
-    _pFormatContext = NULL;
-    pVideoStream = NULL;
-    pImgConvertCtx = NULL;
-    pCurrentPicture = NULL;
-    pVideoEncodeBuffer = NULL;
     nSizeVideoEncodeBuffer = 0;
     pAudioEncodeBuffer = NULL;
     nSizeAudioEncodeBuffer = 0;
@@ -52,10 +52,8 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 	av_register_all();					// Initializes libavformat
 
 	if (container == std::string("auto")) {
-		// Create format
 		_pOutFormat = av_guess_format(NULL, filename, NULL);
 	} else {
-		// use container
 		_pOutFormat = av_guess_format(container.c_str(), NULL, NULL);
 	}
 
@@ -70,8 +68,11 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 			_pFormatContext->oformat = _pOutFormat;
 			memcpy(_pFormatContext->filename, filename, std::min(strlen(filename), sizeof(_pFormatContext->filename)));
 
+			AVCodecID codec_id = _pOutFormat->video_codec;
+			if( _pOutFormat->name == std::string("mov") ) codec_id = AV_CODEC_ID_PRORES;
+
 			// Add video and audio stream
-			pVideoStream   = AddVideoStream(_pFormatContext, _pOutFormat->video_codec);
+			_pVideoStream   = AddVideoStream(_pFormatContext, codec_id );
 			//pAudioStream   = AddAudioStream(_pFormatContext, _pOutFormat->audio_codec);
 
 			// Set the output parameters (must be done even if no
@@ -81,12 +82,15 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 
 				// Open Video and Audio stream
 				res = false;
-				if (pVideoStream)
-				{
-					res = OpenVideo(_pFormatContext, pVideoStream);
+				if (_pVideoStream) {
+					cout << "Opening video stream" << endl;
+					res = OpenVideo(_pFormatContext, _pVideoStream);
 				}
 
-				res = OpenAudio(_pFormatContext, pAudioStream);
+				if( pAudioStream ) {
+					cout << "Opening audio stream" << endl;
+					res = OpenAudio(_pFormatContext, pAudioStream);
+				}
 
 				if (res && !(_pOutFormat->flags & AVFMT_NOFILE))
 				{
@@ -99,6 +103,8 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 
 				if (res)
 				{
+					cout << "Writing file header" << endl;
+
 					// Write file header.
 					avformat_write_header(_pFormatContext, NULL);
 					res = true;
@@ -116,7 +122,7 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 	if (!res)
 	{
 		Free();
-		printf("Cannot init file\n");
+		cerr << "Cannot init file" << endl;
 	}
 
 	return res;
@@ -129,16 +135,16 @@ bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBu
 	int nOutputSize = 0;
 	AVCodecContext *pVideoCodec = NULL;
 
-	if (pVideoStream && frame && frame->data[0])
+	if (_pVideoStream && frame && frame->data[0])
 	{
-		pVideoCodec = pVideoStream->codec;
+		pVideoCodec = _pVideoStream->codec;
 
 		if (NeedConvert())
 		{
 			// RGB to YUV420P.
-			if (!pImgConvertCtx)
+			if (!_pImgConvertCtx)
 			{
-				pImgConvertCtx = sws_getContext(pVideoCodec->width, pVideoCodec->height,
+				_pImgConvertCtx = sws_getContext(pVideoCodec->width, pVideoCodec->height,
 					AV_PIX_FMT_RGB24,
 					pVideoCodec->width, pVideoCodec->height,
 					pVideoCodec->pix_fmt,
@@ -150,14 +156,13 @@ bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBu
 		pCurrentPicture = CreateFFmpegPicture(pVideoCodec->pix_fmt, pVideoCodec->width,
 			pVideoCodec->height);
 
-		if (NeedConvert() && pImgConvertCtx)
-		{
+		if (NeedConvert() && _pImgConvertCtx)	{
 			// Convert RGB to YUV.
-			sws_scale(pImgConvertCtx, frame->data, frame->linesize,
+			sws_scale(_pImgConvertCtx, frame->data, frame->linesize,
 				0, pVideoCodec->height, pCurrentPicture->data, pCurrentPicture->linesize);
 		}
 
-		res = AddVideoFrame(pCurrentPicture, pVideoStream->codec);
+		res = AddVideoFrame(pCurrentPicture, _pVideoStream->codec);
 
 		// Free temp frame
 		av_free(pCurrentPicture->data[0]);
@@ -166,8 +171,7 @@ bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBu
 	}
 
 	// Add sound
-	if (soundBuffer && soundBufferSize > 0)
-	{
+	if (soundBuffer && soundBufferSize > 0)	{
 		res = AddAudioSample(_pFormatContext, pAudioStream, soundBuffer, soundBufferSize);
 	}
 
@@ -203,9 +207,9 @@ void VideoEncoder::Free()
 	if (_pFormatContext)
 	{
 		// close video stream
-		if (pVideoStream)
+		if (_pVideoStream)
 		{
-			CloseVideo(_pFormatContext, pVideoStream);
+			CloseVideo(_pFormatContext, _pVideoStream);
 		}
 
 		// close audio stream.
@@ -272,26 +276,27 @@ bool VideoEncoder::OpenVideo(AVFormatContext *oc, AVStream *pStream)
 
 	// Find the video encoder.
 	pCodec = avcodec_find_encoder(pContext->codec_id);
-	if (!pCodec)
-	{
-		printf("Cannot found video codec\n");
+	if (!pCodec) {
+		cerr << "Cannot find video codec" << endl;
 		return false;
 	}
 
 	// Open the codec.
 	if (avcodec_open2(pContext, pCodec, NULL) < 0)
 	{
-		printf("Cannot open video codec\n");
+		cerr << "Cannot open video codec" << endl;
 		return false;
 	}
 
 	pVideoEncodeBuffer = NULL;
-	if (!(_pFormatContext->oformat->flags & AVFMT_RAWPICTURE))
-	{
+
+	// AVFMT_RAWPICTURE is apparently no longer used, so this is always true
+	// if (!(_pFormatContext->oformat->flags & AVFMT_RAWPICTURE))
+	// {
 		/* allocate output buffer */
 		nSizeVideoEncodeBuffer = 10000000;
 		pVideoEncodeBuffer = (uint8_t *)av_malloc(nSizeVideoEncodeBuffer);
-	}
+//	}
 
 	return true;
 }
@@ -323,9 +328,9 @@ void VideoEncoder::CloseVideo(AVFormatContext *pContext, AVStream *pStream)
 bool VideoEncoder::NeedConvert()
 {
 	bool res = false;
-	if (pVideoStream && pVideoStream->codec)
+	if (_pVideoStream && _pVideoStream->codec)
 	{
-		res = (pVideoStream->codec->pix_fmt != AV_PIX_FMT_RGB24);
+		res = (_pVideoStream->codec->pix_fmt != AV_PIX_FMT_RGB24);
 	}
 	return res;
 }
@@ -333,53 +338,90 @@ bool VideoEncoder::NeedConvert()
 
 AVStream *VideoEncoder::AddVideoStream(AVFormatContext *pContext, AVCodecID codec_id)
 {
-	AVCodecContext *pCodecCxt = NULL;
+	//AVCodecContext *pCodecCxt = NULL;
+	//AVCodecParserContext *cparser = NULL;
 	AVStream *st    = NULL;
 
-	st = avformat_new_stream(pContext, 0);
-	if (!st)
 	{
-		printf("Cannot add new vidoe stream\n");
+		 const AVCodecDescriptor *codecDesc = avcodec_descriptor_get(codec_id);
+		 if( codecDesc ) {
+			  cout << "Using codec " << codec_id << ": " << codecDesc->name << " (" << codecDesc->long_name << ")"  << endl;
+		 } else {
+			 cerr << "Could not retrieve codec description for " << codec_id << endl;
+			 return nullptr;
+		 }
+	}
+
+	AVCodec *codec = avcodec_find_encoder( codec_id );
+	if( codec == nullptr ) {
+		cerr << "Unable to find encoder" << endl;
+		return nullptr;
+	}
+
+	st = avformat_new_stream(pContext, codec);
+	if (!st){
+		cerr << "Cannot add new video stream" << endl;
 		return NULL;
 	}
 
-	pCodecCxt = st->codec;
-	pCodecCxt->codec_id = (AVCodecID)codec_id;
-	pCodecCxt->codec_type = AVMEDIA_TYPE_VIDEO;
-	pCodecCxt->frame_number = 0;
-	// Put sample parameters.
-	pCodecCxt->bit_rate = 2000000;
+	AVCodecContext *codecCtx = st->codec;
+
+	// pCodecCxt->codec_id = (AVCodecID)codec_id;
+	// pCodecCxt->codec_type = AVMEDIA_TYPE_VIDEO;
+	// pCodecCxt->frame_number = 0;
+	// // Put sample parameters.
+	// pCodecCxt->bit_rate = 2000000;
 	// Resolution must be a multiple of two.
-	pCodecCxt->width  = W_VIDEO;
-	pCodecCxt->height = H_VIDEO;
+
+	// This causes a silent crash
+	//cparser->width  = W_VIDEO;
+	//cparser->height = H_VIDEO;
+
+	//AVCodecParameters *codecPars = stream->codecpar;
+	codecCtx->width = W_VIDEO;
+	codecCtx->height = H_VIDEO;
+
 	/* time base: this is the fundamental unit of time (in seconds) in terms
 	of which frame timestamps are represented. for fixed-fps content,
 	timebase should be 1/framerate and timestamp increments should be
 	identically 1. */
-	pCodecCxt->time_base.den = 25;
-	pCodecCxt->time_base.num = 1;
-	pCodecCxt->gop_size = 12; // emit one intra frame every twelve frames at most
+	codecCtx->time_base.den = 25;
+	codecCtx->time_base.num = 1;
+	// st->time_base.den = 25;
+	// st->time_base.num = 1;
 
-	pCodecCxt->pix_fmt = AV_PIX_FMT_YUV420P;
-	if (pCodecCxt->codec_id == AV_CODEC_ID_MPEG2VIDEO)
-	{
+	//pCodecCxt->gop_size = 12; // emit one intra frame every twelve frames at most
+
+	//st->codecpar->format = AV_PIX_FMT_YUV420P;
+	if (codecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
 		// Just for testing, we also add B frames
-		pCodecCxt->max_b_frames = 2;
-	}
-	if (pCodecCxt->codec_id == AV_CODEC_ID_MPEG1VIDEO)
-	{
+		//pCodecCxt->max_b_frames = 2;
+	} else if (codecCtx->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
 		/* Needed to avoid using macroblocks in which some coeffs overflow.
 		This does not happen with normal video, it just happens here as
 		the motion of the chroma plane does not match the luma plane. */
-		pCodecCxt->mb_decision = 2;
+		//pCodecCxt->mb_decision = 2;
+	} else if (codecCtx->codec_id = AV_CODEC_ID_PRORES ) {
+		const enum AVPixelFormat *pixFmt = codec->pix_fmts;
+		int i = 0;
+		for( int i = 0; pixFmt[i] != -1; i++ ) {
+			cout << "Supports pix fmt " << pixFmt[i] << endl;
+		}
+
+		codecCtx->pix_fmt = pixFmt[0];
+
+		// 0 = Proxy
+		// 1 = LT
+		// 2 = normal
+		// 3 = HQ
+		codecCtx->profile = 2;
 	}
 
 	// Some formats want stream headers to be separate.
-	if(pContext->oformat->flags & AVFMT_GLOBALHEADER)
-	{
-		pCodecCxt->flags |= CODEC_FLAG_GLOBAL_HEADER;
-	}
-
+	// if(pContext->oformat->flags & AVFMT_GLOBALHEADER)
+	// {
+	// 	pCodecCxt->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+	// }
 	return st;
 }
 
@@ -416,7 +458,7 @@ AVStream * VideoEncoder::AddAudioStream(AVFormatContext *pContext, AVCodecID cod
 	// Some formats want stream headers to be separate.
 	if(pContext->oformat->flags & AVFMT_GLOBALHEADER)
 	{
-		pCodecCxt->flags |= CODEC_FLAG_GLOBAL_HEADER;
+		pCodecCxt->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 	}
 
 	return pStream;
@@ -487,23 +529,23 @@ bool VideoEncoder::AddVideoFrame(AVFrame * pOutputFrame, AVCodecContext *pVideoC
 {
 	bool res = false;
 
-	if (_pFormatContext->oformat->flags & AVFMT_RAWPICTURE)
-	{
-		// Raw video case. The API will change slightly in the near
-		// future for that.
-		AVPacket pkt;
-		av_init_packet(&pkt);
-
-		pkt.flags |= AV_PKT_FLAG_KEY;
-		pkt.stream_index = pVideoStream->index;
-		pkt.data= (uint8_t *) pOutputFrame;
-		pkt.size= sizeof(AVPicture);
-
-		res = av_interleaved_write_frame(_pFormatContext, &pkt);
-		res = true;
-	}
-	else
-	{
+	// if (_pFormatContext->oformat->flags & AVFMT_RAWPICTURE)
+	// {
+	// 	// Raw video case. The API will change slightly in the near
+	// 	// future for that.
+	// 	AVPacket pkt;
+	// 	av_init_packet(&pkt);
+	//
+	// 	pkt.flags |= AV_PKT_FLAG_KEY;
+	// 	pkt.stream_index = _pVideoStream->index;
+	// 	pkt.data= (uint8_t *) pOutputFrame;
+	// 	pkt.size= sizeof(AVPicture);
+	//
+	// 	res = av_interleaved_write_frame(_pFormatContext, &pkt);
+	// 	res = true;
+	// }
+	// else
+	// {
 		// Encode
 		AVPacket packet;
 		packet.data = pVideoEncodeBuffer;
@@ -530,7 +572,7 @@ bool VideoEncoder::AddVideoFrame(AVFrame * pOutputFrame, AVCodecContext *pVideoC
 			{
 				pkt.flags |= AV_PKT_FLAG_KEY;
 			}
-			pkt.stream_index = pVideoStream->index;
+			pkt.stream_index = _pVideoStream->index;
 			pkt.data         = pVideoEncodeBuffer;
 			pkt.size         = packet.size;
 
@@ -541,7 +583,7 @@ bool VideoEncoder::AddVideoFrame(AVFrame * pOutputFrame, AVCodecContext *pVideoC
 		{
 			res = false;
 		}
-	}
+	//}
 
 	return res;
 }
