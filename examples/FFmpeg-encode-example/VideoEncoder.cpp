@@ -49,7 +49,8 @@ namespace Encoder {
 			_vost( new OutputStream ),
 			_pImgConvertCtx( nullptr ),
 	    pCurrentPicture( nullptr ),
-	    pVideoEncodeBuffer( nullptr )
+	    pVideoEncodeBuffer( nullptr ),
+			numFrames(0)
   {
     nSizeVideoEncodeBuffer = 0;
     pAudioEncodeBuffer = NULL;
@@ -57,6 +58,8 @@ namespace Encoder {
     nAudioBufferSize = 1024 * 1024 * 4;
     audioBuffer      = new char[nAudioBufferSize];
     nAudioBufferSizeCurrent = 0;
+
+		av_log_set_level( AV_LOG_VERBOSE );
   }
 
 
@@ -157,53 +160,6 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 }
 
 
-bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBufferSize)
-{
-	bool res = true;
-	int nOutputSize = 0;
-	AVCodecContext *pVideoCodec = NULL;
-
-	if (_vost && frame && frame->data[0])
-	{
-		//pVideoCodec = _pVideoStream->codec;
-
-		if (NeedConvert()) {
-
-			// RGB to YUV420P.
-			if (!_pImgConvertCtx)
-			{
-				_pImgConvertCtx = sws_getContext(_vost->enc->width, _vost->enc->height,
-																					AV_PIX_FMT_RGB24,
-																					_vost->enc->width, _vost->enc->height,
-																					_vost->enc->pix_fmt,
-																					SWS_BICUBLIN, NULL, NULL, NULL);
-			}
-		}
-
-		// Allocate picture.
-		pCurrentPicture = CreateFFmpegPicture(_vost->enc->pix_fmt, _vost->enc->width, _vost->enc->height);
-
-		if (NeedConvert() && _pImgConvertCtx)	{
-			// Convert RGB to YUV.
-			sws_scale(_pImgConvertCtx, frame->data, frame->linesize,
-				0, _vost->enc->height, pCurrentPicture->data, pCurrentPicture->linesize);
-		}
-
-		res = AddVideoFrame(pCurrentPicture, _vost);
-
-		// Free temp frame
-		av_free(pCurrentPicture->data[0]);
-		av_free(pCurrentPicture);
-		pCurrentPicture = NULL;
-	}
-
-	// Add sound
-	// if (soundBuffer && soundBufferSize > 0)	{
-	// 	res = AddAudioSample(_pFormatContext, pAudioStream, soundBuffer, soundBufferSize);
-	// }
-
-	return res;
-}
 
 
 bool VideoEncoder::Finish()
@@ -259,36 +215,48 @@ void VideoEncoder::Free()
 		_pFormatContext = NULL;
 	}
 }
-
-AVFrame * VideoEncoder::CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, int nHeight)
-{
-	AVFrame *picture     = NULL;
-	uint8_t *picture_buf = NULL;
-	int size;
-
-	picture = av_frame_alloc();   ///avcodec_alloc_frame();
-	if ( !picture)
-	{
-		printf("Cannot create frame\n");
-		return NULL;
-	}
-
-	size = avpicture_get_size(pix_fmt, nWidth, nHeight);
-
-	picture_buf = (uint8_t *) av_malloc(size);
-
-	if (!picture_buf)
-	{
-		av_free(picture);
-		printf("Cannot allocate buffer\n");
-		return NULL;
-	}
-
-	avpicture_fill((AVPicture *)picture, picture_buf,
-		pix_fmt, nWidth, nHeight);
-
-	return picture;
-}
+//
+// AVFrame * VideoEncoder::CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, int nHeight)
+// {
+// 	AVFrame *frame     = NULL;
+// 	// uint8_t *picture_buf = NULL;
+// 	int size;
+//
+// 	frame = av_frame_alloc();   ///avcodec_alloc_frame();
+// 	if ( !frame)
+// 	{
+// 		cerr << "Cannot create frame" << endl;
+// 		return NULL;
+// 	}
+//
+// frame->format = pix_fmt;
+// frame->width = nWidth;
+// frame->height = nHeight;
+//
+// 	auto res = av_frame_get_buffer( frame, 32 );
+// 	if( res < 0 ) {
+// 		cerr << "Unable to allocate buffers.";
+// 		return nullptr;
+// 	}
+//
+// 	// size = avpicture_get_size(pix_fmt, nWidth, nHeight);
+// 	//
+// 	// picture_buf = (uint8_t *) av_malloc(size);
+// 	//
+// 	// if (!picture_buf)
+// 	// {
+// 	// 	av_free(picture);
+// 	// 	printf("Cannot allocate buffer\n");
+// 	// 	return NULL;
+// 	// }
+//
+// 	// auto res = avpicture_alloc((AVPicture *)picture, pix_fmt, nWidth, nHeight);
+// 	// if( res < 0 ) {
+// 	// 	cerr << "Enabled to setup avpicture"
+// 	// }
+//
+// 	return frame;
+// }
 
 
 bool VideoEncoder::OpenVideo(AVFormatContext *oc, OutputStream *ost)
@@ -397,16 +365,6 @@ void VideoEncoder::CloseVideo(AVFormatContext *pContext, OutputStream *ost)
 }
 
 
-bool VideoEncoder::NeedConvert()
-{
-	bool res = false;
-	if (_vost && _vost->enc) {
-		res = (_vost->enc->pix_fmt != AV_PIX_FMT_RGB24);
-	}
-	return res;
-}
-
-
 bool VideoEncoder::AddVideoStream(OutputStream *vost, AVFormatContext *pContext, AVCodecID codec_id)
 {
 	//AVCodecContext *pCodecCxt = NULL;
@@ -475,8 +433,9 @@ bool VideoEncoder::AddVideoStream(OutputStream *vost, AVFormatContext *pContext,
 	of which frame timestamps are represented. for fixed-fps content,
 	timebase should be 1/framerate and timestamp increments should be
 	identically 1. */
-	c->time_base.den = 25;
+	c->time_base.den = 30;
 	c->time_base.num = 1;
+
 	vost->st->time_base = c->time_base;
 
 	//pCodecCxt->gop_size = 12; // emit one intra frame every twelve frames at most
@@ -517,6 +476,8 @@ bool VideoEncoder::AddVideoStream(OutputStream *vost, AVFormatContext *pContext,
 	// }
 	return true;
 }
+
+
 
 //
 // AVStream * VideoEncoder::AddAudioStream(AVFormatContext *pContext, AVCodecID codec_id)
@@ -618,7 +579,69 @@ bool VideoEncoder::AddVideoStream(OutputStream *vost, AVFormatContext *pContext,
 // }
 //
 
-bool VideoEncoder::AddVideoFrame(AVFrame *data, OutputStream *ost)
+bool VideoEncoder::AddFrame(AVFrame* frame, const char* soundBuffer, int soundBufferSize)
+{
+	bool res = true;
+	int nOutputSize = 0;
+	AVCodecContext *pVideoCodec = NULL;
+
+	if (_vost && frame && frame->data[0])
+	{
+		//pVideoCodec = _pVideoStream->codec;
+
+
+
+		if (NeedConvert()) {
+
+			// RGB to YUV420P.
+			if (!_pImgConvertCtx)
+			{
+				_pImgConvertCtx = sws_getContext(_vost->enc->width, _vost->enc->height,
+																					AV_PIX_FMT_RGB24,
+																					_vost->enc->width, _vost->enc->height,
+																					_vost->enc->pix_fmt,
+																					SWS_BICUBLIN, NULL, NULL, NULL);
+			}
+		}
+
+		// Allocate picture.
+		pCurrentPicture = alloc_picture(_vost->enc->pix_fmt, _vost->enc->width, _vost->enc->height);
+		if( pCurrentPicture == nullptr ) {
+			cerr << "Unable to allocate temporary buffer" << endl;
+			return false;
+		}
+
+		if (NeedConvert() && _pImgConvertCtx)	{
+			// Convert RGB to YUV.
+			auto res = sws_scale(_pImgConvertCtx, frame->data, frame->linesize, 0,
+								_vost->enc->height, pCurrentPicture->data, pCurrentPicture->linesize);
+
+
+		}
+
+	pCurrentPicture->pts = numFrames;
+	numFrames++;
+
+	cout << "Writing frame " << pCurrentPicture->pts << endl;
+
+		res = AddVideoFrame(pCurrentPicture, _vost);
+
+		// Free temp frame
+		av_free(pCurrentPicture->data[0]);
+		av_free(pCurrentPicture);
+		pCurrentPicture = NULL;
+	}
+
+	// Add sound
+	// if (soundBuffer && soundBufferSize > 0)	{
+	// 	res = AddAudioSample(_pFormatContext, pAudioStream, soundBuffer, soundBufferSize);
+	// }
+
+	return res;
+}
+
+
+bool VideoEncoder::AddVideoFrame(AVFrame *frame, OutputStream *ost)
 {
 	bool res = false;
 
@@ -644,37 +667,55 @@ bool VideoEncoder::AddVideoFrame(AVFrame *data, OutputStream *ost)
 		AVPacket packet;
 		packet.data = pVideoEncodeBuffer;
 		packet.size = nSizeVideoEncodeBuffer;
+		packet.pts  = frame->pts;
 
 		int nOutputSize = 0;
 		// Encode frame to packet.
-		int error = avcodec_encode_video2(ost->enc, &packet, data, &nOutputSize);
-		if (!error && nOutputSize > 0) {
+		int error = avcodec_encode_video2(ost->enc, &packet, frame, &nOutputSize);
+		if (error || nOutputSize <= 0) {
+			cerr << "Error encoding video" << endl;
+			return false;
+		}
+
 			AVPacket pkt;
 			av_init_packet(&pkt);
 
-			if (ost->enc->coded_frame->pts != AV_NOPTS_VALUE) 	{
-				pkt.pts = AV_NOPTS_VALUE;
-			}	else {
-				int a = 0;
-			}
+			// if (ost->enc->coded_frame->pts != AV_NOPTS_VALUE) 	{
+			// 	av_packet_rescale_tx( pkt, )
+			// 	pkt.pts = AV_NOPTS_VALUE;
+			// }	else {
+			// 	int a = 0;
+			// }
 
 			if(ost->enc->coded_frame->key_frame) {
 				pkt.flags |= AV_PKT_FLAG_KEY;
 			}
+
 			pkt.stream_index = ost->st->index;
 			pkt.data         = pVideoEncodeBuffer;
 			pkt.size         = packet.size;
+			pkt.pts          = frame->pts;
+			pkt.dts          = 0;
 
-			// Write packet with frame.
-			res = (av_interleaved_write_frame(_pFormatContext, &pkt) == 0);
-		}
-		else
 		{
-			res = false;
+			// Write packet with frame.
+			auto res = (av_interleaved_write_frame(_pFormatContext, &pkt) == 0);
+			if( res <= 0 ) {
+				cerr << "Error writing interleaved frame" << endl;
+				return false;
+			}
 		}
-	//}
 
-	return res;
+	return true;
+}
+
+bool VideoEncoder::NeedConvert()
+{
+	bool res = false;
+	if (_vost && _vost->enc) {
+		return (_vost->enc->pix_fmt != AV_PIX_FMT_RGB24);
+	}
+	return false;
 }
 
 //

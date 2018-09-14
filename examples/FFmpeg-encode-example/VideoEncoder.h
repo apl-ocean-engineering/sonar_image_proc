@@ -50,9 +50,9 @@ namespace Encoder {
     AVFrame * CreateFFmpegPicture(AVPixelFormat pix_fmt, int nWidth, int nHeight);
 
     // Add video stream
-    static bool AddVideoStream(OutputStream *ost, AVFormatContext *pContext, AVCodecID codec_id);
+    bool AddVideoStream(OutputStream *ost, AVFormatContext *pContext, AVCodecID codec_id);
     // Open Video Stream
-    static bool OpenVideo(AVFormatContext *oc, OutputStream *ost);
+    bool OpenVideo(AVFormatContext *oc, OutputStream *ost);
 
     // Close video stream
     void CloseVideo(AVFormatContext *oc, OutputStream *ost);
@@ -104,6 +104,8 @@ namespace Encoder {
     uint8_t * pAudioEncodeBuffer;
     int nSizeAudioEncodeBuffer;
 
+
+    int numFrames;
 
     // count of sample
     int audioInputSampleSize;
