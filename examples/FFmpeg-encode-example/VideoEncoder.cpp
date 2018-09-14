@@ -149,6 +149,9 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 	nSizeVideoEncodeBuffer = 10000000;
 	pVideoEncodeBuffer = (uint8_t *)av_malloc(nSizeVideoEncodeBuffer);
 
+	cout << "Codec time base: " << _vost->enc->time_base.num << "/" << _vost->enc->time_base.den << endl;
+	cout << "Video stream time base: " << _vost->st->time_base.num << "/" << _vost->st->time_base.den << endl;
+
 
 	if (!res)
 	{
@@ -302,7 +305,7 @@ bool VideoEncoder::OpenVideo(AVFormatContext *oc, OutputStream *ost)
 	// 		}
 	// }
 
-	/* copy the stream parameters to the muxer */
+	/* copy the codec parameters to the stream */
 	ret = avcodec_parameters_from_context(ost->st->codecpar, ost->enc);
 	if (ret < 0) {
 			fprintf(stderr, "Could not copy the stream parameters\n");
@@ -696,6 +699,8 @@ bool VideoEncoder::AddVideoFrame(AVFrame *frame, OutputStream *ost)
 			pkt.size         = packet.size;
 			pkt.pts          = frame->pts;
 			pkt.dts          = 0;
+
+			av_packet_rescale_ts( &pkt, ost->enc->time_base, ost->st->time_base );
 
 		{
 			// Write packet with frame.
