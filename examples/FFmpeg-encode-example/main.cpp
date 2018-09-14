@@ -41,7 +41,7 @@ int main( int argc, char **argv ) {
   		exit(-1);
   	}
 
-    const int numFrames = 1;
+    const int numFrames = 30;
 
     for( int frameNum = 0; frameNum < numFrames; ++frameNum ) {
       encoder.AddFrame( frame, nullptr, 0 );

@@ -124,11 +124,12 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 
 		// if (res && !(_pOutFormat->flags & AVFMT_NOFILE))
 		// {
-		// 	if (avio_open(&_pFormatContext->pb, filename, AVIO_FLAG_WRITE) < 0)
-		// 	{
-		// 		res = false;
-		// 		printf("Cannot open file\n");
-		// 	}
+
+			if (avio_open(&_pFormatContext->pb, filename, AVIO_FLAG_WRITE) < 0)	{
+				cerr << "Cannot open file" << endl;
+				return false;
+			}
+
 		// }
 		//
 		// if (res)
@@ -141,6 +142,9 @@ bool VideoEncoder::InitFile( const std::string &inputFile, const std::string &co
 		//}
 	}
 
+
+	nSizeVideoEncodeBuffer = 10000000;
+	pVideoEncodeBuffer = (uint8_t *)av_malloc(nSizeVideoEncodeBuffer);
 
 
 	if (!res)
@@ -362,8 +366,7 @@ bool VideoEncoder::OpenVideo(AVFormatContext *oc, OutputStream *ost)
 	// // if (!(_pFormatContext->oformat->flags & AVFMT_RAWPICTURE))
 	// // {
 	// 	/* allocate output buffer */
-	// 	nSizeVideoEncodeBuffer = 10000000;
-	// 	pVideoEncodeBuffer = (uint8_t *)av_malloc(nSizeVideoEncodeBuffer);
+
 //	}
 
 	return true;
@@ -645,8 +648,7 @@ bool VideoEncoder::AddVideoFrame(AVFrame *data, OutputStream *ost)
 		int nOutputSize = 0;
 		// Encode frame to packet.
 		int error = avcodec_encode_video2(ost->enc, &packet, data, &nOutputSize);
-		if (!error && nOutputSize > 0)
-		{
+		if (!error && nOutputSize > 0) {
 			AVPacket pkt;
 			av_init_packet(&pkt);
 
