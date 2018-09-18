@@ -24,7 +24,12 @@ using namespace libblackmagic;
 
 #include "libbmsdi/helpers.h"
 
+#include "libvideoencoder/VideoEncoder.h"
+using libvideoencoder::Encoder;
+
 #include "IoServiceThread.h"
+
+using cv::Mat;
 
 bool keepGoing = true;
 
@@ -131,13 +136,26 @@ static void processKbInput( char c, DeckLink &decklink ) {
 }
 
 
+static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const BMDDisplayMode mode, bool do3D = false ) {
+
+	auto modeStruct = decodeBMDMode( mode );
+
+	shared_ptr<Encoder> videoOutput( new Encoder(modeStruct->width, modeStruct->height, modeStruct->frameRate ) );
+	videoOutput->InitFile( outputFile, "auto", AV_CODEC_ID_PRORES, do3D ? 2 : 1 );
+
+	return videoOutput;
+}
+
+static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const libblackmagic::InputConfig &config ) {
+	return MakeVideoEncoder( outputFile, config.mode(), config.do3D() );
+}
 
 
-using cv::Mat;
+
 
 int main( int argc, char** argv )
 {
-	libg3log::G3Logger logger("bmRecorder");
+	libg3logger::G3Logger logger("bmRecorder");
 
 	signal( SIGINT, signal_handler );
 
@@ -170,6 +188,9 @@ int main( int argc, char** argv )
   string sonarIp("auto");
   app.add_option("-s,--sonar-ip", sonarIp, "IP address of sonar or \"auto\" to automatically detect.");
 
+
+	string outputFile;
+	app.add_option("--output,-o", outputFile, "Output file");
 
 	CLI11_PARSE(app, argc, argv);
 
@@ -207,6 +228,9 @@ int main( int argc, char** argv )
 	deckLink.input().config().set3D( do3D );
 		/* code */
 
+	std::shared_ptr<Encoder> videoOutput(nullptr);
+
+
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
 	// if( !decklink.initialize() ) {
@@ -236,6 +260,10 @@ int main( int argc, char** argv )
 				LOG(WARNING) << "Will attempt input format detection";
 			} else {
 				LOG(WARNING) << "Setting mode " << desiredModeString;
+
+				if( outputFile.size() > 0 ) {
+						videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
+				}
 			}
 
 			// Be careful not to exceed 255 byte buffer length
@@ -249,7 +277,7 @@ int main( int argc, char** argv )
 
 				if(mode != bmdModeDetect) {
 					LOG(INFO) << "Setting video mode";
-					bmAddVideoMode( buffer, CamNum, bmdModeHD1080p2997 );
+					bmAddVideoMode( buffer, CamNum, mode );
 				}
 
 			});
@@ -266,6 +294,11 @@ int main( int argc, char** argv )
 
 			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
 				deckLink.input().getRawImage(i, images[i]);
+			}
+
+			// If output doesn't already exist (might be the case if mdoe = bmdModeDetect)
+			if( (outputFile.size() > 0) && (!videoOutput) ) {
+					videoOutput = MakeVideoEncoder( outputFile, deckLink.input().config() );
 			}
 
 			if( !noDisplay ) {
