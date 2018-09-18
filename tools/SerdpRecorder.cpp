@@ -290,16 +290,38 @@ int main( int argc, char** argv )
 
 		int numImages = 0;
 		if( (numImages = deckLink.input().grab()) > 0 ) {
-			std::array<cv::Mat,2> images;
-
-			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
-				deckLink.input().getRawImage(i, images[i]);
-			}
 
 			// If output doesn't already exist (might be the case if mdoe = bmdModeDetect)
 			if( (outputFile.size() > 0) && (!videoOutput) ) {
 					videoOutput = MakeVideoEncoder( outputFile, deckLink.input().config() );
 			}
+
+			std::array<cv::Mat,2> images;
+			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
+				deckLink.input().getRawImage(i, images[i]);
+
+				if ( videoOutput ) {
+					// Convert to AVFrame
+					AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
+					CHECK( frame != nullptr ) << "Cannot create frame";
+
+				  frame->width = images[i].size().width;
+				  frame->height = images[i].size().height;
+				  frame->format = AV_PIX_FMT_BGR24;
+
+					frame->data[0] = images[i].data;
+					frame->linesize[0] = 3*images[i].size().width;
+					frame->extended_data = frame->data;
+
+					//auto res = av_frame_get_buffer(frame, 0);
+
+					videoOutput->AddFrame( frame, count, i );
+
+					av_frame_free( &frame );
+				}
+			}
+
+
 
 			if( !noDisplay ) {
 
