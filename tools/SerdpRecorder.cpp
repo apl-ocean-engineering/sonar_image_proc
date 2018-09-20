@@ -29,6 +29,8 @@ using libvideoencoder::Encoder;
 
 #include "IoServiceThread.h"
 
+#include "CameraState.h"
+
 using cv::Mat;
 
 bool keepGoing = true;
@@ -52,7 +54,7 @@ const int CamNum = 1;
 
 
 
-static void processKbInput( char c, DeckLink &decklink ) {
+static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) {
 
 	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.output().sdiProtocolBuffer() );
 
@@ -77,14 +79,20 @@ static void processKbInput( char c, DeckLink &decklink ) {
 
 			//=== Aperture increment/decrement ===
 			case ';':
- 					// Send positive aperture increment
- 					LOG(INFO) << "Sending aperture increment to camera";
- 					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, 1 ); });
+					{
+						// Send positive aperture increment
+						auto val = camState.apertureInc();
+	 					LOG(INFO) << "Sending aperture increment to " << val.str;
+					}
+ 					// guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, 1 ); });
  					break;
  			case '\'':
- 					// Send negative aperture decrement
- 					LOG(INFO) << "Sending aperture decrement to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, -1 ); });
+					{
+						// Send negative aperture decrement
+						auto val = camState.apertureDec();
+ 						LOG(INFO) << "Sending aperture decrement to " << val.str;
+					// guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, -1 ); });
+					}
  					break;
 
 			//=== Shutter increment/decrement ===
@@ -249,39 +257,43 @@ int main( int argc, char** argv )
 	}
 
 
-		if ( doConfigCamera ) {
-			LOG(INFO) << "Sending configuration to cameras";
+	CameraState cameraState( deckLink.output().sdiProtocolBuffer() );
 
-			BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
-			if( mode == bmdModeUnknown ) {
-				LOG(WARNING) << "Didn't understand mode \"" << desiredModeString << "\"";
-				return -1;
-			} else if ( mode == bmdModeDetect ) {
-				LOG(WARNING) << "Will attempt input format detection";
-			} else {
-				LOG(WARNING) << "Setting mode " << desiredModeString;
+	if ( doConfigCamera ) {
+		LOG(INFO) << "Sending configuration to cameras";
 
-				if( outputFile.size() > 0 ) {
-						videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
-				}
+		BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
+		if( mode == bmdModeUnknown ) {
+			LOG(WARNING) << "Didn't understand mode \"" << desiredModeString << "\"";
+			return -1;
+		} else if ( mode == bmdModeDetect ) {
+			LOG(WARNING) << "Will attempt input format detection";
+		} else {
+			LOG(WARNING) << "Setting mode " << desiredModeString;
+
+			if( outputFile.size() > 0 ) {
+					videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
+			}
+		}
+
+		// Be careful not to exceed 255 byte buffer length
+		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+		guard( [mode]( BMSDIBuffer *buffer ) {
+
+			// bmAddOrdinalAperture( buffer, CamNum, 0 );
+			// bmAddSensorGain( buffer, CamNum, 8 );
+			bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+			// bmAddAutoWhiteBalance( buffer, CamNum );
+
+			if(mode != bmdModeDetect) {
+				LOG(INFO) << "Setting video mode";
+				bmAddVideoMode( buffer, CamNum, mode );
 			}
 
-			// Be careful not to exceed 255 byte buffer length
-			SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
-			guard( [mode]( BMSDIBuffer *buffer ) {
+		});
 
-				bmAddOrdinalAperture( buffer, CamNum, 0 );
-				bmAddSensorGain( buffer, CamNum, 8 );
-				bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
-				bmAddAutoWhiteBalance( buffer, CamNum );
-
-				if(mode != bmdModeDetect) {
-					LOG(INFO) << "Setting video mode";
-					bmAddVideoMode( buffer, CamNum, mode );
-				}
-
-			});
-		}
+		cameraState.updateCamera();
+	}
 
 	while( keepGoing ) {
 
@@ -352,7 +364,7 @@ int main( int argc, char** argv )
 				++displayed;
 
 				// Take action on character
-				processKbInput( c, deckLink );
+				processKbInput( c, deckLink, cameraState );
 			}
 
 
