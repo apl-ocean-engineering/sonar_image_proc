@@ -56,7 +56,7 @@ const int CamNum = 1;
 
 static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) {
 
-	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.output().sdiProtocolBuffer() );
+	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.input().sdiProtocolBuffer() );
 
 	SDIBufferGuard guard( sdiBuffer );
 
@@ -272,7 +272,7 @@ int main( int argc, char** argv )
 
 	int count = 0, miss = 0, displayed = 0;
 
-	CameraState cameraState( deckLink.output().sdiProtocolBuffer() );
+	CameraState cameraState( deckLink.input().sdiProtocolBuffer() );
 
 	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
 	if( mode == bmdModeUnknown ) {
@@ -283,7 +283,7 @@ int main( int argc, char** argv )
 	} else {
 		LOG(WARNING) << "Setting mode " << desiredModeString;
 
-		deckLink.output().config().setMode( mode );
+		//deckLink.output().config().setMode( mode );
 
 		if( outputFile.size() > 0 ) {
 				videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
@@ -300,7 +300,7 @@ int main( int argc, char** argv )
 			LOG(INFO) << "Sending configuration to cameras";
 
 		// Be careful not to exceed 255 byte buffer length
-		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+		SDIBufferGuard guard( deckLink.input().sdiProtocolBuffer() );
 		guard( [mode]( BMSDIBuffer *buffer ) {
 
 			// bmAddOrdinalAperture( buffer, CamNum, 0 );
