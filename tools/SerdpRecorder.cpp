@@ -136,6 +136,17 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					guard( []( BMSDIBuffer *buffer ){	bmAddWhiteBalanceOffset( buffer, CamNum, 500, 0 ); });
 					break;
 
+			case '1':
+					LOG(INFO) << "Sending Program reference to cameras";
+					// guard( [](BMSDIBuffer *buffer ){bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );});
+					guard( [](BMSDIBuffer *buffer ){				bmAddVideoMode( buffer, CamNum,bmdModeHD1080p30 );});
+					break;
+
+			case '2':
+					LOG(INFO) << "Sending 2160p25 reference to cameras";
+					guard( [](BMSDIBuffer *buffer ){				bmAddVideoMode( buffer, CamNum,bmdMode4K2160p25 );});
+					break;
+
 		case 'q':
 				keepGoing = false;
 				break;
@@ -231,13 +242,23 @@ int main( int argc, char** argv )
 		return 0;
 	}
 
+	// Check DeckLink configuration
+	// {
+	// 	int64_t val;
+	// 	auto result = deckLink.configuration()->GetInt( bmdDeckLinkConfigSDIOutputLinkConfiguration, &val );
+	// 	CHECK( result == S_OK ) << "Unable to query Decklink configuration.";
+	//
+	// 	LOG(INFO) << "Config value is " << std::hex << val;
+	// }
+
+	InputConfig config;
+	config.setMode( bmdModeDetect );
+	config.set3D( do3D );
+
 	//  Input should always auto-detect
-	deckLink.input().config().setMode( bmdModeDetect );
-	deckLink.input().config().set3D( do3D );
-		/* code */
+	deckLink.input().setConfig( config );
 
 	std::shared_ptr<Encoder> videoOutput(nullptr);
-
 
 	// Need to wait for initialization
 //	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
@@ -251,30 +272,32 @@ int main( int argc, char** argv )
 
 	int count = 0, miss = 0, displayed = 0;
 
-	if( !deckLink.startStreams() ) {
-			LOG(WARNING) << "Unable to start streams";
-			exit(-1);
-	}
-
-
 	CameraState cameraState( deckLink.output().sdiProtocolBuffer() );
 
-	if ( doConfigCamera ) {
-		LOG(INFO) << "Sending configuration to cameras";
+	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
+	if( mode == bmdModeUnknown ) {
+		LOG(FATAL) << "Didn't understand mode \"" << desiredModeString << "\"";
+		return -1;
+	} else if ( mode == bmdModeDetect ) {
+		LOG(WARNING) << "Will attempt input format detection";
+	} else {
+		LOG(WARNING) << "Setting mode " << desiredModeString;
 
-		BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
-		if( mode == bmdModeUnknown ) {
-			LOG(WARNING) << "Didn't understand mode \"" << desiredModeString << "\"";
-			return -1;
-		} else if ( mode == bmdModeDetect ) {
-			LOG(WARNING) << "Will attempt input format detection";
-		} else {
-			LOG(WARNING) << "Setting mode " << desiredModeString;
+		deckLink.output().config().setMode( mode );
 
-			if( outputFile.size() > 0 ) {
-					videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
-			}
+		if( outputFile.size() > 0 ) {
+				videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
 		}
+	}
+
+		LOG(DEBUG) << "Starting streams";
+		if( !deckLink.startStreams() ) {
+				LOG(WARNING) << "Unable to start streams";
+				exit(-1);
+		}
+
+		if ( doConfigCamera ) {
+			LOG(INFO) << "Sending configuration to cameras";
 
 		// Be careful not to exceed 255 byte buffer length
 		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
@@ -286,13 +309,17 @@ int main( int argc, char** argv )
 			// bmAddAutoWhiteBalance( buffer, CamNum );
 
 			if(mode != bmdModeDetect) {
-				LOG(INFO) << "Setting video mode";
+				LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
 				bmAddVideoMode( buffer, CamNum, mode );
 			}
 
 		});
 
 		cameraState.updateCamera();
+	} else {
+		if( mode != bmdModeDetect ) {
+			LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
+		}
 	}
 
 	while( keepGoing ) {
@@ -333,9 +360,13 @@ int main( int argc, char** argv )
 				}
 			}
 
+			if( noDisplay ) {
 
+				//
 
-			if( !noDisplay ) {
+			} else {
+
+				// Display images
 
 				if( numImages == 1 ) {
 					cv::imshow("Image", images[0]);

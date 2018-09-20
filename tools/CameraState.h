@@ -6,11 +6,9 @@
 #include "libbmsdi/values.h"
 
 
-
 template <typename RefStruct, const RefStruct RefTable[] >
 class RefTableWrapper {
 public:
-
 
   RefTableWrapper( int idx = 0 )
     : _tableSize( sizeof(RefTable)/sizeof(RefStruct)),
