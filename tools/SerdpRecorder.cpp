@@ -242,53 +242,31 @@ int main( int argc, char** argv )
 		return 0;
 	}
 
-	// Check DeckLink configuration
-	// {
-	// 	int64_t val;
-	// 	auto result = deckLink.configuration()->GetInt( bmdDeckLinkConfigSDIOutputLinkConfiguration, &val );
-	// 	CHECK( result == S_OK ) << "Unable to query Decklink configuration.";
-	//
-	// 	LOG(INFO) << "Config value is " << std::hex << val;
-	// }
-
-	InputConfig config;
-	config.setMode( bmdModeDetect );
-	config.set3D( do3D );
-
-	//  Input should always auto-detect
-	deckLink.input().setConfig( config );
-
-	std::shared_ptr<Encoder> videoOutput(nullptr);
-
-	// Need to wait for initialization
-//	if( decklink.initializedSync.wait_for( std::chrono::seconds(1) ) == false || !decklink.initialized() ) {
-	// if( !decklink.initialize() ) {
-	// 	LOG(WARNING) << "Unable to initialize DeckLink";
-	// 	exit(-1);
-	// }
-
-	// std::chrono::steady_clock::time_point start( std::chrono::steady_clock::now() );
-	// std::chrono::steady_clock::time_point end( start + std::chrono::seconds( duration ) );
-
-	int count = 0, miss = 0, displayed = 0;
-
-	CameraState cameraState( deckLink.output().sdiProtocolBuffer() );
-
 	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
 	if( mode == bmdModeUnknown ) {
 		LOG(FATAL) << "Didn't understand mode \"" << desiredModeString << "\"";
 		return -1;
 	} else if ( mode == bmdModeDetect ) {
-		LOG(WARNING) << "Will attempt input format detection";
+		LOG(WARNING) << "Card will always attempt automatic detection, starting in HD1080p2997 mode";
+		mode = bmdModeHD1080p2997;
 	} else {
 		LOG(WARNING) << "Setting mode " << desiredModeString;
-
-		//deckLink.output().config().setMode( mode );
-
 		// if( outputFile.size() > 0 ) {
 		// 		videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
 		// }
 	}
+
+	//  Input should always auto-detect
+	deckLink.input().enable( mode, true, do3D );
+	deckLink.output().enable( mode );
+
+	std::shared_ptr<Encoder> videoOutput(nullptr);
+
+
+
+	int count = 0, miss = 0, displayed = 0;
+
+	CameraState cameraState( deckLink.output().sdiProtocolBuffer() );
 
 		LOG(DEBUG) << "Starting streams";
 		if( !deckLink.startStreams() ) {
@@ -339,9 +317,9 @@ bool once = true;
 			}
 
 			// If output doesn't already exist (might be the case if mdoe = bmdModeDetect)
-			if( (outputFile.size() > 0) && (!videoOutput) ) {
-					videoOutput = MakeVideoEncoder( outputFile, deckLink.input().config() );
-			}
+			// if( (outputFile.size() > 0) && (!videoOutput) ) {
+			// 		videoOutput = MakeVideoEncoder( outputFile, deckLink.input().config() );
+			// }
 
 			std::array<cv::Mat,2> images;
 			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
