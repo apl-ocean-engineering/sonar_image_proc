@@ -56,7 +56,7 @@ const int CamNum = 1;
 
 static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) {
 
-	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.input().sdiProtocolBuffer() );
+	shared_ptr<SharedBMSDIBuffer> sdiBuffer( decklink.output().sdiProtocolBuffer() );
 
 	SDIBufferGuard guard( sdiBuffer );
 
@@ -82,7 +82,7 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					{
 						// Send positive aperture increment
 						auto val = camState.apertureInc();
-	 					LOG(INFO) << "Sending aperture increment to " << val.str;
+	 					LOG(INFO) << "Sending aperture increment " << val.ord << " , " << val.val << " , " << val.str;
 					}
  					// guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, 1 ); });
  					break;
@@ -90,7 +90,7 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					{
 						// Send negative aperture decrement
 						auto val = camState.apertureDec();
- 						LOG(INFO) << "Sending aperture decrement to " << val.str;
+						LOG(INFO) << "Sending aperture decrement " << val.ord << " , " << val.val << " , " << val.str;
 					// guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, -1 ); });
 					}
  					break;
@@ -272,7 +272,7 @@ int main( int argc, char** argv )
 
 	int count = 0, miss = 0, displayed = 0;
 
-	CameraState cameraState( deckLink.input().sdiProtocolBuffer() );
+	CameraState cameraState( deckLink.output().sdiProtocolBuffer() );
 
 	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
 	if( mode == bmdModeUnknown ) {
@@ -300,7 +300,7 @@ int main( int argc, char** argv )
 			LOG(INFO) << "Sending configuration to cameras";
 
 		// Be careful not to exceed 255 byte buffer length
-		SDIBufferGuard guard( deckLink.input().sdiProtocolBuffer() );
+		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
 		guard( [mode]( BMSDIBuffer *buffer ) {
 
 			// bmAddOrdinalAperture( buffer, CamNum, 0 );
