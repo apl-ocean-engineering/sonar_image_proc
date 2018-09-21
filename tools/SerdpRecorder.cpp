@@ -285,9 +285,9 @@ int main( int argc, char** argv )
 
 		//deckLink.output().config().setMode( mode );
 
-		if( outputFile.size() > 0 ) {
-				videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
-		}
+		// if( outputFile.size() > 0 ) {
+		// 		videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
+		// }
 	}
 
 		LOG(DEBUG) << "Starting streams";
@@ -296,31 +296,8 @@ int main( int argc, char** argv )
 				exit(-1);
 		}
 
-		if ( doConfigCamera ) {
-			LOG(INFO) << "Sending configuration to cameras";
 
-		// Be careful not to exceed 255 byte buffer length
-		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
-		guard( [mode]( BMSDIBuffer *buffer ) {
-
-			// bmAddOrdinalAperture( buffer, CamNum, 0 );
-			// bmAddSensorGain( buffer, CamNum, 8 );
-			bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
-			// bmAddAutoWhiteBalance( buffer, CamNum );
-
-			if(mode != bmdModeDetect) {
-				LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
-				bmAddVideoMode( buffer, CamNum, mode );
-			}
-
-		});
-
-		cameraState.updateCamera();
-	} else {
-		if( mode != bmdModeDetect ) {
-			LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
-		}
-	}
+bool once = true;
 
 	while( keepGoing ) {
 
@@ -329,6 +306,37 @@ int main( int argc, char** argv )
 
 		int numImages = 0;
 		if( (numImages = deckLink.input().grab()) > 0 ) {
+
+			// Only do these things once good data starts flowing
+			if( displayed == 100 ) {
+				once = false;
+
+				if ( doConfigCamera ) {
+					LOG(INFO) << "Sending configuration to cameras";
+
+				// Be careful not to exceed 255 byte buffer length
+				SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+				guard( [mode]( BMSDIBuffer *buffer ) {
+
+					// bmAddOrdinalAperture( buffer, CamNum, 0 );
+					// bmAddSensorGain( buffer, CamNum, 8 );
+					bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+					// bmAddAutoWhiteBalance( buffer, CamNum );
+
+					if(mode != bmdModeDetect) {
+						LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
+						bmAddVideoMode( buffer, CamNum, mode );
+					}
+
+				});
+
+				cameraState.updateCamera();
+			} else {
+				if( mode != bmdModeDetect ) {
+					LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
+				}
+			}
+			}
 
 			// If output doesn't already exist (might be the case if mdoe = bmdModeDetect)
 			if( (outputFile.size() > 0) && (!videoOutput) ) {
@@ -387,16 +395,14 @@ int main( int argc, char** argv )
 
 					cv::imshow("Composite", composite );
 
+					char c = cv::waitKey(1);
+					processKbInput( c, deckLink, cameraState );
 				}
 
-				LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
-				char c = cv::waitKey(1);
-
-				++displayed;
-
-				// Take action on character
-				processKbInput( c, deckLink, cameraState );
 			}
+
+			LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
+			++displayed;
 
 
 		} else {
