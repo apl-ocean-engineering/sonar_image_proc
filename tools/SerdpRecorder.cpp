@@ -29,7 +29,10 @@ using libvideoencoder::Encoder;
 
 #include "IoServiceThread.h"
 
-#include "CameraState.h"
+#include "serdprecorder/CameraState.h"
+#include "serdprecorder/VideoRecorder.h"
+using namespace serdprecorder;
+
 
 using cv::Mat;
 
@@ -51,6 +54,9 @@ void signal_handler( int sig )
 }
 
 const int CamNum = 1;
+
+DeckLink deckLink;
+shared_ptr<VideoRecorder> recorder(nullptr);
 
 
 
@@ -147,29 +153,26 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					guard( [](BMSDIBuffer *buffer ){				bmAddVideoMode( buffer, CamNum,bmdMode4K2160p25 );});
 					break;
 
+
+			case '\\':
+					if( recorder->isRecording() ) {
+						LOG(INFO) << "Stopping recording";
+						recorder->close();
+					} else {
+						LOG(INFO) << "Starting recording";
+
+						libblackmagic::ModeConfig config( decklink.input().currentConfig() );
+						if( !recorder->open( config.width(), config.height(), config.do3D() ) ) {
+							LOG(WARNING) << "Unable to start recorder!";
+						}
+					}
+
 		case 'q':
 				keepGoing = false;
 				break;
 	}
 
 }
-
-
-static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const BMDDisplayMode mode, bool do3D = false ) {
-
-	auto modeStruct = decodeBMDMode( mode );
-
-	shared_ptr<Encoder> videoOutput( new Encoder(modeStruct->width, modeStruct->height, modeStruct->frameRate ) );
-	videoOutput->InitFile( outputFile, "auto", AV_CODEC_ID_PRORES, do3D ? 2 : 1 );
-
-	return videoOutput;
-}
-
-static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const libblackmagic::InputConfig &config ) {
-	return MakeVideoEncoder( outputFile, config.mode(), config.do3D() );
-}
-
-
 
 
 int main( int argc, char** argv )
@@ -207,9 +210,8 @@ int main( int argc, char** argv )
   string sonarIp("auto");
   app.add_option("-s,--sonar-ip", sonarIp, "IP address of sonar or \"auto\" to automatically detect.");
 
-
-	string outputFile;
-	app.add_option("--output,-o", outputFile, "Output file");
+	string outputDir;
+	app.add_option("--output,-o", outputDir, "Output dir");
 
 	CLI11_PARSE(app, argc, argv);
 
@@ -232,8 +234,6 @@ int main( int argc, char** argv )
 	cout << "   . /     Adjust shutter speed" << endl;
 	cout << "   z x     Adjust sensor gain" << endl;
 	cout << "    s      Cycle through reference sources" << endl;
-
-	DeckLink deckLink;
 
 	// Handle the one-off commands
 	if( doListCards || doListInputModes ) {
@@ -260,9 +260,9 @@ int main( int argc, char** argv )
 	deckLink.input().enable( mode, true, do3D );
 	deckLink.output().enable( mode );
 
-	std::shared_ptr<Encoder> videoOutput(nullptr);
+//	std::shared_ptr<Encoder> videoOutput(nullptr);
 
-
+	recorder.reset( new VideoRecorder( outputDir ) );
 
 	int count = 0, miss = 0, displayed = 0;
 
@@ -275,7 +275,7 @@ int main( int argc, char** argv )
 		}
 
 
-bool once = true;
+		bool once = true;
 
 	while( keepGoing ) {
 
@@ -325,25 +325,25 @@ bool once = true;
 			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
 				deckLink.input().getRawImage(i, images[i]);
 
-				if ( videoOutput ) {
+				//if ( videoOutput ) {
 					// Convert to AVFrame
-					AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
-					CHECK( frame != nullptr ) << "Cannot create frame";
-
-				  frame->width = images[i].size().width;
-				  frame->height = images[i].size().height;
-				  frame->format = AV_PIX_FMT_BGR24;
-
-					frame->data[0] = images[i].data;
-					frame->linesize[0] = 3*images[i].size().width;
-					frame->extended_data = frame->data;
-
-					//auto res = av_frame_get_buffer(frame, 0);
-
-					videoOutput->AddFrame( frame, count, i );
-
-					av_frame_free( &frame );
-				}
+					// AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
+					// CHECK( frame != nullptr ) << "Cannot create frame";
+					//
+				  // frame->width = images[i].size().width;
+				  // frame->height = images[i].size().height;
+				  // frame->format = AV_PIX_FMT_BGR24;
+					//
+					// frame->data[0] = images[i].data;
+					// frame->linesize[0] = 3*images[i].size().width;
+					// frame->extended_data = frame->data;
+					//
+					// //auto res = av_frame_get_buffer(frame, 0);
+					//
+					// //videoOutput->AddFrame( frame, count, i );
+					//
+					// av_frame_free( &frame );
+				//}
 			}
 
 			if( noDisplay ) {

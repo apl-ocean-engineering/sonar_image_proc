@@ -4,7 +4,7 @@ fips_begin_app( serdp_recorder cmdline )
     SerdpRecorder.cpp
   )
 
-  fips_deps( blackmagic oculus active_object videoencoder )
+  fips_deps( blackmagic oculus active_object videoencoder serdprecorder )
   fips_libs( avutil avcodec swscale avformat )
 
 

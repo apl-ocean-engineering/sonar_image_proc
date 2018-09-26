@@ -6,6 +6,8 @@
 #include "libbmsdi/values.h"
 
 
+namespace serdprecorder {
+
 template <typename RefStruct, const RefStruct RefTable[] >
 class RefTableWrapper {
 public:
@@ -105,3 +107,6 @@ protected:
   RefTableWrapper< struct BmApertureRef, BmApertureTable > _aperture;
 
 };
+
+
+}

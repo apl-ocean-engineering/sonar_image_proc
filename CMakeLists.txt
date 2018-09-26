@@ -34,14 +34,27 @@ fips_include_directories(
  )
 
 
+ fips_begin_module( serdprecorder )
+
+   fips_src( lib *.cpp )
+
+   fips_deps( videoencoder )
+
+    fips_include_directories(
+ 	 	${CMAKE_SOURCE_DIR}/include
+ 	 )
+
+  fips_end_module()
+
+
 if( NOT FIPS_IMPORT )
   add_subdirectory("tools/")
 
 	if( FIPS_UNITTESTS )
-			# gtest_begin( blackmagic )
-			#     fips_src( test/unit/ )
-			#     fips_deps( blackmagic )
-			# gtest_end()
+			 gtest_begin( serdprecorder )
+			     fips_src( test/unit/ )
+			     fips_deps( serdprecorder )
+			gtest_end()
 	endif()
 
   fips_finish()
