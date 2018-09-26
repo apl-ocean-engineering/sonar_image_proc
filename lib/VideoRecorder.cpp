@@ -44,6 +44,14 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir )
   }
 
 
+  bool VideoRecorder::addFrame( AVFrame *frame, unsigned int frameNum, unsigned int stream ) {
+    if( _writer ) {
+      return _writer->addFrame( frame, frameNum, stream );
+    }
+
+    return false;
+  }
+
 
   fs::path VideoRecorder::makeFilename() {
 

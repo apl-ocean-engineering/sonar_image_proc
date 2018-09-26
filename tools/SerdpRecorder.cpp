@@ -325,25 +325,25 @@ int main( int argc, char** argv )
 			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
 				deckLink.input().getRawImage(i, images[i]);
 
-				//if ( videoOutput ) {
-					// Convert to AVFrame
-					// AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
-					// CHECK( frame != nullptr ) << "Cannot create frame";
-					//
-				  // frame->width = images[i].size().width;
-				  // frame->height = images[i].size().height;
-				  // frame->format = AV_PIX_FMT_BGR24;
-					//
-					// frame->data[0] = images[i].data;
-					// frame->linesize[0] = 3*images[i].size().width;
-					// frame->extended_data = frame->data;
-					//
-					// //auto res = av_frame_get_buffer(frame, 0);
-					//
-					// //videoOutput->AddFrame( frame, count, i );
-					//
-					// av_frame_free( &frame );
-				//}
+				if( recorder->isRecording() ) {
+					//Convert to AVFrame
+					AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
+					CHECK( frame != nullptr ) << "Cannot create frame";
+
+				  frame->width = images[i].size().width;
+				  frame->height = images[i].size().height;
+				  frame->format = AV_PIX_FMT_BGR24;
+
+					frame->data[0] = images[i].data;
+					frame->linesize[0] = 3*images[i].size().width;
+					frame->extended_data = frame->data;
+
+					//auto res = av_frame_get_buffer(frame, 0);
+
+					recorder->addFrame( frame, count, i );
+
+					av_frame_free( &frame );
+				}
 			}
 
 			if( noDisplay ) {
