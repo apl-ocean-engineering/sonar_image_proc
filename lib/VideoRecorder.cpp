@@ -13,6 +13,7 @@ namespace serdprecorder {
 
 VideoRecorder::VideoRecorder( const fs::path &outputDir )
   : _outputDir( outputDir ),
+    _isReady( false ),
     _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
     _writer(nullptr)
   {;}
@@ -25,21 +26,25 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir )
   }
 
 
-  bool VideoRecorder::open( int width, int height, int numStreams ) {
+  bool VideoRecorder::open( int width, int height, float frameRate, int numStreams ) {
     auto filename = makeFilename();
 
-    _writer.reset( _encoder->makeWriter( width, height, numStreams ) );
+    _writer.reset( _encoder->makeWriter() );
     CHECK( _writer != nullptr );
+
+    _writer->addVideoTrack( width, height, frameRate, numStreams );
 
     LOG(INFO) << "Opening video file " << filename;
 
     _writer->open(filename.string());
 
+    _isReady = true;
     return true;
   }
 
 
   bool VideoRecorder::close() {
+    _isReady = false;
     _writer.reset();
   }
 

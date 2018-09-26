@@ -146,15 +146,34 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					break;
 
 			case '1':
-					LOG(INFO) << "Sending Program reference to cameras";
+					LOG(INFO) << "Setting camera to 1080p2997";
 					// guard( [](BMSDIBuffer *buffer ){bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );});
-					guard( [](BMSDIBuffer *buffer ){				bmAddVideoMode( buffer, CamNum,bmdModeHD1080p30 );});
+					guard( [](BMSDIBuffer *buffer ){
+						bmAddVideoMode( buffer, CamNum,bmdModeHD1080p2997 );
+						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+					});
 					break;
 
 			case '2':
-					LOG(INFO) << "Sending 2160p25 reference to cameras";
-					guard( [](BMSDIBuffer *buffer ){				bmAddVideoMode( buffer, CamNum,bmdMode4K2160p25 );});
+					LOG(INFO) << "Setting camera to 1080p30";
+					guard( [](BMSDIBuffer *buffer ){
+						bmAddVideoMode( buffer, CamNum,bmdModeHD1080p30 );
+						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+					});
 					break;
+
+			case '3':
+					LOG(INFO) << "Setting camera to 1080p60";
+					guard( [](BMSDIBuffer *buffer ){
+						bmAddVideoMode( buffer, CamNum,bmdModeHD1080p6000 );
+						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+					});
+					break;
+
+			// case '3':
+			// 		LOG(INFO) << "Sending 2160p25 reference to cameras";
+			// 		guard( [](BMSDIBuffer *buffer ){				bmAddVideoMode( buffer, CamNum,bmdMode4K2160p25 );});
+			// 		break;
 
 
 			case '`':
@@ -170,11 +189,31 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 			           LOG(INFO) << "Starting recording";
 
 			           libblackmagic::ModeConfig config( decklink.input().currentConfig() );
-			          if( !recorder->open( config.width(), config.height(), config.do3D() ) ) {
+								 ModeParams params( config.params() );
+
+								 if( params.valid() ) {
+
+								 const int numStreams = config.do3D() ? 2 : 1;
+								 LOG(INFO) << "Opening video " << params.width << " x " << params.height << " with " << numStreams << " streams";
+			          if( !recorder->open( params.width, params.height, params.frameRate, numStreams ) ) {
 			                   LOG(WARNING) << "Unable to start recorder!";
 			           }
+							 } else {
+								 LOG(WARNING) << "Bad configuration from the decklink";
+							 }
 			   }
+				 break;
 
+
+		case '9':
+				LOG(INFO) << "Enabling overlay";
+					guard( [](BMSDIBuffer *buffer ){ bmAddOverlayEnable( buffer, CamNum, 0x3 );});
+				break;
+
+		case '0':
+				 LOG(INFO) << "Enabling overlay";
+				 guard( [](BMSDIBuffer *buffer ){	bmAddOverlayEnable( buffer, CamNum, 0x0 );});
+				 break;
 
 
 		case 'q':
@@ -253,17 +292,11 @@ int main( int argc, char** argv )
 	}
 
 	BMDDisplayMode mode = stringToDisplayMode( desiredModeString );
-	if( mode == bmdModeUnknown ) {
-		LOG(FATAL) << "Didn't understand mode \"" << desiredModeString << "\"";
-		return -1;
-	} else if ( mode == bmdModeDetect ) {
+	if( (mode == bmdModeUnknown) || ( mode == bmdModeDetect) ) {
 		LOG(WARNING) << "Card will always attempt automatic detection, starting in HD1080p2997 mode";
 		mode = bmdModeHD1080p2997;
 	} else {
-		LOG(WARNING) << "Setting mode " << desiredModeString;
-		// if( outputFile.size() > 0 ) {
-		// 		videoOutput = MakeVideoEncoder( outputFile, mode, do3D);
-		// }
+		LOG(WARNING) << "Starting in mode " << desiredModeString;
 	}
 
 	//  Input should always auto-detect
@@ -287,13 +320,6 @@ int main( int argc, char** argv )
 
 	while( keepGoing ) {
 
-		if( (count % 30) == 0 ) {
-					SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
-		guard( [mode]( BMSDIBuffer *buffer ) {
-			bmAddVideoMode( buffer, CamNum, bmdModeHD1080p2997 );
-		});
-	}
-
 		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
 		//if( (duration > 0) && (loopStart > end) ) { keepGoing = false;  break; }
 
@@ -301,59 +327,65 @@ int main( int argc, char** argv )
 		if( (numImages = deckLink.input().grab()) > 0 ) {
 
 			// Only do these things once good data starts flowing
-			if( displayed == 100 ) {
-				once = false;
-
-				if ( doConfigCamera ) {
-					LOG(INFO) << "Sending configuration to cameras";
-
-					// Be careful not to exceed 255 byte buffer length
-					SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
-					guard( [mode]( BMSDIBuffer *buffer ) {
-
-						// bmAddOrdinalAperture( buffer, CamNum, 0 );
-						// bmAddSensorGain( buffer, CamNum, 8 );
-						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
-						// bmAddAutoWhiteBalance( buffer, CamNum );
-
-						// if(mode != bmdModeDetect) {
-						// 	LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
-						// 	bmAddVideoMode( buffer, CamNum, mode );
-						// }
-
-					});
-
-					cameraState.updateCamera();
-				} else {
-					if( mode != bmdModeDetect ) {
-						LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
-					}
-				}
-			}
+			// if( displayed == 100 ) {
+			// 	once = false;
+			//
+			// 	if ( doConfigCamera ) {
+			// 		LOG(INFO) << "Sending configuration to cameras";
+			//
+			// 		// Be careful not to exceed 255 byte buffer length
+			// 		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+			// 		guard( [mode]( BMSDIBuffer *buffer ) {
+			//
+			// 			// bmAddOrdinalAperture( buffer, CamNum, 0 );
+			// 			// bmAddSensorGain( buffer, CamNum, 8 );
+			// 			bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+			// 			// bmAddAutoWhiteBalance( buffer, CamNum );
+			//
+			// 			// if(mode != bmdModeDetect) {
+			// 			// 	LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
+			// 			// 	bmAddVideoMode( buffer, CamNum, mode );
+			// 			// }
+			//
+			// 		});
+			//
+			// 		cameraState.updateCamera();
+			// 	} else {
+			// 		if( mode != bmdModeDetect ) {
+			// 			LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
+			// 		}
+			// 	}
+			// }
 
 			// If output doesn't already exist (might be the case if mdoe = bmdModeDetect)
 			// if( (outputFile.size() > 0) && (!videoOutput) ) {
 			// 		videoOutput = MakeVideoEncoder( outputFile, deckLink.input().config() );
 			// }
 
-			std::array<cv::Mat,2> images;
+			std::array<cv::Mat,2> images, scaledImages;
 			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
 				deckLink.input().getRawImage(i, images[i]);
+			}
 
-				if( recorder->isRecording() ) {
+			if( recorder->isRecording() ) {
+
+				for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
+
 					//Convert to AVFrame
 					AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
 					CHECK( frame != nullptr ) << "Cannot create frame";
 
-				  frame->width = images[i].size().width;
-				  frame->height = images[i].size().height;
-				  frame->format = AV_PIX_FMT_BGR24;
+						auto sz = images[i].size();
 
-					frame->data[0] = images[i].data;
-					frame->linesize[0] = 3*images[i].size().width;
-					frame->extended_data = frame->data;
+				  frame->width = sz.width;
+				  frame->height = sz.height;
+				  frame->format = AV_PIX_FMT_BGRA;
+					auto res = av_frame_get_buffer(frame, 0);
 
-					//auto res = av_frame_get_buffer(frame, 0);
+					// Try this_`
+					// memcpy for now
+					cv::Mat frameMat( sz.height, sz.width, CV_8UC4, frame->data[0]);
+					images[i].copyTo( frameMat );
 
 					recorder->addFrame( frame, count, i );
 
@@ -367,23 +399,27 @@ int main( int argc, char** argv )
 
 			} else {
 
+				for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
+					cv::resize( images[i], scaledImages[i], cv::Size(), 0.25, 0.25  );
+				}
+
 				// Display images
 
 				if( numImages == 1 ) {
-					cv::imshow("Image", images[0]);
+					cv::imshow("Image", scaledImages[0]);
 				} else if ( numImages == 2 ) {
 
-					cv::Mat composite( cv::Size( images[0].size().width + images[0].size().width,
-					std::max(images[0].size().height, images[1].size().height )), images[0].type() );
+					cv::Mat composite( cv::Size( scaledImages[0].size().width + scaledImages[0].size().width,
+					std::max(scaledImages[0].size().height, scaledImages[1].size().height )), scaledImages[0].type() );
 
-					if( !images[0].empty() ) {
-						cv::Mat leftROI( composite, cv::Rect(0,0,images[0].size().width,images[0].size().height) );
-						images[0].copyTo( leftROI );
+					if( !scaledImages[0].empty() ) {
+						cv::Mat leftROI( composite, cv::Rect(0,0,scaledImages[0].size().width,scaledImages[0].size().height) );
+						scaledImages[0].copyTo( leftROI );
 					}
 
-					if( !images[1].empty() ) {
-						cv::Mat rightROI( composite, cv::Rect(images[0].size().width, 0, images[1].size().width, images[1].size().height) );
-						images[1].copyTo( rightROI );
+					if( !scaledImages[1].empty() ) {
+						cv::Mat rightROI( composite, cv::Rect(scaledImages[0].size().width, 0, scaledImages[1].size().width, scaledImages[1].size().height) );
+						scaledImages[1].copyTo( rightROI );
 					}
 
 					cv::imshow("Composite", composite );
@@ -414,9 +450,12 @@ int main( int argc, char** argv )
 
 	 //std::chrono::duration<float> dur( std::chrono::steady_clock::now()  - start );
 
+	 recorder->close();
+
 	LOG(INFO) << "End of main loop, stopping streams...";
 
 	deckLink.stopStreams();
+
 
 
 	// LOG(INFO) << "Recorded " << count << " frames in " <<   dur.count();

@@ -11,7 +11,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # find_package(Eigen3 REQUIRED )
-# find_package(Boost COMPONENTS filesystem system program_options REQUIRED )  #n.b. program_options is only required for my version of Stereolabs "Recorder"
+find_package(Boost COMPONENTS filesystem system REQUIRED )  #n.b. program_options is only required for my version of Stereolabs "Recorder"
 
 ## Default OpenCV version
 list(APPEND OPENCV_COMPONENTS core highgui imgproc )
@@ -38,11 +38,14 @@ fips_include_directories(
 
    fips_src( lib *.cpp )
 
-   fips_deps( videoencoder )
+   fips_deps( videoencoder blackmagic )
 
     fips_include_directories(
  	 	${CMAKE_SOURCE_DIR}/include
  	 )
+
+	 fips_libs(  ${Boost_LIBRARIES} )
+
 
   fips_end_module()
 
