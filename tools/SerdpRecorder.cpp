@@ -38,6 +38,7 @@ using cv::Mat;
 
 bool keepGoing = true;
 
+using namespace serdp_recorder;
 
 void signal_handler( int sig )
 {
@@ -84,19 +85,21 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					break;
 
 			//=== Aperture increment/decrement ===
-			case ';':
+			case '\'':
 					{
 						// Send positive aperture increment
 						auto val = camState.apertureInc();
-	 					LOG(INFO) << "Sending aperture increment " << val.ord << " , " << val.val << " , " << val.str;
+	 					// LOG(INFO) << "Sending aperture increment " << val.ord << " , " << val.val << " , " << val.str;
+						LOG(INFO) << "Set aperture to " << val;
 					}
  					// guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, 1 ); });
  					break;
- 			case '\'':
+ 			case ';':
 					{
 						// Send negative aperture decrement
 						auto val = camState.apertureDec();
-						LOG(INFO) << "Sending aperture decrement " << val.ord << " , " << val.val << " , " << val.str;
+						//LOG(INFO) << "Sending aperture decrement " << val.ord << " , " << val.val << " , " << val.str;
+						LOG(INFO) << "Set aperture to " << val;
 					// guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, -1 ); });
 					}
  					break;
@@ -104,21 +107,21 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 			//=== Shutter increment/decrement ===
 			case '.':
  					LOG(INFO) << "Sending shutter increment to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, CamNum, 1 ); });
+					camState.exposureInc();
  					break;
  			case '/':
  					LOG(INFO) << "Sending shutter decrement to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalShutterOffset( buffer, CamNum, -1 ); });
+					camState.exposureDec();
  					break;
 
 			//=== Gain increment/decrement ===
 			case 'z':
  					LOG(INFO) << "Sending gain increment to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, CamNum, 1 ); });
+					camState.gainInc();
  					break;
  			case 'x':
  					LOG(INFO) << "Sending gain decrement to camera";
-					guard( []( BMSDIBuffer *buffer ){	bmAddSensorGainOffset( buffer, CamNum, -1 ); });
+					camState.gainDec();
  					break;
 
 			//== Increment/decrement white balance
@@ -154,18 +157,25 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					break;
 
 
-			case '\\':
-					if( recorder->isRecording() ) {
-						LOG(INFO) << "Stopping recording";
-						recorder->close();
-					} else {
-						LOG(INFO) << "Starting recording";
+			case '`':
+				LOG(INFO) << "Updating camera";
+					camState.updateCamera();
+					break;
 
-						libblackmagic::ModeConfig config( decklink.input().currentConfig() );
-						if( !recorder->open( config.width(), config.height(), config.do3D() ) ) {
-							LOG(WARNING) << "Unable to start recorder!";
-						}
-					}
+			case '\\':
+			   if( recorder->isRecording() ) {
+			           LOG(INFO) << "Stopping recording";
+			           recorder->close();
+			   } else {
+			           LOG(INFO) << "Starting recording";
+
+			           libblackmagic::ModeConfig config( decklink.input().currentConfig() );
+			          if( !recorder->open( config.width(), config.height(), config.do3D() ) ) {
+			                   LOG(WARNING) << "Unable to start recorder!";
+			           }
+			   }
+
+
 
 		case 'q':
 				keepGoing = false;
@@ -260,8 +270,6 @@ int main( int argc, char** argv )
 	deckLink.input().enable( mode, true, do3D );
 	deckLink.output().enable( mode );
 
-//	std::shared_ptr<Encoder> videoOutput(nullptr);
-
 	recorder.reset( new VideoRecorder( outputDir ) );
 
 	int count = 0, miss = 0, displayed = 0;
@@ -279,6 +287,13 @@ int main( int argc, char** argv )
 
 	while( keepGoing ) {
 
+		if( (count % 30) == 0 ) {
+					SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+		guard( [mode]( BMSDIBuffer *buffer ) {
+			bmAddVideoMode( buffer, CamNum, bmdModeHD1080p2997 );
+		});
+	}
+
 		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
 		//if( (duration > 0) && (loopStart > end) ) { keepGoing = false;  break; }
 
@@ -292,28 +307,28 @@ int main( int argc, char** argv )
 				if ( doConfigCamera ) {
 					LOG(INFO) << "Sending configuration to cameras";
 
-				// Be careful not to exceed 255 byte buffer length
-				SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
-				guard( [mode]( BMSDIBuffer *buffer ) {
+					// Be careful not to exceed 255 byte buffer length
+					SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
+					guard( [mode]( BMSDIBuffer *buffer ) {
 
-					// bmAddOrdinalAperture( buffer, CamNum, 0 );
-					// bmAddSensorGain( buffer, CamNum, 8 );
-					bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
-					// bmAddAutoWhiteBalance( buffer, CamNum );
+						// bmAddOrdinalAperture( buffer, CamNum, 0 );
+						// bmAddSensorGain( buffer, CamNum, 8 );
+						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+						// bmAddAutoWhiteBalance( buffer, CamNum );
 
-					if(mode != bmdModeDetect) {
-						LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
-						bmAddVideoMode( buffer, CamNum, mode );
+						// if(mode != bmdModeDetect) {
+						// 	LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
+						// 	bmAddVideoMode( buffer, CamNum, mode );
+						// }
+
+					});
+
+					cameraState.updateCamera();
+				} else {
+					if( mode != bmdModeDetect ) {
+						LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
 					}
-
-				});
-
-				cameraState.updateCamera();
-			} else {
-				if( mode != bmdModeDetect ) {
-					LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
 				}
-			}
 			}
 
 			// If output doesn't already exist (might be the case if mdoe = bmdModeDetect)
@@ -373,11 +388,12 @@ int main( int argc, char** argv )
 
 					cv::imshow("Composite", composite );
 
-					char c = cv::waitKey(1);
-					processKbInput( c, deckLink, cameraState );
 				}
 
 			}
+
+			char c = cv::waitKey(1);
+			processKbInput( c, deckLink, cameraState );
 
 			LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
 			++displayed;
