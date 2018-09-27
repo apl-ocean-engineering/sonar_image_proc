@@ -316,7 +316,9 @@ int main( int argc, char** argv )
 		}
 
 
-		bool once = true;
+	bool once = true;
+
+	std::array<cv::Mat,2> images, scaledImages;
 
 	while( keepGoing ) {
 
@@ -326,56 +328,18 @@ int main( int argc, char** argv )
 		int numImages = 0;
 		if( (numImages = deckLink.input().grab()) > 0 ) {
 
-			// Only do these things once good data starts flowing
-			// if( displayed == 100 ) {
-			// 	once = false;
-			//
-			// 	if ( doConfigCamera ) {
-			// 		LOG(INFO) << "Sending configuration to cameras";
-			//
-			// 		// Be careful not to exceed 255 byte buffer length
-			// 		SDIBufferGuard guard( deckLink.output().sdiProtocolBuffer() );
-			// 		guard( [mode]( BMSDIBuffer *buffer ) {
-			//
-			// 			// bmAddOrdinalAperture( buffer, CamNum, 0 );
-			// 			// bmAddSensorGain( buffer, CamNum, 8 );
-			// 			bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
-			// 			// bmAddAutoWhiteBalance( buffer, CamNum );
-			//
-			// 			// if(mode != bmdModeDetect) {
-			// 			// 	LOG(INFO) << "Setting video mode to " << displayModeToString(mode);
-			// 			// 	bmAddVideoMode( buffer, CamNum, mode );
-			// 			// }
-			//
-			// 		});
-			//
-			// 		cameraState.updateCamera();
-			// 	} else {
-			// 		if( mode != bmdModeDetect ) {
-			// 			LOG(WARNING) << "Mode " << desiredModeString << " requested, but camera configuration not requested with -c";
-			// 		}
-			// 	}
-			// }
+			numImages = std::min( numImages, int(images.size()) );
 
-			// If output doesn't already exist (might be the case if mdoe = bmdModeDetect)
-			// if( (outputFile.size() > 0) && (!videoOutput) ) {
-			// 		videoOutput = MakeVideoEncoder( outputFile, deckLink.input().config() );
-			// }
-
-			std::array<cv::Mat,2> images, scaledImages;
-			for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
+			for( unsigned int i=0; i < numImages; ++i ) {
 				deckLink.input().getRawImage(i, images[i]);
-			}
 
-			if( recorder->isRecording() ) {
-
-				for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
+				if( recorder->isRecording() ) {
 
 					//Convert to AVFrame
 					AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
 					CHECK( frame != nullptr ) << "Cannot create frame";
 
-						auto sz = images[i].size();
+					auto sz = images[i].size();
 
 				  frame->width = sz.width;
 				  frame->height = sz.height;
@@ -387,11 +351,12 @@ int main( int argc, char** argv )
 					cv::Mat frameMat( sz.height, sz.width, CV_8UC4, frame->data[0]);
 					images[i].copyTo( frameMat );
 
-					recorder->addFrame( frame, count, i );
+					recorder->addFrame( frame, i );
 
 					av_frame_free( &frame );
-				}
 			}
+		}
+
 
 			if( noDisplay ) {
 
@@ -399,7 +364,7 @@ int main( int argc, char** argv )
 
 			} else {
 
-				for( unsigned int i=0; i < (unsigned int)count && i < images.size(); ++i ) {
+				for( unsigned int i=0; i < numImages; ++i ) {
 					cv::resize( images[i], scaledImages[i], cv::Size(), 0.25, 0.25  );
 				}
 

@@ -15,7 +15,8 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir )
   : _outputDir( outputDir ),
     _isReady( false ),
     _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
-    _writer(nullptr)
+    _writer(nullptr),
+    _frameNum(0)
   {;}
 
 
@@ -37,6 +38,7 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir )
     LOG(INFO) << "Opening video file " << filename;
 
     _writer->open(filename.string());
+    _frameNum = 0;
 
     _isReady = true;
     return true;
@@ -45,13 +47,17 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir )
 
   bool VideoRecorder::close() {
     _isReady = false;
+    _frameNum = 0;
     _writer.reset();
   }
 
 
-  bool VideoRecorder::addFrame( AVFrame *frame, unsigned int frameNum, unsigned int stream ) {
+  bool VideoRecorder::addFrame( AVFrame *frame, unsigned int stream ) {
     if( _writer ) {
-      return _writer->addFrame( frame, frameNum, stream );
+      if( !_writer->addFrame( frame, _frameNum, stream ) ) return false;
+
+      _frameNum++;
+      return true;
     }
 
     return false;
