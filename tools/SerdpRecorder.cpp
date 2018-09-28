@@ -7,16 +7,9 @@ using namespace std;
 
 #include <signal.h>
 
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
-
 #include <CLI/CLI.hpp>
 
 #include <libg3logger/g3logger.h>
-
-#include "liboculus/StatusRx.h"
-#include "liboculus/SonarClient.h"
-using namespace liboculus;
 
 #include "libblackmagic/DeckLink.h"
 #include "libblackmagic/DataTypes.h"
@@ -27,10 +20,9 @@ using namespace libblackmagic;
 #include "libvideoencoder/VideoEncoder.h"
 using libvideoencoder::Encoder;
 
-#include "IoServiceThread.h"
-
 #include "serdprecorder/CameraState.h"
 #include "serdprecorder/VideoRecorder.h"
+#include "serdprecorder/SonarClient.h"
 using namespace serdprecorder;
 
 
@@ -58,6 +50,7 @@ const int CamNum = 1;
 
 DeckLink deckLink;
 shared_ptr<VideoRecorder> recorder(nullptr);
+shared_ptr<SonarClient> sonar(nullptr);
 
 
 
@@ -256,8 +249,11 @@ int main( int argc, char** argv )
 	int stopAfter = -1;
 	app.add_option("--stop-after", stopAfter, "Stop after N frames");
 
+	bool doSonar = false;
+	app.add_flag("-s,--sonar", doSonar, "Record Oculus sonar");
+
   string sonarIp("auto");
-  app.add_option("-s,--sonar-ip", sonarIp, "IP address of sonar or \"auto\" to automatically detect.");
+  app.add_option("--sonar-ip", sonarIp, "IP address of sonar or \"auto\" to automatically detect.");
 
 	string outputDir;
 	app.add_option("--output,-o", outputDir, "Output dir");
@@ -305,122 +301,90 @@ int main( int argc, char** argv )
 
 	recorder.reset( new VideoRecorder( outputDir ) );
 
+	if( doSonar ) sonar.reset( new SonarClient( sonarIp, recorder ));
+
 	int count = 0, miss = 0, displayed = 0;
 
 	CameraState cameraState( deckLink.output().sdiProtocolBuffer() );
 
-		LOG(DEBUG) << "Starting streams";
-		if( !deckLink.startStreams() ) {
-				LOG(WARNING) << "Unable to start streams";
-				exit(-1);
-		}
+	LOG(DEBUG) << "Starting streams";
+	if( !deckLink.startStreams() ) {
+			LOG(WARNING) << "Unable to start streams";
+			exit(-1);
+	}
 
-
-	bool once = true;
-
-	std::array<cv::Mat,2> images, scaledImages;
+	libblackmagic::InputHandler::MatPair rawImages, scaledImages;
 
 	while( keepGoing ) {
 
-		std::chrono::steady_clock::time_point loopStart( std::chrono::steady_clock::now() );
-		//if( (duration > 0) && (loopStart > end) ) { keepGoing = false;  break; }
+		++count;
+		if((stopAfter > 0) && (count > stopAfter)) { break; }
 
-		int numImages = 0;
-		if( (numImages = deckLink.input().grab()) > 0 ) {
+		if( !deckLink.input().queue().wait_for_pop( rawImages, std::chrono::milliseconds(100) ) ) {
+			// No input
 
-			numImages = std::min( numImages, int(images.size()) );
+			// check for keyboard input
+			continue;
+		}
+
+
+		unsigned int numImages = (rawImages[1].empty() ? 1 : 2);
+
+		if( recorder->isRecording() ) {
+			for( unsigned int i=0; i < numImages; ++i ) {
+					recorder->addMat( rawImages[i], i );
+			}
+			recorder->advanceFrame();
+		}
+
+
+		if( noDisplay == false )  {
 
 			for( unsigned int i=0; i < numImages; ++i ) {
-				deckLink.input().getRawImage(i, images[i]);
-
-				if( recorder->isRecording() ) {
-
-					//Convert to AVFrame
-					AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
-					CHECK( frame != nullptr ) << "Cannot create frame";
-
-					auto sz = images[i].size();
-
-				  frame->width = sz.width;
-				  frame->height = sz.height;
-				  frame->format = AV_PIX_FMT_BGRA;
-					auto res = av_frame_get_buffer(frame, 0);
-
-					// Try this_`
-					// memcpy for now
-					cv::Mat frameMat( sz.height, sz.width, CV_8UC4, frame->data[0]);
-					images[i].copyTo( frameMat );
-
-					recorder->addFrame( frame, i );
-
-					av_frame_free( &frame );
+				cv::resize( rawImages[i], scaledImages[i], cv::Size(), 0.25, 0.25  );
 			}
-		}
 
+			// Display images
 
-			if( noDisplay ) {
+			if( numImages == 1 ) {
+				cv::imshow("Image", scaledImages[0]);
+			} else if ( numImages == 2 ) {
 
-				//
+				cv::Mat composite( cv::Size( scaledImages[0].size().width + scaledImages[0].size().width,
+				std::max(scaledImages[0].size().height, scaledImages[1].size().height )), scaledImages[0].type() );
 
-			} else {
-
-				for( unsigned int i=0; i < numImages; ++i ) {
-					cv::resize( images[i], scaledImages[i], cv::Size(), 0.25, 0.25  );
+				if( !scaledImages[0].empty() ) {
+					cv::Mat leftROI( composite, cv::Rect(0,0,scaledImages[0].size().width,scaledImages[0].size().height) );
+					scaledImages[0].copyTo( leftROI );
 				}
 
-				// Display images
-
-				if( numImages == 1 ) {
-					cv::imshow("Image", scaledImages[0]);
-				} else if ( numImages == 2 ) {
-
-					cv::Mat composite( cv::Size( scaledImages[0].size().width + scaledImages[0].size().width,
-					std::max(scaledImages[0].size().height, scaledImages[1].size().height )), scaledImages[0].type() );
-
-					if( !scaledImages[0].empty() ) {
-						cv::Mat leftROI( composite, cv::Rect(0,0,scaledImages[0].size().width,scaledImages[0].size().height) );
-						scaledImages[0].copyTo( leftROI );
-					}
-
-					if( !scaledImages[1].empty() ) {
-						cv::Mat rightROI( composite, cv::Rect(scaledImages[0].size().width, 0, scaledImages[1].size().width, scaledImages[1].size().height) );
-						scaledImages[1].copyTo( rightROI );
-					}
-
-					cv::imshow("Composite", composite );
-
+				if( !scaledImages[1].empty() ) {
+					cv::Mat rightROI( composite, cv::Rect(scaledImages[0].size().width, 0, scaledImages[1].size().width, scaledImages[1].size().height) );
+					scaledImages[1].copyTo( rightROI );
 				}
+
+				cv::imshow("Composite", composite );
 
 			}
 
-			char c = cv::waitKey(1);
-			processKbInput( c, deckLink, cameraState );
-
-			LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
-			++displayed;
-
-
-		} else {
-			// if grab() fails
-			LOG(INFO) << "unable to grab frame";
-			++miss;
-			std::this_thread::sleep_for(std::chrono::microseconds(1000));
 		}
 
-		++count;
+		char c = cv::waitKey(1);
+		processKbInput( c, deckLink, cameraState );
 
-		if((stopAfter > 0) && (count >= stopAfter)) keepGoing = false;
+		LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
+		++displayed;
 
 	}
 
 	 //std::chrono::duration<float> dur( std::chrono::steady_clock::now()  - start );
 
-	 recorder->close();
+	recorder->close();
 
 	LOG(INFO) << "End of main loop, stopping streams...";
 
 	deckLink.stopStreams();
-
+	if( sonar ) sonar->stop();
 
 
 	// LOG(INFO) << "Recorded " << count << " frames in " <<   dur.count();
@@ -432,58 +396,3 @@ int main( int argc, char** argv )
 
 		return 0;
 	}
-
-
-
-	//
-	//
-	//   try {
-	//     IoServiceThread ioSrv;
-	//
-	//     OsStatusRx statusRx( ioSrv.service() );
-	//     std::unique_ptr<SonarClient> sonarClient( nullptr );
-	//
-	//     if( ipAddr != "auto" ) {
-	//       LOG(INFO) << "Connecting to sonar with IP address " << ipAddr;
-	//       auto addr( boost::asio::ip::address_v4::from_string( ipAddr ) );
-	//
-	//       LOG_IF(FATAL,addr.is_unspecified()) << "Hm, couldn't parse IP address";
-	//
-	//       sonarClient.reset( new SonarClient( ioSrv.service(), addr ) );
-	//     }
-	//
-	//     ioSrv.start();
-	//
-	//     while(true) {
-	//
-	//       if( !sonarClient && ipAddr == "auto") {
-	//         if( statusRx.status().valid() ) {
-	//           auto addr( statusRx.status().ipAddr() );
-	//
-	//           LOG(INFO) << "Using detected sonar at IP address " << addr;
-	//
-	//           if( verbosity > 0 ) statusRx.status().dump();
-	//
-	//           sonarClient.reset( new SonarClient( ioSrv.service(), addr ) );
-	//
-	//         }
-	//       }
-	//
-	//       if( sonarClient ) {
-	//         // Do some stuff
-	//         sleep(1);
-	//       }
-	//
-	//     }
-	//
-	//     ioSrv.stop();
-	//
-	//   }
-	//   catch (std::exception& e)
-	//   {
-	//     LOG(WARNING) << "Exception: " << e.what();
-	//   }
-	//
-	//
-	//
-	// }
