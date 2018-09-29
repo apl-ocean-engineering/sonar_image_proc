@@ -51,6 +51,7 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
 
 
   void VideoRecorder::close() {
+    LOG(INFO) << "Closing video with " << _frameNum << " frames";
     _isReady = false;
     _frameNum = 0;
     _writer.reset();

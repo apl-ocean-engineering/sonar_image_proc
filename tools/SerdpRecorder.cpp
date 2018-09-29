@@ -144,6 +144,7 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					guard( [](BMSDIBuffer *buffer ){
 						bmAddVideoMode( buffer, CamNum,bmdModeHD1080p2997 );
 						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+						bmAddAutoExposureMode( buffer, CamNum, BM_AUTOEXPOSURE_SHUTTER );
 					});
 					break;
 
@@ -152,6 +153,7 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					guard( [](BMSDIBuffer *buffer ){
 						bmAddVideoMode( buffer, CamNum,bmdModeHD1080p30 );
 						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+						bmAddAutoExposureMode( buffer, CamNum, BM_AUTOEXPOSURE_SHUTTER );
 					});
 					break;
 
@@ -160,6 +162,7 @@ static void processKbInput( char c, DeckLink &decklink, CameraState &camState ) 
 					guard( [](BMSDIBuffer *buffer ){
 						bmAddVideoMode( buffer, CamNum,bmdModeHD1080p6000 );
 						bmAddReferenceSource( buffer, CamNum, BM_REF_SOURCE_PROGRAM );
+						bmAddAutoExposureMode( buffer, CamNum, BM_AUTOEXPOSURE_SHUTTER );
 					});
 					break;
 
@@ -258,6 +261,9 @@ int main( int argc, char** argv )
 	string outputDir;
 	app.add_option("--output,-o", outputDir, "Output dir");
 
+	float previewScale = 0.5;
+	app.add_option("--preview-scale", previewScale, "Scale of preview window");
+
 	CLI11_PARSE(app, argc, argv);
 
 	switch(verbosity) {
@@ -341,7 +347,16 @@ int main( int argc, char** argv )
 		if( noDisplay == false )  {
 
 			for( unsigned int i=0; i < numImages; ++i ) {
-				cv::resize( rawImages[i], scaledImages[i], cv::Size(), 0.25, 0.25  );
+				cv::Mat tmp;
+				cv::resize( rawImages[i], tmp, cv::Size(), previewScale, previewScale  );
+
+				scaledImages[i] = cv::Mat(tmp.rows, tmp.cols, CV_8UC3 );
+
+				// Image from camera is BGRA  map to RGB
+				int from_to[] = { 0,0, 1,1, 2,2 };
+				cv::mixChannels( &tmp, 1, &(scaledImages[i]), 1, from_to, 3 );
+				//cv::cvtColor( tmp, scaledImages[i], cv::COLOR_BGRA2RGB );
+				//cv::extractChannel(tmp, scaledImages[i], 0 );
 			}
 
 			// Display images
@@ -364,7 +379,6 @@ int main( int argc, char** argv )
 				}
 
 				cv::imshow("Composite", composite );
-
 			}
 
 		}

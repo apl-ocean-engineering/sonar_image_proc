@@ -38,7 +38,7 @@ fips_include_directories(
 
    fips_src( lib *.cpp )
 
-   fips_deps( videoencoder blackmagic )
+   fips_deps( videoencoder blackmagic oculus )
 
     fips_include_directories(
  	 	${CMAKE_SOURCE_DIR}/include
