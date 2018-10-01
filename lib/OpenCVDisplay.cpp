@@ -7,8 +7,8 @@
 
 namespace serdprecorder {
 
-  OpenCVDisplay::OpenCVDisplay( bool active, SerdpRecorder &parent )
-    : _active(active),
+  OpenCVDisplay::OpenCVDisplay( SerdpRecorder &parent, bool enabled )
+    : _enabled(enabled),
       _previewScale( 0.25 ),
       _parent(parent),
       _thread(active_object::Active::createActive())

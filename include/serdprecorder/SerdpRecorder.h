@@ -40,10 +40,11 @@ namespace serdprecorder {
 
     bool _keepGoing;
 
-    DeckLink _deckLink;
-    CameraState _camState;
+    std::shared_ptr<DeckLink> _deckLink;
+    std::shared_ptr<CameraState> _camState;
     std::shared_ptr<VideoRecorder> _recorder;
-    shared_ptr<SonarClient> _sonar;
+    std::shared_ptr<SonarClient> _sonar;
+    std::shared_ptr<OpenCVDisplay> _display;
 
 
   };

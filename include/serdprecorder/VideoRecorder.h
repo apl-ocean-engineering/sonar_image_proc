@@ -15,8 +15,12 @@ namespace serdprecorder {
   class VideoRecorder {
   public:
 
+    VideoRecorder();
     VideoRecorder( const fs::path &outputDir, bool doSonar = false );
     ~VideoRecorder();
+
+    bool setDoSonar( bool d )                   { return _doSonar = d; }
+    void setOutputDir( const std::string &dir ) { _outputDir = dir; }
 
     bool open( int width, int height, float frameRate, int numStreams = 1);
 

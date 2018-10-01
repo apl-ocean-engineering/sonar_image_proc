@@ -11,10 +11,12 @@ namespace serdprecorder {
   class OpenCVDisplay {
   public:
 
-    OpenCVDisplay( bool active, SerdpRecorder &parent );
+    OpenCVDisplay( SerdpRecorder &parent, bool enabled = true );
+
+    bool setEnabled( bool e ) { return _enabled = e; }
 
     void callDisplay( vector< cv::Mat > mats )
-    { if( _active) _thread->send( std::bind(&OpenCVDisplay::display, this, mats) ); }
+    { if( _enabled) _thread->send( std::bind(&OpenCVDisplay::display, this, mats) ); }
 
     float setPreviewScale( float scale )
     { _previewScale = scale;
@@ -25,12 +27,11 @@ namespace serdprecorder {
 
     void display( vector< cv::Mat > mats );
 
-
     void resizeImage( const cv::Mat &rawImage, cv::Mat &scaledImage );
 
   private:
 
-    bool _active;
+    bool _enabled;
     float _previewScale;
     SerdpRecorder &_parent;
 

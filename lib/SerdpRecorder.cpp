@@ -12,10 +12,11 @@ namespace serdprecorder {
 
   SerdpRecorder::SerdpRecorder( void )
     : _keepGoing( true ),
-      _deckLink(),
-      _camState( _deckLink.output().sdiProtocolBuffer() ),
+      _deckLink( new DeckLink() ),
+      _camState( new CameraState( _deckLink->output().sdiProtocolBuffer() ) ),
       _recorder(nullptr),
-      _sonar( nullptr )
+      _sonar( nullptr ),
+      _display( new OpenCVDisplay( *this ) )
   {}
 
 
@@ -87,8 +88,8 @@ namespace serdprecorder {
 
     // Handle the one-off commands
     if( doListCards || doListInputModes ) {
-        if(doListCards) _deckLink.listCards();
-        if(doListInputModes) _deckLink.listInputModes();
+        if(doListCards) _deckLink->listCards();
+        if(doListInputModes) _deckLink->listInputModes();
       return 0;
     }
 
@@ -100,19 +101,21 @@ namespace serdprecorder {
       LOG(WARNING) << "Starting in mode " << desiredModeString;
     }
 
-    OpenCVDisplay display( !noDisplay, *this );
-    _recorder.reset( new VideoRecorder(outputDir) );
+    _recorder->setOutputDir( outputDir );
+    _recorder->setDoSonar( doSonar );
+
+    _display->setEnabled( !noDisplay );
 
     //  Input should always auto-detect
-    _deckLink.input().enable( mode, true, do3D );
-    _deckLink.output().enable( mode );
+    _deckLink->input().enable( mode, true, do3D );
+    _deckLink->output().enable( mode );
 
     if( doSonar ) _sonar.reset( new SonarClient( sonarIp, _recorder ));
 
     int count = 0, miss = 0, displayed = 0;
 
     LOG(DEBUG) << "Starting streams";
-    if( !_deckLink.startStreams() ) {
+    if( !_deckLink->startStreams() ) {
         LOG(WARNING) << "Unable to start streams";
         exit(-1);
     }
@@ -124,7 +127,7 @@ namespace serdprecorder {
       ++count;
       if((stopAfter > 0) && (count > stopAfter)) { break; }
 
-      if( !_deckLink.input().queue().wait_for_pop( rawImages, std::chrono::milliseconds(100) ) ) {
+      if( !_deckLink->input().queue().wait_for_pop( rawImages, std::chrono::milliseconds(100) ) ) {
         // No input
 
         // check for keyboard input
@@ -144,7 +147,7 @@ namespace serdprecorder {
 
       // Reap all threads
 
-      display.callDisplay( rawImages );
+      _display->callDisplay( rawImages );
 
       // Wait for all recorder threads
       for( auto thread : recordThreads ) thread->join();
@@ -161,7 +164,7 @@ namespace serdprecorder {
 
     LOG(INFO) << "End of main loop, stopping streams...";
 
-    _deckLink.stopStreams();
+    _deckLink->stopStreams();
     if( _sonar ) _sonar->stop();
 
 
@@ -178,7 +181,7 @@ namespace serdprecorder {
 
   void SerdpRecorder::handleKey( const char c ) {
 
-  	std::shared_ptr<SharedBMSDIBuffer> sdiBuffer( _deckLink.output().sdiProtocolBuffer() );
+  	std::shared_ptr<SharedBMSDIBuffer> sdiBuffer( _deckLink->output().sdiProtocolBuffer() );
     const int CamNum = 1;
 
   	SDIBufferGuard guard( sdiBuffer );
@@ -204,7 +207,7 @@ namespace serdprecorder {
   			case '\'':
   					{
   						// Send positive aperture increment
-  						auto val = _camState.apertureInc();
+  						auto val = _camState->apertureInc();
   	 					// LOG(INFO) << "Sending aperture increment " << val.ord << " , " << val.val << " , " << val.str;
   						LOG(INFO) << "Set aperture to " << val;
   					}
@@ -213,7 +216,7 @@ namespace serdprecorder {
    			case ';':
   					{
   						// Send negative aperture decrement
-  						auto val = _camState.apertureDec();
+  						auto val = _camState->apertureDec();
   						//LOG(INFO) << "Sending aperture decrement " << val.ord << " , " << val.val << " , " << val.str;
   						LOG(INFO) << "Set aperture to " << val;
   					// guard( []( BMSDIBuffer *buffer ){	bmAddOrdinalApertureOffset( buffer, CamNum, -1 ); });
@@ -223,21 +226,21 @@ namespace serdprecorder {
   			//=== Shutter increment/decrement ===
   			case '.':
    					LOG(INFO) << "Sending shutter increment to camera";
-  					_camState.exposureInc();
+  					_camState->exposureInc();
    					break;
    			case '/':
    					LOG(INFO) << "Sending shutter decrement to camera";
-  					_camState.exposureDec();
+  					_camState->exposureDec();
    					break;
 
   			//=== Gain increment/decrement ===
   			case 'z':
    					LOG(INFO) << "Sending gain increment to camera";
-  					_camState.gainInc();
+  					_camState->gainInc();
    					break;
    			case 'x':
    					LOG(INFO) << "Sending gain decrement to camera";
-  					_camState.gainDec();
+  					_camState->gainDec();
    					break;
 
   			//== Increment/decrement white balance
@@ -297,7 +300,7 @@ namespace serdprecorder {
 
   			case '`':
   				LOG(INFO) << "Updating camera";
-  					_camState.updateCamera();
+  					_camState->updateCamera();
   					break;
 
   			case '\\':
@@ -307,7 +310,7 @@ namespace serdprecorder {
   			   } else {
 	           LOG(INFO) << "Starting recording";
 
-	           const libblackmagic::ModeConfig config( _deckLink.input().currentConfig() );
+	           const libblackmagic::ModeConfig config( _deckLink->input().currentConfig() );
 						 const ModeParams params( config.params() );
 
 						 if( params.valid() ) {

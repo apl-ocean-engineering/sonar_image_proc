@@ -11,6 +11,16 @@ using namespace libvideoencoder;
 namespace serdprecorder {
 
 
+  VideoRecorder::VideoRecorder( )
+    : _frameNum(0),
+      _doSonar( false ),
+      _sonarTrack( -1 ),
+      _outputDir( "." ),
+      _isReady( false ),
+      _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
+      _writer(nullptr)
+    {;}
+
 VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
   : _frameNum(0),
     _doSonar( doSonar ),
