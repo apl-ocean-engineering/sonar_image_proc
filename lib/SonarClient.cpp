@@ -54,14 +54,12 @@ namespace serdprecorder {
         if( !dataRx ) {
 
           // Attempt auto detection
-          if( statusRx.status().wait_for( std::chrono::milliseconds(100) ) ) {
+          if( statusRx.status().wait_for(std::chrono::seconds(1)) ) {
 
             if( statusRx.status().valid() ) {
               auto addr( statusRx.status().ipAddr() );
 
               LOG(INFO) << "Using detected sonar at IP address " << addr;
-
-              // statusRx.status().dump();
 
               dataRx.reset( new DataRx( ioSrv.service(), addr ) );
 
@@ -78,6 +76,8 @@ namespace serdprecorder {
           // Do something
           auto valid = ping->validate();
           LOG(INFO) << "Got " << (valid ? "valid" : "invalid") << " ping";
+
+          // Send to recorder
 
         }
 

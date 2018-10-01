@@ -60,6 +60,7 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
 
 
   bool VideoRecorder::addMat( cv::Mat image, unsigned int stream ) {
+    if( !_writer ) return false;
     //Convert to AVFrame
     AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
     CHECK( frame != nullptr ) << "Cannot create frame";
@@ -92,6 +93,8 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
   }
 
   bool VideoRecorder::addData( void *data, size_t sz ) {
+    if( !_writer ) return false;
+
     if( _sonarTrack < 0 ) return false;
 
     {

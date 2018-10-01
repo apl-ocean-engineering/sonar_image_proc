@@ -8,7 +8,7 @@ imports:
         git: https://github.com/amarburg/liboculus.git
     libvideoencoder:
         git: https://github.com/amarburg/libvideoencoder.git
-    libgpmf:
+    libgpmf-fips:
         git: https://github.com/amarburg/libgpmf-fips.git
 
 defines:

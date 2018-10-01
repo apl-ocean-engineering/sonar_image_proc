@@ -1,12 +1,17 @@
 #pragma once
 
 #include <memory>
+#include <iostream>
 
 #include "libbmsdi/bmsdi_message.h"
+#include "libbmsdi/helpers.h"
 #include "libbmsdi/values.h"
 
 
-namespace serdp_recorder {
+namespace serdprecorder {
+
+  using std::cout;
+  using std::endl;
 
 class Bounded {
 public:
@@ -84,6 +89,10 @@ public:
     int _idx;
 
 };
+
+using libblackmagic::SharedBMSDIBuffer;
+using libblackmagic::SDIBufferGuard;
+
 
 class CameraState {
 public:
