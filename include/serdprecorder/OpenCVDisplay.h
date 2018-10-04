@@ -1,7 +1,9 @@
 #pragma once
 
+#include <opencv2/core.hpp>
 
 #include "active_object/active.h"
+#include "liboculus/SimplePingResult.h"
 
 namespace serdprecorder {
 
@@ -15,8 +17,11 @@ namespace serdprecorder {
 
     bool setEnabled( bool e ) { return _enabled = e; }
 
-    void callDisplay( vector< cv::Mat > mats )
-    { if( _enabled) _thread->send( std::bind(&OpenCVDisplay::display, this, mats) ); }
+    void showVideo( vector< cv::Mat > mats )
+    { if( _enabled) _thread->send( std::bind(&OpenCVDisplay::implShowVideo, this, mats) ); }
+
+    void showSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping )
+    { if( _enabled) _thread->send( std::bind(&OpenCVDisplay::implShowSonar, this, ping) ); }
 
     float setPreviewScale( float scale )
     { _previewScale = scale;
@@ -25,9 +30,10 @@ namespace serdprecorder {
 
   protected:
 
-    void display( vector< cv::Mat > mats );
-
+    void implShowVideo( vector< cv::Mat > mats );
     void resizeImage( const cv::Mat &rawImage, cv::Mat &scaledImage );
+
+    void implShowSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping );
 
   private:
 

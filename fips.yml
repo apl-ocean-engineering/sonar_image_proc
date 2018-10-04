@@ -2,6 +2,8 @@ imports:
     fips-googletest:
         git: https://github.com/amarburg/fips-googletest.git
         cond: "FIPS_UNITTESTS"
+    libactive_object:
+        git: https://github.com/amarburg/libactive_object.git
     libblackmagic:
         git: https://github.com/amarburg/libactive_object.git
     liboculus:

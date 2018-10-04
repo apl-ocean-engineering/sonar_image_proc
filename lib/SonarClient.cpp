@@ -7,10 +7,13 @@
 namespace serdprecorder {
 
 
-  SonarClient::SonarClient( const std::string &ipAddr, const shared_ptr<VideoRecorder> &recorder )
+  SonarClient::SonarClient( const std::string &ipAddr,
+                            const shared_ptr<VideoRecorder> &recorder,
+                            const shared_ptr<OpenCVDisplay> &display )
   : _ipAddr( ipAddr ),
   _thread(),
   _recorder( recorder ),
+  _display( display ),
   _done( false )
   {;}
 
@@ -57,30 +60,27 @@ namespace serdprecorder {
 
           // Attempt auto detection
           if( statusRx.status().wait_for(std::chrono::seconds(1)) ) {
-
             if( statusRx.status().valid() ) {
               auto addr( statusRx.status().ipAddr() );
-
               LOG(INFO) << "Using detected sonar at IP address " << addr;
-
               dataRx.reset( new DataRx( ioSrv.service(), addr ) );
-
             }
-
           }
 
         } else {
 
-          shared_ptr<SimplePingResult> ping;
+          shared_ptr<SimplePingResult> ping(nullptr);
 
-          dataRx->queue().wait_for_pop( ping, std::chrono::milliseconds(100) );
+          if( dataRx->queue().wait_for_pop( ping, std::chrono::milliseconds(100) ) ) {
+            // Do something
+            auto valid = ping->validate();
+            LOG(INFO) << "Got " << (valid ? "valid" : "invalid") << " ping";
 
-          // Do something
-          auto valid = ping->validate();
-          LOG(INFO) << "Got " << (valid ? "valid" : "invalid") << " ping";
+            // Send to recorder
+            _recorder->addSonar( ping->data(), ping->dataSize() );
 
-          // Send to recorder
-          _recorder->addSonar( ping->data(), ping->dataSize() );
+            if( _display ) _display->showSonar( ping );
+          } 
         }
 
       }

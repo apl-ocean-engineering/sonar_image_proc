@@ -1,7 +1,8 @@
 
-#include "serdprecorder/SerdpRecorder.h"
-
 #include "serdprecorder/OpenCVDisplay.h"
+
+#include "serdprecorder/SerdpRecorder.h"
+#include "serdprecorder/drawSonar.h"
 
 
 
@@ -15,7 +16,9 @@ namespace serdprecorder {
   {}
 
 
-  void OpenCVDisplay::display( vector< cv::Mat > rawImages )
+  //=== Functions related to showing video =====
+
+  void OpenCVDisplay::implShowVideo( vector< cv::Mat > rawImages )
   {
     const unsigned int numImages = rawImages.size();
     vector< cv::Mat > scaledImages( numImages );
@@ -67,6 +70,19 @@ namespace serdprecorder {
   	//cv::cvtColor( tmp, scaledImages[i], cv::COLOR_BGRA2RGB );
   	//cv::extractChannel(tmp, scaledImages[i], 0 );
   }
+
+  //==== Functions related to showing sonar =====
+
+  void OpenCVDisplay::implShowSonar( const std::shared_ptr<SimplePingResult> &ping )
+  {
+    cv::Mat mat( 500, 1000, CV_8UC3 );
+    mat.setTo( cv::Vec3b(128,128,128) );
+
+    drawSonar( ping, mat );
+    cv::imshow("Sonar ping", mat);
+  }
+
+
 
 
 }

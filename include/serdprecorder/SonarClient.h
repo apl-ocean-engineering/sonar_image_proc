@@ -9,13 +9,16 @@
 using namespace liboculus;
 
 #include "serdprecorder/VideoRecorder.h"
+#include "serdprecorder/OpenCVDisplay.h"
 
 namespace serdprecorder {
 
   class SonarClient {
   public:
 
-    SonarClient( const std::string &ipAddr, const shared_ptr<VideoRecorder> &recorder = shared_ptr<VideoRecorder>(nullptr) );
+    SonarClient( const std::string &ipAddr,
+                  const shared_ptr<VideoRecorder> &recorder = shared_ptr<VideoRecorder>(nullptr),
+                  const shared_ptr<OpenCVDisplay> &display = shared_ptr<OpenCVDisplay>(nullptr) );
 
     ~SonarClient();
 
@@ -34,6 +37,7 @@ namespace serdprecorder {
     std::thread _thread;
 
     shared_ptr<VideoRecorder> _recorder;
+    shared_ptr<OpenCVDisplay> _display;
 
     bool _done;
 

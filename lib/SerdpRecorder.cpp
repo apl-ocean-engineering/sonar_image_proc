@@ -14,7 +14,7 @@ namespace serdprecorder {
     : _keepGoing( true ),
       _deckLink( new DeckLink() ),
       _camState( new CameraState( _deckLink->output().sdiProtocolBuffer() ) ),
-      _recorder(nullptr),
+      _recorder( new VideoRecorder() ),
       _sonar( nullptr ),
       _display( new OpenCVDisplay( *this ) )
   {}
@@ -110,7 +110,11 @@ namespace serdprecorder {
     _deckLink->input().enable( mode, true, do3D );
     _deckLink->output().enable( mode );
 
-    if( doSonar ) _sonar.reset( new SonarClient( sonarIp, _recorder ));
+    if( doSonar ) {
+      LOG(INFO) << "Enabling sonar";
+      _sonar.reset( new SonarClient( sonarIp, _recorder, _display ) );
+      _sonar->start();
+    }
 
     int count = 0, miss = 0, displayed = 0;
 
@@ -146,8 +150,7 @@ namespace serdprecorder {
 
 
       // Reap all threads
-
-      _display->callDisplay( rawImages );
+      _display->showVideo( rawImages );
 
       // Wait for all recorder threads
       for( auto thread : recordThreads ) thread->join();
