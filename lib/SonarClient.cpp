@@ -2,6 +2,8 @@
 
 #include "serdprecorder/SonarClient.h"
 
+#include "serdprecorder/drawSonar.h"
+
 namespace serdprecorder {
 
 
@@ -78,7 +80,7 @@ namespace serdprecorder {
           LOG(INFO) << "Got " << (valid ? "valid" : "invalid") << " ping";
 
           // Send to recorder
-
+          _recorder->addSonar( ping->data(), ping->dataSize() );
         }
 
       }

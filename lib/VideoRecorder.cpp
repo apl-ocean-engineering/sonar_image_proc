@@ -5,31 +5,41 @@
 
 #include "serdprecorder/VideoRecorder.h"
 
+#include "gpmf-write/GPMF_writer.h"
 
 using namespace libvideoencoder;
 
 namespace serdprecorder {
 
+  #define GPMF_DEVICE_ID_OCULUS_SONAR  0xAA000001
+  static char SonarName[] = "OculusSonar";
 
   VideoRecorder::VideoRecorder( )
     : _frameNum(0),
       _doSonar( false ),
       _sonarTrack( -1 ),
-      _outputDir( "." ),
+      _outputDir( "/tmp/" ),
       _isReady( false ),
       _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
-      _writer(nullptr)
-    {;}
+      _writer(nullptr),
+      _gpmfHandle( GPMFWriteServiceInit() ),
+      _sonarHandle( GPMFWriteStreamOpen(_gpmfHandle, GPMF_CHANNEL_TIMED, GPMF_DEVICE_ID_OCULUS_SONAR, SonarName, NULL, 0) )
+    {
+      CHECK( _gpmfHandle ) << "Unable to initialize GPMF Write Service";
+      CHECK( _sonarHandle ) << "Unable to initialize GPMF stream for sonar";
 
-VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
-  : _frameNum(0),
-    _doSonar( doSonar ),
-    _sonarTrack( -1 ),
-    _outputDir( outputDir ),
-    _isReady( false ),
-    _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
-    _writer(nullptr)
-  {;}
+      initGPMF();
+    }
+
+// VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
+//   : _frameNum(0),
+//     _doSonar( doSonar ),
+//     _sonarTrack( -1 ),
+//     _outputDir( outputDir ),
+//     _isReady( false ),
+//     _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
+//     _writer(nullptr)
+//   {;}
 
 
   VideoRecorder::~VideoRecorder()
@@ -54,6 +64,14 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
 
     _writer->open(filename.string());
     _frameNum = 0;
+
+    // Flush GPMF stream
+    //Flush any stale data before starting video capture.
+    {
+      char buffer[8192];
+      uint32_t *payload, payload_size;
+	    GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, sizeof(buffer), &payload, &payload_size);
+    }
 
     _isReady = true;
     return true;
@@ -102,20 +120,38 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
     return true;
   }
 
-  bool VideoRecorder::addData( void *data, size_t sz ) {
+  bool VideoRecorder::addSonar( void *data, size_t sz ) {
     if( !_writer ) return false;
 
     if( _sonarTrack < 0 ) return false;
 
+
     {
+      // Add sonar data to GPMF handle
+      auto err = GPMFWriteStreamStore(_sonarHandle, STR2FOURCC("OCUS"), GPMF_TYPE_COMPLEX, 1, sz, data, GPMF_FLAGS_NONE);
+			LOG_IF(WARNING,err) << "Error writing to GPMF store";
+    }
+
+    {
+
+      // Estimate buffer size
+      size_t estSize = GPMFWriteEstimateBufferSize( _gpmfHandle, GPMF_CHANNEL_TIMED, 0 );
+      // Inflate estimated size?
+
+      void *buffer = av_malloc( estSize + 8192 );
+
+      uint32_t *payload, payloadSize;
+
+      GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, sizeof(buffer), &payload, &payloadSize);
+
       // And data track
       AVPacket *pkt = av_packet_alloc();
-      av_new_packet( pkt, sz );
-      memcpy( pkt->data, data, sz );
+      av_packet_from_data(pkt, (uint8_t *)buffer, payloadSize );
+      //memcpy( pkt->data, data, sz );
 
       pkt->stream_index = _sonarTrack;
-      pkt->pts = 0;
-      pkt->dts = pkt->pts;
+      pkt->dts = 0;
+      pkt->pts = pkt->dts;
 
       _writer->addPacket( pkt );
     }
@@ -136,6 +172,14 @@ VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
     return fs::path(_outputDir) += mbstr;
   }
 
+
+  //=================================
+  void VideoRecorder::initGPMF()
+  {
+    // Add sticky deckLinkAttributes
+    const char name[]="Oculus MB1200d";
+		GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_STREAM_NAME, GPMF_TYPE_STRING_ASCII, strlen(name), 1, (void *)name, GPMF_FLAGS_STICKY);
+  }
 
 
   // static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const BMDDisplayMode mode, bool do3D = false ) {

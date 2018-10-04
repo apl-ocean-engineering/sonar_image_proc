@@ -10,7 +10,8 @@ using serdprecorder::VideoRecorder;
 
 TEST(TestVideoRecorder, makeFilename) {
 
-  VideoRecorder recorder( "/tmp/" );
+  VideoRecorder recorder;
+  recorder.setOutputDir( "/tmp/" );
 
   {
     auto p = recorder.makeFilename();

@@ -12,20 +12,26 @@ using std::string;
 #include <libg3logger/g3logger.h>
 #include <CLI/CLI.hpp>
 
+#include <opencv2/highgui.hpp>
 
 #include "liboculus/StatusRx.h"
 #include "liboculus/DataRx.h"
 #include "liboculus/IoServiceThread.h"
 #include "liboculus/playback.h"
 
+#include "serdprecorder/drawSonar.h"
 
 #include "gpmf-write/GPMF_writer.h"
 
 
 using namespace liboculus;
+using namespace serdprecorder;
 
 using std::ofstream;
 using std::ios_base;
+
+int playbackSonarFile( const std::string &filename );
+
 
 int main( int argc, char **argv ) {
 
@@ -159,6 +165,32 @@ int main( int argc, char **argv ) {
   }
 
   if( output.is_open() ) output.close();
+  exit(0);
+}
 
 
+int playbackSonarFile( const std::string &filename ) {
+  SonarPlayer player;
+  if( !player.open(filename) ) {
+    LOG(INFO) << "Failed to open " << filename;
+    return -1;
+  }
+
+  std::shared_ptr<SimplePingResult> ping( player.nextPing() );
+  while( ping ) {
+    ping->validate();
+
+    cv::Mat mat( 500, 1000, CV_8UC3 );
+    mat.setTo( cv::Vec3b(128,128,128) );
+
+
+    drawSonar( ping, mat );
+    cv::imshow("Sonar ping", mat);
+
+    cv::waitKey(1000);
+
+    ping = player.nextPing();
+  }
+
+  return 0;
 }

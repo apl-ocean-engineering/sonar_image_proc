@@ -34,18 +34,18 @@ fips_include_directories(
  )
 
 
- fips_begin_module( serdprecorder )
+# The local library
+fips_begin_module( serdprecorder )
 
    fips_src( lib *.cpp )
 
-   fips_deps( videoencoder blackmagic oculus )
+   fips_deps( videoencoder blackmagic oculus gpmf )
 
     fips_include_directories(
  	 	${CMAKE_SOURCE_DIR}/include
  	 )
 
 	 fips_libs(  ${Boost_LIBRARIES} )
-
 
   fips_end_module()
 

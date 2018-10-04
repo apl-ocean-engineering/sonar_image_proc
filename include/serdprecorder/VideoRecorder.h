@@ -16,7 +16,7 @@ namespace serdprecorder {
   public:
 
     VideoRecorder();
-    VideoRecorder( const fs::path &outputDir, bool doSonar = false );
+    //VideoRecorder( const fs::path &outputDir, bool doSonar = false );
     ~VideoRecorder();
 
     bool setDoSonar( bool d )                   { return _doSonar = d; }
@@ -31,13 +31,15 @@ namespace serdprecorder {
     bool addMat( cv::Mat image, unsigned int stream = 0  );
     bool addFrame( AVFrame *frame, unsigned int stream = 0 );
 
-    bool addData( void *data, size_t size );
+    bool addSonar( void *data, size_t size );
 
     void advanceFrame() { ++_frameNum; }
 
     fs::path makeFilename();
 
   protected:
+
+    void initGPMF();
 
     int _frameNum;
 
@@ -49,6 +51,9 @@ namespace serdprecorder {
 
     std::shared_ptr<libvideoencoder::Encoder> _encoder;
     std::shared_ptr<libvideoencoder::VideoWriter> _writer;
+
+    size_t _gpmfHandle;
+    size_t _sonarHandle;
 
   };
 
