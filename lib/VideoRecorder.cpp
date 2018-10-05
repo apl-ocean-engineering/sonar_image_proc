@@ -1,5 +1,6 @@
 
 #include <ctime>
+#include <memory>
 
 #include "libg3logger/g3logger.h"
 
@@ -11,6 +12,8 @@ using namespace libvideoencoder;
 
 namespace serdprecorder {
 
+  using namespace std;
+
   #define GPMF_DEVICE_ID_OCULUS_SONAR  0xAA000001
   static char SonarName[] = "OculusSonar";
 
@@ -20,7 +23,9 @@ namespace serdprecorder {
       _sonarTrack( -1 ),
       _outputDir( "/tmp/" ),
       _isReady( false ),
-      _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
+      _pending(0),
+      _mutex(),
+      _encoder( new Encoder("mp4", AV_CODEC_ID_HEVC) ),
       _writer(nullptr),
       _gpmfHandle( GPMFWriteServiceInit() ),
       _sonarHandle( GPMFWriteStreamOpen(_gpmfHandle, GPMF_CHANNEL_TIMED, GPMF_DEVICE_ID_OCULUS_SONAR, SonarName, NULL, 0) )
@@ -74,11 +79,21 @@ namespace serdprecorder {
     }
 
     _isReady = true;
+    {
+      std::lock_guard<std::mutex> lock(_mutex);
+      _pending = 0;
+    }
     return true;
   }
 
 
   void VideoRecorder::close() {
+
+    while(true) {
+      std::lock_guard<std::mutex> lock(_mutex);
+      if( _pending == 0 ) break;;
+    }
+
     LOG(INFO) << "Closing video with " << _frameNum << " frames";
     _isReady = false;
     _frameNum = 0;
@@ -86,9 +101,30 @@ namespace serdprecorder {
   }
 
 
+  bool VideoRecorder::addMats( std::vector<cv::Mat> &mats ) {
+    std::deque< std::shared_ptr<std::thread> > recordThreads;
+
+    for( unsigned int i=0; i < mats.size(); ++i ) {
+      recordThreads.push_back( shared_ptr<std::thread>( new std::thread( &VideoRecorder::addMat, this, mats[i], i ) ) );
+    }
+
+    // Wait for all recorder threads
+    for( auto thread : recordThreads ) thread->join();
+    advanceFrame();
+
+    return true;
+  }
+
 
   bool VideoRecorder::addMat( cv::Mat image, unsigned int stream ) {
+
     if( !_writer ) return false;
+
+    {
+      std::lock_guard<std::mutex> lock(_mutex);
+      ++_pending;
+    }
+
     //Convert to AVFrame
     AVFrame *frame = av_frame_alloc();   ///avcodec_alloc_frame();
     CHECK( frame != nullptr ) << "Cannot create frame";
@@ -105,26 +141,36 @@ namespace serdprecorder {
     cv::Mat frameMat( sz.height, sz.width, CV_8UC4, frame->data[0]);
     image.copyTo( frameMat );
 
-    auto result = addFrame( frame, stream );
+    res = _writer->addFrame( frame, _frameNum, stream );
 
     av_frame_free( &frame );
 
-    return result;
+    {
+      std::lock_guard<std::mutex> lock(_mutex);
+      --_pending;
+    }
+
+    return res;
   }
 
-  bool VideoRecorder::addFrame( AVFrame *frame, unsigned int stream ) {
-    if( !_writer ) return false;
-
-    if( !_writer->addFrame( frame, _frameNum, stream ) ) return false;
-
-    return true;
-  }
+  // bool VideoRecorder::addFrame( AVFrame *frame, unsigned int stream ) {
+  //
+  //   if( !_writer ) return false;
+  //
+  //   if( !_writer->addFrame( frame, _frameNum, stream ) ) return false;
+  //
+  //   return true;
+  // }
 
   bool VideoRecorder::addSonar( void *data, size_t sz ) {
-    if( !_writer ) return false;
 
+    if( !_writer ) return false;
     if( _sonarTrack < 0 ) return false;
 
+    {
+      std::lock_guard<std::mutex> lock(_mutex);
+      ++_pending;
+    }
 
     {
       // Add sonar data to GPMF handle
@@ -153,7 +199,14 @@ namespace serdprecorder {
       pkt->dts = 0;
       pkt->pts = pkt->dts;
 
+      LOG(WARNING) << "Writing " << payloadSize << " bytes to sonar track";
+
       _writer->addPacket( pkt );
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(_mutex);
+      --_pending;
     }
 
     return true;
@@ -165,7 +218,7 @@ namespace serdprecorder {
     std::time_t t = std::time(nullptr);
 
     char mbstr[100];
-    std::strftime(mbstr, sizeof(mbstr), "vid_%Y%m%d_%H%M%S.mov", std::localtime(&t));
+    std::strftime(mbstr, sizeof(mbstr), "vid_%Y%m%d_%H%M%S.mp4", std::localtime(&t));
 
     // TODO.  Test if file is existing
 

@@ -102,7 +102,7 @@ namespace serdprecorder {
     }
 
     _recorder->setOutputDir( outputDir );
-    _recorder->setDoSonar( doSonar );
+    //_recorder->setDoSonar( doSonar );
 
     _display->setEnabled( !noDisplay );
 
@@ -125,6 +125,7 @@ namespace serdprecorder {
     }
 
     libblackmagic::InputHandler::MatVector rawImages, scaledImages;
+    std::chrono::system_clock::time_point prevImage = std::chrono::system_clock::now();
 
     while( _keepGoing ) {
 
@@ -138,23 +139,23 @@ namespace serdprecorder {
         continue;
       }
 
+      // Compute dt
+      std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+
+      auto dt = now-prevImage;
+
+//std::chrono::milliseconds(dt).count()
+      LOG(WARNING) << "dt = " << float(dt.count())/1e6 << " ms";
+
+      prevImage = now;
+
       unsigned int numImages = rawImages.size();
 
       // Process each step in its own thread
-      std::deque< shared_ptr<std::thread> > recordThreads;
-
-      if( _recorder->isRecording() ) {
-        for( unsigned int i=0; i < numImages; ++i )
-            recordThreads.push_back( shared_ptr<std::thread>( new std::thread( &VideoRecorder::addMat, _recorder, rawImages[i], i ) ) );
-      }
-
+      if( _recorder->isRecording() ) _recorder->addMats( rawImages );
 
       // Reap all threads
       _display->showVideo( rawImages );
-
-      // Wait for all recorder threads
-      for( auto thread : recordThreads ) thread->join();
-      _recorder->advanceFrame();
 
       LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;
       ++displayed;
@@ -163,7 +164,7 @@ namespace serdprecorder {
 
      //std::chrono::duration<float> dur( std::chrono::steady_clock::now()  - start );
 
-    _recorder->close();
+    if( _recorder->isRecording() ) _recorder->close();
 
     LOG(INFO) << "End of main loop, stopping streams...";
 

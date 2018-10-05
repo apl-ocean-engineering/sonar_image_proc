@@ -28,8 +28,9 @@ namespace serdprecorder {
 
     bool isRecording() const { return bool(_writer != nullptr) && _isReady; }
 
+    bool addMats( std::vector<cv::Mat> &mats );
     bool addMat( cv::Mat image, unsigned int stream = 0  );
-    bool addFrame( AVFrame *frame, unsigned int stream = 0 );
+    //bool addFrame( AVFrame *frame, unsigned int stream = 0 );
 
     bool addSonar( void *data, size_t size );
 
@@ -48,6 +49,9 @@ namespace serdprecorder {
 
     fs::path _outputDir;
     bool _isReady;
+
+    unsigned int _pending;
+    std::mutex _mutex;
 
     std::shared_ptr<libvideoencoder::Encoder> _encoder;
     std::shared_ptr<libvideoencoder::VideoWriter> _writer;

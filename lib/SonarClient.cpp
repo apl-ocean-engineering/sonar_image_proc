@@ -74,13 +74,13 @@ namespace serdprecorder {
           if( dataRx->queue().wait_for_pop( ping, std::chrono::milliseconds(100) ) ) {
             // Do something
             auto valid = ping->validate();
-            LOG(INFO) << "Got " << (valid ? "valid" : "invalid") << " ping";
+            LOG(DEBUG) << "Got " << (valid ? "valid" : "invalid") << " ping";
 
             // Send to recorder
             _recorder->addSonar( ping->data(), ping->dataSize() );
 
             if( _display ) _display->showSonar( ping );
-          } 
+          }
         }
 
       }
