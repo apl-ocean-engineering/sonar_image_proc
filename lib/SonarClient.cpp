@@ -8,7 +8,7 @@ namespace serdprecorder {
 
 
   SonarClient::SonarClient( const std::string &ipAddr,
-                            const shared_ptr<VideoRecorder> &recorder,
+                            const shared_ptr<Recorder> &recorder,
                             const shared_ptr<OpenCVDisplay> &display )
   : _ipAddr( ipAddr ),
   _thread(),
@@ -37,6 +37,7 @@ namespace serdprecorder {
 
   // Runs in thread
   void SonarClient::run() {
+    LOG(DEBUG) << "Starting SonarClient in thread";
     try {
       IoServiceThread ioSrv;
 
@@ -65,6 +66,8 @@ namespace serdprecorder {
               LOG(INFO) << "Using detected sonar at IP address " << addr;
               dataRx.reset( new DataRx( ioSrv.service(), addr ) );
             }
+          } else {
+            LOG(INFO) << "No sonars detected, still waiting...";
           }
 
         } else {
@@ -77,7 +80,7 @@ namespace serdprecorder {
             LOG(DEBUG) << "Got " << (valid ? "valid" : "invalid") << " ping";
 
             // Send to recorder
-            _recorder->addSonar( ping->data(), ping->dataSize() );
+            _recorder->addSonar( ping );
 
             if( _display ) _display->showSonar( ping );
           }

@@ -16,7 +16,7 @@ namespace serdprecorder {
       _camState( new CameraState( _deckLink->output().sdiProtocolBuffer() ) ),
       _recorder( new VideoRecorder() ),
       _sonar( nullptr ),
-      _display( new OpenCVDisplay( *this ) )
+      _display( new OpenCVDisplay( this ) )
   {}
 
 
@@ -125,7 +125,7 @@ namespace serdprecorder {
     }
 
     libblackmagic::InputHandler::MatVector rawImages, scaledImages;
-    std::chrono::system_clock::time_point prevImage = std::chrono::system_clock::now();
+    std::chrono::system_clock::time_point prevTime = std::chrono::system_clock::now();
 
     while( _keepGoing ) {
 
@@ -142,19 +142,15 @@ namespace serdprecorder {
       // Compute dt
       std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 
-      auto dt = now-prevImage;
+      auto dt = now-prevTime;
 
 //std::chrono::milliseconds(dt).count()
       LOG(WARNING) << "dt = " << float(dt.count())/1e6 << " ms";
 
-      prevImage = now;
+      prevTime = now;
 
-      unsigned int numImages = rawImages.size();
 
-      // Process each step in its own thread
-      if( _recorder->isRecording() ) _recorder->addMats( rawImages );
-
-      // Reap all threads
+       _recorder->addMats( rawImages );
       _display->showVideo( rawImages );
 
       LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;

@@ -8,7 +8,14 @@
 
 namespace serdprecorder {
 
-  OpenCVDisplay::OpenCVDisplay( SerdpRecorder &parent, bool enabled )
+  OpenCVDisplay::OpenCVDisplay( bool enabled )
+    : _enabled(enabled),
+      _previewScale( 0.25 ),
+      _parent(nullptr),
+      _thread(active_object::Active::createActive())
+  {}
+
+  OpenCVDisplay::OpenCVDisplay( const std::shared_ptr<SerdpRecorder> &parent, bool enabled )
     : _enabled(enabled),
       _previewScale( 0.25 ),
       _parent(parent),
@@ -53,7 +60,7 @@ namespace serdprecorder {
 
 
 		char c = cv::waitKey(1);
-		_parent.handleKey( c );
+		if( _parent ) _parent->handleKey( c );
 
   }
 

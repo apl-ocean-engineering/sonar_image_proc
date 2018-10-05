@@ -17,8 +17,20 @@ namespace serdprecorder {
   #define GPMF_DEVICE_ID_OCULUS_SONAR  0xAA000001
   static char SonarName[] = "OculusSonar";
 
+  //=================================================================
+
+  Recorder::Recorder()
+  {;}
+
+  Recorder::~Recorder()
+  {;}
+
+
+  //=================================================================
+
   VideoRecorder::VideoRecorder( )
-    : _frameNum(0),
+    : Recorder(),
+      _frameNum(0),
       _doSonar( false ),
       _sonarTrack( -1 ),
       _outputDir( "/tmp/" ),
@@ -102,6 +114,8 @@ namespace serdprecorder {
 
 
   bool VideoRecorder::addMats( std::vector<cv::Mat> &mats ) {
+    if( !isRecording() ) return false;
+
     std::deque< std::shared_ptr<std::thread> > recordThreads;
 
     for( unsigned int i=0; i < mats.size(); ++i ) {
@@ -117,6 +131,7 @@ namespace serdprecorder {
 
 
   bool VideoRecorder::addMat( cv::Mat image, unsigned int stream ) {
+      if( !isRecording() ) return false;
 
     if( !_writer ) return false;
 
@@ -162,7 +177,8 @@ namespace serdprecorder {
   //   return true;
   // }
 
-  bool VideoRecorder::addSonar( void *data, size_t sz ) {
+  bool VideoRecorder::addSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping ) {
+    if( !isRecording() ) return false;
 
     if( !_writer ) return false;
     if( _sonarTrack < 0 ) return false;
@@ -174,7 +190,7 @@ namespace serdprecorder {
 
     {
       // Add sonar data to GPMF handle
-      auto err = GPMFWriteStreamStore(_sonarHandle, STR2FOURCC("OCUS"), GPMF_TYPE_COMPLEX, 1, sz, data, GPMF_FLAGS_NONE);
+      auto err = GPMFWriteStreamStore(_sonarHandle, STR2FOURCC("OCUS"), GPMF_TYPE_COMPLEX, 1, ping->dataSize(), ping->data(), GPMF_FLAGS_NONE);
 			LOG_IF(WARNING,err) << "Error writing to GPMF store";
     }
 
@@ -248,6 +264,87 @@ namespace serdprecorder {
   // static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const libblackmagic::InputConfig &config ) {
   // 	return MakeVideoEncoder( outputFile, config.mode(), config.do3D() );
   // }
+
+
+
+    //=================================================================
+
+    GPMFRecorder::GPMFRecorder( )
+      : Recorder(),
+        _out(),
+        _gpmfHandle( GPMFWriteServiceInit() ),
+        _sonarHandle( GPMFWriteStreamOpen(_gpmfHandle, GPMF_CHANNEL_TIMED, GPMF_DEVICE_ID_OCULUS_SONAR, SonarName, NULL, 0) )
+      {
+        CHECK( _gpmfHandle ) << "Unable to initialize GPMF Write Service";
+        CHECK( _sonarHandle ) << "Unable to initialize GPMF stream for sonar";
+
+        initGPMF();
+      }
+
+  // VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
+  //   : _frameNum(0),
+  //     _doSonar( doSonar ),
+  //     _sonarTrack( -1 ),
+  //     _outputDir( outputDir ),
+  //     _isReady( false ),
+  //     _encoder( new Encoder("mov", AV_CODEC_ID_PRORES) ),
+  //     _writer(nullptr)
+  //   {;}
+
+
+    GPMFRecorder::~GPMFRecorder()
+    {
+    }
+
+
+    bool GPMFRecorder::open( const std::string &filename ) {
+
+      _out.open( filename, ios_base::binary | ios_base::out );
+
+      if( !_out.is_open() ) return false;
+
+      //Flush GPMF stream
+      {
+        char buffer[8192];
+        uint32_t *payload, payload_size;
+  	    GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, sizeof(buffer), &payload, &payload_size);
+      }
+
+      return true;
+    }
+
+    void GPMFRecorder::close() {
+      _out.close();
+    }
+
+    bool GPMFRecorder::addSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping ) {
+
+    }
+
+    //=================================
+    void GPMFRecorder::initGPMF()
+    {
+      // Add sticky deckLinkAttributes
+      const char name[]="Oculus MB1200d";
+  		GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_STREAM_NAME, GPMF_TYPE_STRING_ASCII, strlen(name), 1, (void *)name, GPMF_FLAGS_STICKY);
+    }
+
+
+    // static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const BMDDisplayMode mode, bool do3D = false ) {
+    //
+    // 	auto modeStruct = decodeBMDMode( mode );
+    //
+    // 	shared_ptr<Encoder> videoOutput( new Encoder(modeStruct->width, modeStruct->height, modeStruct->frameRate ) );
+    // 	videoOutput->InitFile( outputFile, "auto", AV_CODEC_ID_PRORES, do3D ? 2 : 1 );
+    //
+    // 	return videoOutput;
+    // }
+    //
+    // static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const libblackmagic::InputConfig &config ) {
+    // 	return MakeVideoEncoder( outputFile, config.mode(), config.do3D() );
+    // }
+
+
 
 
 

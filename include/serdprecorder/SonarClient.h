@@ -17,7 +17,7 @@ namespace serdprecorder {
   public:
 
     SonarClient( const std::string &ipAddr,
-                  const shared_ptr<VideoRecorder> &recorder = shared_ptr<VideoRecorder>(nullptr),
+                  const shared_ptr<Recorder> &recorder = shared_ptr<Recorder>(nullptr),
                   const shared_ptr<OpenCVDisplay> &display = shared_ptr<OpenCVDisplay>(nullptr) );
 
     ~SonarClient();
@@ -36,7 +36,7 @@ namespace serdprecorder {
     std::string _ipAddr;
     std::thread _thread;
 
-    shared_ptr<VideoRecorder> _recorder;
+    shared_ptr<Recorder> _recorder;
     shared_ptr<OpenCVDisplay> _display;
 
     bool _done;
