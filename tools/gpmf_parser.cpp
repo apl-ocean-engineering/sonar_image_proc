@@ -16,11 +16,7 @@ using namespace liboculus;
 
 #include "gpmf-parser/GPMF_parser.h"
 
-extern "C" {
-
-  void PrintGPMF(GPMF_stream *ms);
-
-}
+void PrintGPMF(GPMF_stream *ms);
 
 
 int main(int argc, char *argv[]) {
@@ -68,11 +64,21 @@ int main(int argc, char *argv[]) {
     PrintGPMF(&gs);  // printf current GPMF KLV
 
     if( GPMF_Key(&gs) == MAKEID('O','C','U','S') ) {
-      LOG(INFO) << "Found sonar.";
+      LOG(INFO) << "Found " <<  GPMF_RawDataSize(&gs) << " bytes of sonar data";
 
-      SimplePingResult ping( (char *)GPMF_RawData(&gs) );
+      char *data = (char *)GPMF_RawData(&gs);
+      CHECK(data != nullptr);
 
-      if( ping.header().validate() ) {
+      LOG(INFO) << "Data: " << std::hex << (uint32_t)data[0] << " " << (uint32_t)data[1] << " " << (uint32_t)data[2] << " " << (uint32_t)data[3];
+      LOG(INFO) << "Data: " << std::hex << (uint32_t)data[4] << " " << (uint32_t)data[5] << " " << (uint32_t)data[6] << " " << (uint32_t)data[7];
+      LOG(INFO) << "Offset: " << std::hex << gs.pos;
+
+      MessageHeader header( data );
+
+      if( header.validate() ) {
+
+        SimplePingResult ping( (char *)GPMF_RawData(&gs) );
+
         LOG(INFO) << "   --> Header is valid";
         ping.validate();
       }
