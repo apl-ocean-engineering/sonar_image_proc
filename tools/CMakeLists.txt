@@ -25,7 +25,7 @@ fips_end_app()
 
 
 fips_begin_app( gpmf_parser cmdline )
-  fips_files( gpmf_parser.cpp GPMF_print.c )
+  fips_files( gpmf_parser.cpp GPMF_print.cpp )
 
   fips_deps( gpmf g3logger )
 

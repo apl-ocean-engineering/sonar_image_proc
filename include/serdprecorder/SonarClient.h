@@ -26,6 +26,8 @@ namespace serdprecorder {
 
     void stop();
 
+    unsigned int pingCount() const { return _pingCount; }
+
   protected:
 
     // Runs in thread
@@ -40,6 +42,8 @@ namespace serdprecorder {
     shared_ptr<OpenCVDisplay> _display;
 
     bool _done;
+
+    unsigned int _pingCount;
 
   };
 }

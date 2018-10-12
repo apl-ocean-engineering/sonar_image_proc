@@ -106,6 +106,7 @@ namespace serdprecorder {
     void initGPMF();
 
     std::ofstream _out;
+    std::unique_ptr<uint32_t> _buffer;
 
     size_t _gpmfHandle;
     size_t _sonarHandle;

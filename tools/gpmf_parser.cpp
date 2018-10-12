@@ -69,9 +69,9 @@ int main(int argc, char *argv[]) {
       char *data = (char *)GPMF_RawData(&gs);
       CHECK(data != nullptr);
 
-      LOG(INFO) << "Data: " << std::hex << (uint32_t)data[0] << " " << (uint32_t)data[1] << " " << (uint32_t)data[2] << " " << (uint32_t)data[3];
-      LOG(INFO) << "Data: " << std::hex << (uint32_t)data[4] << " " << (uint32_t)data[5] << " " << (uint32_t)data[6] << " " << (uint32_t)data[7];
-      LOG(INFO) << "Offset: " << std::hex << gs.pos;
+      // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[0] << " " << (uint32_t)data[1] << " " << (uint32_t)data[2] << " " << (uint32_t)data[3];
+      // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[4] << " " << (uint32_t)data[5] << " " << (uint32_t)data[6] << " " << (uint32_t)data[7];
+      // LOG(INFO) << "Offset: " << std::hex << gs.pos;
 
       MessageHeader header( data );
 

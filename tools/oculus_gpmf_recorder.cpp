@@ -51,6 +51,9 @@ int main( int argc, char **argv ) {
   string inputFilename("");
   app.add_option("-i,--input", inputFilename, "Filename to read sonar data from.");
 
+  int count = -1;
+  app.add_option("-c,--count", count, "");
+
   CLI11_PARSE(app, argc, argv);
 
   if( verbosity == 1 ) {
@@ -81,7 +84,12 @@ int main( int argc, char **argv ) {
   sonar->start();
 
   while(true) {
-    sleep(1);
+    if( (count > 0) && (sonar->pingCount() >= count ) ) {
+      LOG(INFO) << "Collected " << count << " pings, quitting...";
+      break;
+    }
+
+    usleep(100000);
   }
 
   //

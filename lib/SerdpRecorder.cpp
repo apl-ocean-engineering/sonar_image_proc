@@ -16,7 +16,7 @@ namespace serdprecorder {
       _camState( new CameraState( _deckLink->output().sdiProtocolBuffer() ) ),
       _recorder( new VideoRecorder() ),
       _sonar( nullptr ),
-      _display( new OpenCVDisplay( this ) )
+      _display( new OpenCVDisplay( std::shared_ptr<SerdpRecorder>(this), true ) )
   {}
 
 
@@ -105,6 +105,7 @@ namespace serdprecorder {
     //_recorder->setDoSonar( doSonar );
 
     _display->setEnabled( !noDisplay );
+    _display->setPreviewScale( previewScale );
 
     //  Input should always auto-detect
     _deckLink->input().enable( mode, true, do3D );
@@ -149,8 +150,7 @@ namespace serdprecorder {
 
       prevTime = now;
 
-
-       _recorder->addMats( rawImages );
+      _recorder->addMats( rawImages );
       _display->showVideo( rawImages );
 
       LOG_IF(INFO, (displayed % 50) == 0) << "Frame #" << displayed;

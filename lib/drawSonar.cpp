@@ -65,9 +65,11 @@ namespace serdprecorder {
 
         const float rad = float(radius * r) / ping->ping()->nRanges;
 
+        const float fudge=0.7;
+
         // Assume angles are in image frame x-right, y-down
         cv::ellipse( mat, origin, cv::Size(rad, rad), 0,
-                    begin, end, color, binThickness );
+                    begin-fudge, end+fudge, color, binThickness*1.4 );
 
       }
     }

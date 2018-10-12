@@ -59,7 +59,7 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 			if (arraysize == 1 || repeat == 1)
 			{
-				LOGF(DEBUG,"\"%s\"", t);
+				printf("\"%s\"", t);
 				dots = 0;
 			}
 			else
@@ -67,14 +67,14 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 				uint32_t i,j,pos=0;
 				for (i = 0; i < repeat; i++)
 				{
-					LOGF(DEBUG,"\"");
+					printf("\"");
 					for (j = 0; j < arraysize; j++)
 					{
 						if (t[pos] != '\0' && t[pos] != ' ')
-							LOGF(DEBUG,"%c", t[pos]);
+							printf("%c", t[pos]);
 						pos++;
 					}
-					LOGF(DEBUG,"\", ");
+					printf("\", ");
 				}
 			}
 		}
@@ -91,10 +91,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%d,", (int8_t)*b);
+					printf("%d,", (int8_t)*b);
 					b++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -110,10 +110,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%d,", *b);
+					printf("%d,", *b);
 					b++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -132,10 +132,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 				{
 					Swap = BYTESWAP64(*L);
 					d = (double *)&Swap;
-					LOGF(DEBUG,"%.3f,", *d);
+					printf("%.3f,", *d);
 					L++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -154,10 +154,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 				{
 					Swap = BYTESWAP32(*L);
 					f = (float *)&Swap;
-					LOGF(DEBUG,"%.3f,", *f);
+					printf("%.3f,", *f);
 					L++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 	break;
@@ -172,10 +172,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%c%c%c%c,", PRINTF_4CC(*L));
+					printf("%c%c%c%c,", PRINTF_4CC(*L));
 					L++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -190,10 +190,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%02X", *B);
+					printf("%02X", *B);
 					B++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -209,10 +209,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%d,", (int16_t)BYTESWAP16(*s));
+					printf("%d,", (int16_t)BYTESWAP16(*s));
 					s++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -228,10 +228,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%d,", BYTESWAP16(*S));
+					printf("%d,", BYTESWAP16(*S));
 					S++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -247,10 +247,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%d,", (int32_t)BYTESWAP32(*l));
+					printf("%d,", (int32_t)BYTESWAP32(*l));
 					l++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -265,10 +265,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%d,", BYTESWAP32(*L));
+					printf("%d,", BYTESWAP32(*L));
 					L++;
 				}
-				if(repeat) LOGF(DEBUG," ");
+				if(repeat) printf(" ");
 			}
 		}
 		break;
@@ -286,10 +286,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 				{
 					double dq = BYTESWAP32(*q);
 					dq /= (double)65536.0;
-					LOGF(DEBUG,"%.3f,", dq);
+					printf("%.3f,", dq);
 					q++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -308,10 +308,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 					uint64_t Q64 = (uint64_t)BYTESWAP64(*Q);
 					double dq = (double)(Q64 >> (uint64_t)32);
 					dq += (double)(Q64 & (uint64_t)0xffffffff) / (double)0x100000000;
-					LOGF(DEBUG,"%.3f,", dq);
+					printf("%.3f,", dq);
 					Q++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -333,10 +333,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 #else
 					strncpy(t, U, 16);
 #endif
-					LOGF(DEBUG,"\"%s\",", t);
+					printf("\"%s\",", t);
 					U += 16;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -351,10 +351,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%lld,", BYTESWAP64(*J));
+					printf("%lld,", BYTESWAP64(*J));
 					J++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -369,10 +369,10 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 				while (arraysize--)
 				{
-					LOGF(DEBUG,"%llu,", BYTESWAP64(*J));
+					printf("%llu,", BYTESWAP64(*J));
 					J++;
 				}
-				if (repeat) LOGF(DEBUG," ");
+				if (repeat) printf(" ");
 			}
 		}
 		break;
@@ -381,7 +381,7 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 	}
 
 	if (dots) // more data was not output
-		LOGF(DEBUG,"...");
+		printf("...");
 }
 
 
@@ -401,20 +401,20 @@ void PrintGPMF(GPMF_stream *ms)
 
 		indent = level;
 		while (indent > 0 && indent < 10) {
-			LOGF(DEBUG,"  ");
+			printf("  ");
 			indent--;
 		}
 
 		if (type == 0)
-			LOGF(INFO,"%c%c%c%c nest size %d ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, size);
+			printf("%c%c%c%c nest size %d ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, size);
 		else if (structsize == 1 || (repeat == 1 && type != '?'))
-			LOGF(INFO,"%c%c%c%c type '%c' size %d (%d samples at %d bytes) ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, type == 0 ? '0' : type, size, repeat, structsize );
+			printf("%c%c%c%c type '%c' size %d (%d samples at %d bytes) ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, type == 0 ? '0' : type, size, repeat, structsize );
 		else
-			LOGF(INFO,"%c%c%c%c type '%c' samplesize %d repeat %d ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, type == 0 ? '0' : type, structsize, repeat);
+			printf("%c%c%c%c type '%c' samplesize %d repeat %d ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, type == 0 ? '0' : type, structsize, repeat);
 
 		if (type && repeat > 0)
 		{
-			LOGF(DEBUG,"data: ");
+			printf("data: ");
 
 			if (type == GPMF_TYPE_COMPLEX)
 			{
@@ -429,7 +429,7 @@ void PrintGPMF(GPMF_stream *ms)
 					struct_size_of_type = GPMF_SizeOfComplexTYPE(srctype, typelen);
 					if (struct_size_of_type != (int32_t)structsize)
 					{
-						LOGF(DEBUG,"error: found structure of %d bytes reported as %d bytes", struct_size_of_type, structsize);
+						printf("error: found structure of %d bytes reported as %d bytes", struct_size_of_type, structsize);
 					}
 					else
 					{
@@ -447,12 +447,12 @@ void PrintGPMF(GPMF_stream *ms)
 							for (j = 0; j < repeat; j++)
 							{
 								if (repeat > 1) {
-									LOGF(DEBUG,"\n  ");
+									printf("\n  ");
 
 									indent = level;
 									while (indent > 0 && indent < 10)
 									{
-										LOGF(DEBUG,"  ");
+										printf("  ");
 										indent--;
 									}
 								}
@@ -465,13 +465,13 @@ void PrintGPMF(GPMF_stream *ms)
 
 							}
 							if (repeat > 1)
-								LOGF(DEBUG,"...");
+								printf("...");
 						}
 					}
 				}
 				else
 				{
-					LOGF(DEBUG,"unknown formatting");
+					printf("unknown formatting");
 				}
 			}
 			else
@@ -480,4 +480,6 @@ void PrintGPMF(GPMF_stream *ms)
 			}
 		}
 	}
+
+	printf("\n");
 }

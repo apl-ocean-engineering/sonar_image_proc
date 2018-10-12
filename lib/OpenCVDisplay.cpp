@@ -20,7 +20,9 @@ namespace serdprecorder {
       _previewScale( 0.25 ),
       _parent(parent),
       _thread(active_object::Active::createActive())
-  {}
+  {
+    LOG(INFO) << "Got parent: " << _parent;
+  }
 
 
   //=== Functions related to showing video =====
@@ -59,7 +61,7 @@ namespace serdprecorder {
     }
 
 
-		char c = cv::waitKey(1);
+		int c = cv::waitKey(1);
 		if( _parent ) _parent->handleKey( c );
 
   }

@@ -17,6 +17,8 @@ namespace serdprecorder {
   #define GPMF_DEVICE_ID_OCULUS_SONAR  0xAA000001
   static char SonarName[] = "OculusSonar";
 
+static char FileExtension[] = "mov";
+
   //=================================================================
 
   Recorder::Recorder()
@@ -37,7 +39,8 @@ namespace serdprecorder {
       _isReady( false ),
       _pending(0),
       _mutex(),
-      _encoder( new Encoder("mp4", AV_CODEC_ID_HEVC) ),
+      //_encoder( new Encoder("mp4", AV_CODEC_ID_HEVC) ),
+      _encoder( new Encoder(FileExtension, AV_CODEC_ID_PRORES) ),
       _writer(nullptr),
       _gpmfHandle( GPMFWriteServiceInit() ),
       _sonarHandle( GPMFWriteStreamOpen(_gpmfHandle, GPMF_CHANNEL_TIMED, GPMF_DEVICE_ID_OCULUS_SONAR, SonarName, NULL, 0) )
@@ -118,12 +121,15 @@ namespace serdprecorder {
 
     std::deque< std::shared_ptr<std::thread> > recordThreads;
 
+    // Video corruption when this encoding is split into two threads.
     for( unsigned int i=0; i < mats.size(); ++i ) {
-      recordThreads.push_back( shared_ptr<std::thread>( new std::thread( &VideoRecorder::addMat, this, mats[i], i ) ) );
+    //  addMat( mats[i], i );
+       recordThreads.push_back( shared_ptr<std::thread>( new std::thread( &VideoRecorder::addMat, this, mats[i], i ) ) );
     }
 
-    // Wait for all recorder threads
+    // // Wait for all recorder threads
     for( auto thread : recordThreads ) thread->join();
+
     advanceFrame();
 
     return true;
@@ -234,11 +240,14 @@ namespace serdprecorder {
     std::time_t t = std::time(nullptr);
 
     char mbstr[100];
-    std::strftime(mbstr, sizeof(mbstr), "vid_%Y%m%d_%H%M%S.mp4", std::localtime(&t));
+    std::strftime(mbstr, sizeof(mbstr), "vid_%Y%m%d_%H%M%S", std::localtime(&t));
 
     // TODO.  Test if file is existing
 
-    return fs::path(_outputDir) += mbstr;
+    strcat( mbstr, ".");
+    strcat( mbstr, FileExtension);
+
+    return fs::path(_outputDir) /= mbstr;
   }
 
 
@@ -248,6 +257,9 @@ namespace serdprecorder {
     // Add sticky deckLinkAttributes
     const char name[]="Oculus MB1200d";
 		GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_STREAM_NAME, GPMF_TYPE_STRING_ASCII, strlen(name), 1, (void *)name, GPMF_FLAGS_STICKY);
+
+    const char complex[]="c[4]";
+    GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_TYPE, GPMF_TYPE_STRING_ASCII, strlen(complex), 1, (void *)complex, GPMF_FLAGS_STICKY);
   }
 
 
@@ -269,11 +281,14 @@ namespace serdprecorder {
 
     //=================================================================
 
+    const size_t BufferSize = 2048*2048;
+
     GPMFRecorder::GPMFRecorder( )
       : Recorder(),
         _out(),
+        _buffer( new uint32_t[ BufferSize ]),
         _gpmfHandle( GPMFWriteServiceInit() ),
-        _sonarHandle( GPMFWriteStreamOpen(_gpmfHandle, GPMF_CHANNEL_TIMED, GPMF_DEVICE_ID_OCULUS_SONAR, SonarName, NULL, 0) )
+        _sonarHandle( GPMFWriteStreamOpen(_gpmfHandle, GPMF_CHANNEL_TIMED, GPMF_DEVICE_ID_OCULUS_SONAR, SonarName, NULL, BufferSize) )
       {
         CHECK( _gpmfHandle ) << "Unable to initialize GPMF Write Service";
         CHECK( _sonarHandle ) << "Unable to initialize GPMF stream for sonar";
@@ -294,6 +309,8 @@ namespace serdprecorder {
 
     GPMFRecorder::~GPMFRecorder()
     {
+      GPMFWriteStreamClose(_sonarHandle);
+      GPMFWriteServiceClose(_gpmfHandle);
     }
 
 
@@ -318,15 +335,56 @@ namespace serdprecorder {
     }
 
     bool GPMFRecorder::addSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping ) {
+      if( !_out.is_open() ) return false;
 
+      {
+        LOG(DEBUG) << "Adding " << ping->dataSize() << " bytes of sonar data";
+        // Add sonar data to GPMF handle
+        // char *data = (char *)ping->data();
+        // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[0] << " " << (uint32_t)data[1] << " " << (uint32_t)data[2] << " " << (uint32_t)data[3];
+        // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[4] << " " << (uint32_t)data[5] << " " << (uint32_t)data[6] << " " << (uint32_t)data[7];
+
+        // Mark as big endian so it doesn't try to byte-swap the data.
+        LOG(INFO) << "Writing " << (ping->dataSize() >> 2) << " dwords of sonar";
+        auto err = GPMFWriteStreamStore(_sonarHandle, STR2FOURCC("OCUS"), GPMF_TYPE_UNSIGNED_LONG,
+                                            4, (ping->dataSize() >> 2), ping->data(), GPMF_FLAGS_BIG_ENDIAN);
+        LOG_IF(WARNING, err != GPMF_ERROR_OK) << "Error writing to GPMF store";
+      }
+
+      // Estimate buffer size
+      size_t estSize = GPMFWriteEstimateBufferSize( _gpmfHandle, GPMF_CHANNEL_TIMED, 0 );
+
+      // Estimated size in bytes
+      //estSize += ping->dataSize() + 1024;
+      // Inflate estimated size?
+
+      {
+        void *buffer = new uint32_t[ estSize ];
+        uint32_t *payload, payloadSize = 0;
+        GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, estSize, &payload, &payloadSize);
+
+        LOG(DEBUG) << "Estimated GPMF size (in bytes) " << estSize << " ; actual payload size (in bytes) " << payloadSize;
+
+        _out.write( (const char *)payload, payloadSize );
+
+        delete buffer;
+      }
+
+      return true;
     }
 
     //=================================
     void GPMFRecorder::initGPMF()
     {
-      // Add sticky deckLinkAttributes
+      GPMFWriteSetScratchBuffer( _gpmfHandle, _buffer.get(), BufferSize );
+
+      // Add sticky attributes
+      // const char complex[]="c[4]";
+      // GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_TYPE, GPMF_TYPE_STRING_ASCII, strlen(complex), 1, (void *)complex, GPMF_FLAGS_STICKY);
+
       const char name[]="Oculus MB1200d";
   		GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_STREAM_NAME, GPMF_TYPE_STRING_ASCII, strlen(name), 1, (void *)name, GPMF_FLAGS_STICKY);
+
     }
 
 
