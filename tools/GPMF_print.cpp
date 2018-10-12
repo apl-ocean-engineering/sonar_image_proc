@@ -387,99 +387,108 @@ void printfData(uint32_t type, uint32_t structsize, uint32_t repeat, void *data)
 
 void PrintGPMF(GPMF_stream *ms)
 {
-	if (ms)
+	if(ms == nullptr ) return;
+
+	uint32_t key = GPMF_Key(ms);
+	uint32_t type = GPMF_Type(ms);
+	uint32_t structsize = GPMF_StructSize(ms);
+	uint32_t repeat = GPMF_Repeat(ms);
+	uint32_t size = GPMF_RawDataSize(ms);
+	uint32_t level = GPMF_NestLevel(ms);
+	void *data = GPMF_RawData(ms);
+
+	if (key != GPMF_KEY_DEVICE) level++;
+
+	const uint32_t maxIndent = 10;
+	char spacer[maxIndent*2 + 1] = "";
+	//spacer[0] = '\0';
+
+	for( auto i = 0; i < std::min(maxIndent,level); ++i ) {
+		strcat(spacer, "  ");
+	}
+	// indent = level;
+	// while (indent > 0 && indent < 10) {
+	// 	printf("  ");
+	// 	indent--;
+	// }
+
+	char keyStr[5];
+	snprintf(keyStr, 4, "%c%c%c%c", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff);
+
+	if (type == 0) {
+		LOGF(INFO, "%s%s nest size %d ", spacer, keyStr, size);
+	} else if (structsize == 1 || (repeat == 1 && type != '?')) {
+		LOGF(INFO, "%s%s type '%c' size %d (%d samples at %d bytes) ", spacer, keyStr, type == 0 ? '0' : type, size, repeat, structsize );
+	} else {
+		LOGF(INFO, "%s%s type '%c' samplesize %d repeat %d ", spacer, keyStr, type == 0 ? '0' : type, structsize, repeat);
+	}
+
+	if (type && repeat > 0)
 	{
-		uint32_t key = GPMF_Key(ms);
-		uint32_t type = GPMF_Type(ms);
-		uint32_t structsize = GPMF_StructSize(ms);
-		uint32_t repeat = GPMF_Repeat(ms);
-		uint32_t size = GPMF_RawDataSize(ms);
-		uint32_t indent, level = GPMF_NestLevel(ms);
-		void *data = GPMF_RawData(ms);
+		//printf("data: ");
 
-		if (key != GPMF_KEY_DEVICE) level++;
-
-		indent = level;
-		while (indent > 0 && indent < 10) {
-			printf("  ");
-			indent--;
-		}
-
-		if (type == 0)
-			printf("%c%c%c%c nest size %d ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, size);
-		else if (structsize == 1 || (repeat == 1 && type != '?'))
-			printf("%c%c%c%c type '%c' size %d (%d samples at %d bytes) ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, type == 0 ? '0' : type, size, repeat, structsize );
-		else
-			printf("%c%c%c%c type '%c' samplesize %d repeat %d ", (key >> 0) & 0xff, (key >> 8) & 0xff, (key >> 16) & 0xff, (key >> 24) & 0xff, type == 0 ? '0' : type, structsize, repeat);
-
-		if (type && repeat > 0)
+		if (type == GPMF_TYPE_COMPLEX)
 		{
-			printf("data: ");
-
-			if (type == GPMF_TYPE_COMPLEX)
+			GPMF_stream find_stream;
+			GPMF_CopyState(ms, &find_stream);
+			if (GPMF_OK == GPMF_FindPrev(&find_stream, GPMF_KEY_TYPE, GPMF_CURRENT_LEVEL))
 			{
-				GPMF_stream find_stream;
-				GPMF_CopyState(ms, &find_stream);
-				if (GPMF_OK == GPMF_FindPrev(&find_stream, GPMF_KEY_TYPE, GPMF_CURRENT_LEVEL))
+				char *srctype = (char *)GPMF_RawData(&find_stream);
+				uint32_t typelen = GPMF_RawDataSize(&find_stream);
+				int struct_size_of_type;
+
+				struct_size_of_type = GPMF_SizeOfComplexTYPE(srctype, typelen);
+				if (struct_size_of_type != (int32_t)structsize)
 				{
-					char *srctype = (char *)GPMF_RawData(&find_stream);
-					uint32_t typelen = GPMF_RawDataSize(&find_stream);
-					int struct_size_of_type;
-
-					struct_size_of_type = GPMF_SizeOfComplexTYPE(srctype, typelen);
-					if (struct_size_of_type != (int32_t)structsize)
-					{
-						printf("error: found structure of %d bytes reported as %d bytes", struct_size_of_type, structsize);
-					}
-					else
-					{
-						char typearray[64];
-						uint32_t elements = sizeof(typearray);
-						uint8_t *bdata = (uint8_t *)data;
-						uint32_t i;
-
-						if (GPMF_OK == GPMF_ExpandComplexTYPE(srctype, typelen, typearray, &elements))
-						{
-							uint32_t j;
-#if !VERBOSE_OUTPUT
-							if (repeat > 3) repeat = 3;
-#endif
-							for (j = 0; j < repeat; j++)
-							{
-								if (repeat > 1) {
-									printf("\n  ");
-
-									indent = level;
-									while (indent > 0 && indent < 10)
-									{
-										printf("  ");
-										indent--;
-									}
-								}
-								for (i = 0; i < elements; i++)
-								{
-									auto elementsize = GPMF_SizeofType(static_cast<GPMF_SampleType>(typearray[i]));
-									printfData(typearray[i], elementsize, 1, bdata);
-									bdata += elementsize;
-								}
-
-							}
-							if (repeat > 1)
-								printf("...");
-						}
-					}
+					printf("error: found structure of %d bytes reported as %d bytes", struct_size_of_type, structsize);
 				}
 				else
 				{
-					printf("unknown formatting");
+					char typearray[64];
+					uint32_t elements = sizeof(typearray);
+					uint8_t *bdata = (uint8_t *)data;
+					uint32_t i;
+
+					if (GPMF_OK == GPMF_ExpandComplexTYPE(srctype, typelen, typearray, &elements))
+					{
+						uint32_t j;
+#if !VERBOSE_OUTPUT
+						if (repeat > 3) repeat = 3;
+#endif
+						for (j = 0; j < repeat; j++)
+						{
+							if (repeat > 1) {
+								printf("\n  ");
+
+								// indent = level;
+								// while (indent > 0 && indent < 10)
+								// {
+									printf(spacer);
+								// 	indent--;
+								// }
+							}
+							for (i = 0; i < elements; i++)
+							{
+								auto elementsize = GPMF_SizeofType(static_cast<GPMF_SampleType>(typearray[i]));
+								printfData(typearray[i], elementsize, 1, bdata);
+								bdata += elementsize;
+							}
+
+						}
+						if (repeat > 1)
+							printf("...");
+					}
 				}
 			}
 			else
 			{
-				printfData(type, structsize, repeat, data);
+				//printf("unknown formatting");
 			}
+		}
+		else
+		{
+			//printfData(type, structsize, repeat, data);
 		}
 	}
 
-	printf("\n");
 }

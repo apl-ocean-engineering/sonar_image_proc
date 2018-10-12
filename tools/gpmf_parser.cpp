@@ -86,9 +86,6 @@ int main(int argc, char *argv[]) {
 
   } while (GPMF_OK == GPMF_Next(&gs, GPMF_RECURSE_LEVELS));
 
-
-  exit(0);
-
 	// int32_t ret = GPMF_OK;
 	// GPMF_stream metadata_stream, *ms = &metadata_stream;
 	// double metadatalength;
@@ -117,4 +114,5 @@ int main(int argc, char *argv[]) {
   // }
   // printf("\n");
 
+  return 0;
 }
