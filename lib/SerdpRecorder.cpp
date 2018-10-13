@@ -102,7 +102,7 @@ namespace serdprecorder {
     }
 
     _recorder->setOutputDir( outputDir );
-    //_recorder->setDoSonar( doSonar );
+    _recorder->setDoSonar( doSonar );
 
     _display->setEnabled( !noDisplay );
     _display->setPreviewScale( previewScale );
