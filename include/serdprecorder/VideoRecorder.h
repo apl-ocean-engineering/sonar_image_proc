@@ -34,7 +34,39 @@ namespace serdprecorder {
 
   //==
 
-  class VideoRecorder : public Recorder {
+
+    //==
+
+    class GPMFRecorder : public Recorder {
+    public:
+
+      GPMFRecorder();
+      //VideoRecorder( const fs::path &outputDir, bool doSonar = false );
+      virtual ~GPMFRecorder();
+
+      bool open( const std::string &filename );
+      void close();
+
+      bool isRecording() const { return _out.is_open(); }
+
+      virtual bool addMats( std::vector<cv::Mat> &mats ) { return false;}
+      virtual bool addSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping );
+
+    protected:
+
+      void initGPMF();
+
+      std::ofstream _out;
+      std::unique_ptr<uint32_t> _buffer;
+
+      size_t _gpmfHandle;
+      size_t _sonarHandle;
+
+    };
+
+ //==
+
+  class VideoRecorder : public GPMFRecorder {
   public:
 
     VideoRecorder();
@@ -63,8 +95,6 @@ namespace serdprecorder {
 
   protected:
 
-    void initGPMF();
-
     int _frameNum;
 
     bool _doSonar;
@@ -79,40 +109,8 @@ namespace serdprecorder {
     std::shared_ptr<libvideoencoder::Encoder> _encoder;
     std::shared_ptr<libvideoencoder::VideoWriter> _writer;
 
-    size_t _gpmfHandle;
-    size_t _sonarHandle;
 
   };
-
-  //==
-
-  class GPMFRecorder : public Recorder {
-  public:
-
-    GPMFRecorder();
-    //VideoRecorder( const fs::path &outputDir, bool doSonar = false );
-    virtual ~GPMFRecorder();
-
-    bool open( const std::string &filename );
-    void close();
-
-    bool isRecording() const { return _out.is_open(); }
-
-    virtual bool addMats( std::vector<cv::Mat> &mats ) { return false;}
-    virtual bool addSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping );
-
-  protected:
-
-    void initGPMF();
-
-    std::ofstream _out;
-    std::unique_ptr<uint32_t> _buffer;
-
-    size_t _gpmfHandle;
-    size_t _sonarHandle;
-
-  };
-
 
 
 }

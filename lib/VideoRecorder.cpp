@@ -31,7 +31,7 @@ static char FileExtension[] = "mov";
   //=================================================================
 
   VideoRecorder::VideoRecorder( )
-    : Recorder(),
+    : GPMFRecorder(),
       _frameNum(0),
       _doSonar( false ),
       _sonarTrack( -1 ),
@@ -41,14 +41,8 @@ static char FileExtension[] = "mov";
       _mutex(),
       //_encoder( new Encoder("mp4", AV_CODEC_ID_HEVC) ),
       _encoder( new Encoder(FileExtension, AV_CODEC_ID_PRORES) ),
-      _writer(nullptr),
-      _gpmfHandle( GPMFWriteServiceInit() ),
-      _sonarHandle( GPMFWriteStreamOpen(_gpmfHandle, GPMF_CHANNEL_TIMED, GPMF_DEVICE_ID_OCULUS_SONAR, SonarName, NULL, 0) )
+      _writer(nullptr)
     {
-      CHECK( _gpmfHandle ) << "Unable to initialize GPMF Write Service";
-      CHECK( _sonarHandle ) << "Unable to initialize GPMF stream for sonar";
-
-      initGPMF();
     }
 
 // VideoRecorder::VideoRecorder( const fs::path &outputDir, bool doSonar )
@@ -195,9 +189,17 @@ static char FileExtension[] = "mov";
     }
 
     {
+      LOG(DEBUG) << "Adding " << ping->dataSize() << " bytes of sonar data";
       // Add sonar data to GPMF handle
-      auto err = GPMFWriteStreamStore(_sonarHandle, STR2FOURCC("OCUS"), GPMF_TYPE_COMPLEX, 1, ping->dataSize(), ping->data(), GPMF_FLAGS_NONE);
-			LOG_IF(WARNING,err) << "Error writing to GPMF store";
+      // char *data = (char *)ping->data();
+      // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[0] << " " << (uint32_t)data[1] << " " << (uint32_t)data[2] << " " << (uint32_t)data[3];
+      // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[4] << " " << (uint32_t)data[5] << " " << (uint32_t)data[6] << " " << (uint32_t)data[7];
+
+      // Mark as big endian so it doesn't try to byte-swap the data.
+      LOG(INFO) << "Writing " << (ping->dataSize() >> 2) << " dwords of sonar";
+      auto err = GPMFWriteStreamStore(_sonarHandle, STR2FOURCC("OCUS"), GPMF_TYPE_UNSIGNED_LONG,
+                                          4, (ping->dataSize() >> 2), ping->data(), GPMF_FLAGS_BIG_ENDIAN);
+      LOG_IF(WARNING, err != GPMF_ERROR_OK) << "Error writing to GPMF store";
     }
 
     {
@@ -249,33 +251,6 @@ static char FileExtension[] = "mov";
 
     return fs::path(_outputDir) /= mbstr;
   }
-
-
-  //=================================
-  void VideoRecorder::initGPMF()
-  {
-    // Add sticky deckLinkAttributes
-    const char name[]="Oculus MB1200d";
-		GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_STREAM_NAME, GPMF_TYPE_STRING_ASCII, strlen(name), 1, (void *)name, GPMF_FLAGS_STICKY);
-
-    const char complex[]="c[4]";
-    GPMFWriteStreamStore(_sonarHandle, GPMF_KEY_TYPE, GPMF_TYPE_STRING_ASCII, strlen(complex), 1, (void *)complex, GPMF_FLAGS_STICKY);
-  }
-
-
-  // static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const BMDDisplayMode mode, bool do3D = false ) {
-  //
-  // 	auto modeStruct = decodeBMDMode( mode );
-  //
-  // 	shared_ptr<Encoder> videoOutput( new Encoder(modeStruct->width, modeStruct->height, modeStruct->frameRate ) );
-  // 	videoOutput->InitFile( outputFile, "auto", AV_CODEC_ID_PRORES, do3D ? 2 : 1 );
-  //
-  // 	return videoOutput;
-  // }
-  //
-  // static shared_ptr<Encoder> MakeVideoEncoder( const string &outputFile, const libblackmagic::InputConfig &config ) {
-  // 	return MakeVideoEncoder( outputFile, config.mode(), config.do3D() );
-  // }
 
 
 
