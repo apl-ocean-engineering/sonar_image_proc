@@ -1,29 +1,22 @@
 
+#include <opencv2/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+
 #include "serdprecorder/OpenCVDisplay.h"
 
-#include "serdprecorder/SerdpRecorder.h"
 #include "serdprecorder/drawSonar.h"
-
-
 
 namespace serdprecorder {
 
-  OpenCVDisplay::OpenCVDisplay( bool enabled )
-    : _enabled(enabled),
+  using namespace liboculus;
+
+  OpenCVDisplay::OpenCVDisplay( std::function<void(const char)> keyHandler )
+    : _enabled(false),
       _previewScale( 0.25 ),
-      _parent(nullptr),
+      _keyHandler(keyHandler),
       _thread(active_object::Active::createActive())
   {}
-
-  OpenCVDisplay::OpenCVDisplay( const std::shared_ptr<SerdpRecorder> &parent, bool enabled )
-    : _enabled(enabled),
-      _previewScale( 0.25 ),
-      _parent(parent),
-      _thread(active_object::Active::createActive())
-  {
-    LOG(INFO) << "Got parent: " << _parent;
-  }
-
 
   //=== Functions related to showing video =====
 
@@ -62,7 +55,7 @@ namespace serdprecorder {
 
 
 		int c = cv::waitKey(1);
-		if( _parent ) _parent->handleKey( c );
+		if( _keyHandler ) _keyHandler( c );
 
   }
 

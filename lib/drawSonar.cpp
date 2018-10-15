@@ -19,7 +19,7 @@ namespace serdprecorder {
 
     const float binThickness = 3 * ceil( radius / ping->ping()->nRanges );
 
-    LOG(DEBUG) << "binThickness is " << binThickness;
+    //LOG(DEBUG) << "binThickness is " << binThickness;
 
 
     // Build vector of start and end angles (in degrees, but still in sonar 0 == straight ahead frame)
@@ -46,7 +46,7 @@ namespace serdprecorder {
 
       }
 
-      LOG(DEBUG) << "Bin " << b << " from " << begin << " to " << end;
+      //LOG(DEBUG) << "Bin " << b << " from " << begin << " to " << end;
 
       angles[b] = make_pair( begin, end );
     }

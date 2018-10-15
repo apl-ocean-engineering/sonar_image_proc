@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <functional>
 
 #include <opencv2/core.hpp>
 
@@ -15,9 +16,7 @@ namespace serdprecorder {
   class OpenCVDisplay {
   public:
 
-
-    OpenCVDisplay( bool enabled = true );
-    OpenCVDisplay( const std::shared_ptr<SerdpRecorder> &parent, bool enabled = true );
+    OpenCVDisplay( std::function<void(const char)> callback  );
 
     bool setEnabled( bool e ) { return _enabled = e; }
 
@@ -43,9 +42,9 @@ namespace serdprecorder {
 
     bool _enabled;
     float _previewScale;
-    std::shared_ptr<SerdpRecorder> _parent;
 
     std::unique_ptr<active_object::Active> _thread;
+    std::function<void(const char)> _keyHandler;
 
   };
 

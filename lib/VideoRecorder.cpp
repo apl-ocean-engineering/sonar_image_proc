@@ -79,6 +79,9 @@ static char FileExtension[] = "mov";
     _writer->open(filename.string());
     _frameNum = 0;
 
+    _sonarWritten = 0;
+    _startTime = std::chrono::system_clock::now();
+
     // Flush GPMF stream
     //Flush any stale data before starting video capture.
     {
@@ -104,6 +107,8 @@ static char FileExtension[] = "mov";
     }
 
     LOG(INFO) << "Closing video with " << _frameNum << " frames";
+    LOG_IF(INFO, _doSonar) << "     Wrote " << _sonarWritten << " frames of sonar";
+
     _isReady = false;
     _frameNum = 0;
     _writer.reset();
@@ -189,30 +194,35 @@ static char FileExtension[] = "mov";
     }
 
     {
-      LOG(DEBUG) << "Adding " << ping->dataSize() << " bytes of sonar data";
+      //LOG(DEBUG) << "Adding " << ping->dataSize() << " bytes of sonar data";
       // Add sonar data to GPMF handle
       // char *data = (char *)ping->data();
       // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[0] << " " << (uint32_t)data[1] << " " << (uint32_t)data[2] << " " << (uint32_t)data[3];
       // LOG(INFO) << "Data: " << std::hex << (uint32_t)data[4] << " " << (uint32_t)data[5] << " " << (uint32_t)data[6] << " " << (uint32_t)data[7];
 
       // Mark as big endian so it doesn't try to byte-swap the data.
-      LOG(INFO) << "Writing " << (ping->dataSize() >> 2) << " dwords of sonar";
+      LOG(INFO) << "Writing " << (ping->dataSize() >> 2) << " dwords (" << ping->dataSize()<< " bytes) of sonar";
       auto err = GPMFWriteStreamStore(_sonarHandle, STR2FOURCC("OCUS"), GPMF_TYPE_UNSIGNED_LONG,
                                           4, (ping->dataSize() >> 2), ping->data(), GPMF_FLAGS_BIG_ENDIAN);
       LOG_IF(WARNING, err != GPMF_ERROR_OK) << "Error writing to GPMF store";
     }
 
     {
-
       // Estimate buffer size
-      size_t estSize = GPMFWriteEstimateBufferSize( _gpmfHandle, GPMF_CHANNEL_TIMED, 0 );
+      size_t estSize = GPMFWriteEstimateBufferSize( _gpmfHandle, GPMF_CHANNEL_TIMED, 0 ) + 8192;
       // Inflate estimated size?
 
-      void *buffer = av_malloc( estSize + 8192 );
+      void *buffer = av_malloc( estSize );
 
       uint32_t *payload, payloadSize;
 
-      GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, sizeof(buffer), &payload, &payloadSize);
+      auto err = GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, estSize, &payload, &payloadSize);
+      if( err != GPMF_ERROR_OK ) {
+        LOG(WARNING) << "Error writing GPMF: " << err;
+        return false;
+      }
+
+      LOG(WARNING) << "Writing " << payloadSize << " bytes to sonar track";
 
       // And data track
       AVPacket *pkt = av_packet_alloc();
@@ -220,11 +230,15 @@ static char FileExtension[] = "mov";
       //memcpy( pkt->data, data, sz );
 
       pkt->stream_index = _sonarTrack;
-      pkt->dts = 0;
+
+      std::chrono::microseconds timePt =  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - _startTime);
+
+      pkt->dts = timePt.count();
       pkt->pts = pkt->dts;
 
-      LOG(WARNING) << "Writing " << payloadSize << " bytes to sonar track";
+      LOG(WARNING) << "   packet->pts " << pkt->pts;
 
+      ++_sonarWritten;
       _writer->addPacket( pkt );
     }
 
@@ -297,9 +311,10 @@ static char FileExtension[] = "mov";
 
       //Flush GPMF stream
       {
-        char buffer[8192];
+        const size_t bufferSize = 8192;
+        char buffer[bufferSize];
         uint32_t *payload, payload_size;
-  	    GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, sizeof(buffer), &payload, &payload_size);
+  	    GPMFWriteGetPayload(_gpmfHandle, GPMF_CHANNEL_TIMED, (uint32_t *)buffer, bufferSize, &payload, &payload_size);
       }
 
       return true;

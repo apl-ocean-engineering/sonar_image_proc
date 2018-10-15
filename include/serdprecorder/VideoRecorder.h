@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <fstream>
+#include <chrono>
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
@@ -97,6 +98,8 @@ namespace serdprecorder {
 
     int _frameNum;
 
+    unsigned int _sonarWritten;
+
     bool _doSonar;
     int _sonarTrack;
 
@@ -105,6 +108,8 @@ namespace serdprecorder {
 
     unsigned int _pending;
     std::mutex _mutex;
+
+    std::chrono::time_point< std::chrono::system_clock > _startTime;
 
     std::shared_ptr<libvideoencoder::Encoder> _encoder;
     std::shared_ptr<libvideoencoder::VideoWriter> _writer;

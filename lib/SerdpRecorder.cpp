@@ -10,13 +10,15 @@ namespace serdprecorder {
   using std::string;
 
 
+  using std::placeholders::_1;
+
   SerdpRecorder::SerdpRecorder( void )
     : _keepGoing( true ),
       _deckLink( new DeckLink() ),
       _camState( new CameraState( _deckLink->output().sdiProtocolBuffer() ) ),
       _recorder( new VideoRecorder() ),
       _sonar( nullptr ),
-      _display( new OpenCVDisplay( std::shared_ptr<SerdpRecorder>(this), true ) )
+      _display( new OpenCVDisplay( std::bind( &SerdpRecorder::handleKey, this, _1 ) ) )
   {}
 
 
