@@ -50,15 +50,19 @@ namespace serdprecorder {
 
       bool isRecording() const { return _out.is_open(); }
 
-      virtual bool addMats( std::vector<cv::Mat> &mats ) { return false;}
+      virtual bool addMats( std::vector<cv::Mat> &mats ) { return false; }
       virtual bool addSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping );
 
     protected:
 
       void initGPMF();
+      void flushGPMF();
+      size_t writeSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping, uint32_t **buffer, size_t bufferSize );
+
+
+      std::unique_ptr<uint32_t> _scratch;
 
       std::ofstream _out;
-      std::unique_ptr<uint32_t> _buffer;
 
       size_t _gpmfHandle;
       size_t _sonarHandle;

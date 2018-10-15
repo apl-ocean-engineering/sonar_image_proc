@@ -25,7 +25,7 @@ namespace serdprecorder {
 
   int SerdpRecorder::run( int argc, char **argv )
   {
-    libg3logger::G3Logger logger("bmRecorder");
+    libg3logger::G3Logger logger("serdp_recorder");
 
     CLI::App app{"Simple BlackMagic camera recorder"};
 
@@ -307,8 +307,8 @@ namespace serdprecorder {
 
   			case '\\':
   			   if( _recorder->isRecording() ) {
-  			           LOG(INFO) << "Stopping recording";
-  			           _recorder->close();
+	           LOG(INFO) << "Stopping recording";
+	           _recorder->close();
   			   } else {
 	           LOG(INFO) << "Starting recording";
 
