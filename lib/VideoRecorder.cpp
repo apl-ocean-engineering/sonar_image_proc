@@ -172,7 +172,6 @@ static char FileExtension[] = "mov";
 
     flushGPMF();
 
-
     _isReady = true;
     {
       std::lock_guard<std::mutex> lock(_mutex);
@@ -205,7 +204,6 @@ static char FileExtension[] = "mov";
 
     // Video corruption when this encoding is split into two threads.
     for( unsigned int i=0; i < mats.size(); ++i ) {
-    //  addMat( mats[i], i );
        recordThreads.push_back( shared_ptr<std::thread>( new std::thread( &VideoRecorder::addMat, this, mats[i], i ) ) );
     }
 
@@ -296,7 +294,7 @@ static char FileExtension[] = "mov";
       ++_sonarWritten;
       _writer->addPacket( pkt );
     }
-    
+
     {
       std::lock_guard<std::mutex> lock(_mutex);
       --_pending;
