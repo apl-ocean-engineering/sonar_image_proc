@@ -2,16 +2,16 @@ imports:
     fips-googletest:
         git: https://github.com/amarburg/fips-googletest.git
         cond: "FIPS_UNITTESTS"
-    libactive_object:
-        git: https://github.com/amarburg/libactive_object.git
+    libactiveobject:
+        git: https://github.com/apl-ocean-engineering/libactiveobject.git
     libblackmagic:
-        git: https://github.com/amarburg/libactive_object.git
+        git: https://github.com/apl-ocean-engineering/libblackmagic.git
     liboculus:
-        git: https://github.com/amarburg/liboculus.git
+        git: https://github.com/apl-ocean-engineering/liboculus.git
     libvideoencoder:
-        git: https://github.com/amarburg/libvideoencoder.git
+        git: https://github.com/apl-ocean-engineering/libvideoencoder.git
     libgpmf-fips:
-        git: https://github.com/amarburg/libgpmf-fips.git
+        git: https://github.com/apl-ocean-engineering/libgpmf-fips.git
 
 defines:
   FIPS_EXCEPTIONS: ON

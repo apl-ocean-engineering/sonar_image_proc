@@ -39,7 +39,7 @@ fips_begin_module( serdprecorder )
 
    fips_src( lib *.cpp )
 
-   fips_deps( videoencoder blackmagic oculus gpmf active_object )
+   fips_deps( videoencoder blackmagic oculus gpmf activeobject )
 
     fips_include_directories(
  	 	${CMAKE_SOURCE_DIR}/include
