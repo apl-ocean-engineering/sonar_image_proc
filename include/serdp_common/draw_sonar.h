@@ -6,7 +6,7 @@
 
 #include "liboculus/SimplePingResult.h"
 
-namespace serdprecorder {
+namespace serdp_common {
 
   void drawSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping, cv::Mat &mat );
 

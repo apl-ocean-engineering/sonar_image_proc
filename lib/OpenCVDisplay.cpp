@@ -3,11 +3,11 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include "serdprecorder/OpenCVDisplay.h"
+#include "serdp_common/OpenCVDisplay.h"
 
-#include "serdprecorder/drawSonar.h"
+#include "serdp_Common/draw_sonar.h"
 
-namespace serdprecorder {
+namespace serdp_common {
 
   using namespace liboculus;
 

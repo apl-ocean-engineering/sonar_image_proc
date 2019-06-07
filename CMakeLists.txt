@@ -5,7 +5,7 @@ if( NOT FIPS_IMPORT )
 	get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)
 	include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
 
-	fips_setup(PROJECT recorder)
+	fips_setup(PROJECT serdp_common)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -20,43 +20,31 @@ find_package(OpenCV COMPONENTS ${OPENCV_COMPONENTS} REQUIRED)
 ## C++ flags applied to all builds
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-## Configure OpenCV ##
-
-## Find Blackmagic SDK
-set( BLACKMAGIC_FORCE_LINUX TRUE )
-find_package( BlackmagicSDK REQUIRED )
 
 ## Set global include paths
 fips_include_directories(
   ${CMAKE_SOURCE_DIR}/include
-  ${BLACKMAGIC_INCLUDE_DIR}
   ${OpenCV_INCLUDE_DIRS}
  )
 
-
 # The local library
-fips_begin_module( serdprecorder )
+fips_begin_module( serdp_common )
 
    fips_src( lib *.cpp )
 
-   fips_deps( videoencoder blackmagic oculus gpmf activeobject )
-
-    fips_include_directories(
- 	 	${CMAKE_SOURCE_DIR}/include
- 	 )
+   fips_deps( oculus )
 
 	 fips_libs(  ${Boost_LIBRARIES} )
 
-  fips_end_module()
+fips_end_module()
 
 
 if( NOT FIPS_IMPORT )
-  add_subdirectory("tools/")
 
 	if( FIPS_UNITTESTS )
-			 gtest_begin( serdprecorder )
+			 gtest_begin( serdp_common )
 			     fips_src( test/unit/ )
-			     fips_deps( serdprecorder )
+			     fips_deps( serdp_common )
 			gtest_end()
 	endif()
 

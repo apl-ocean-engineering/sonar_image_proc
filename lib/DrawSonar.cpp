@@ -1,9 +1,9 @@
 
-#include "serdprecorder/drawSonar.h"
+#include "serdp_common/draw_sonar.h"
 
 #include <opencv2/imgproc.hpp>
 
-namespace serdprecorder {
+namespace serdp_common {
 
   using namespace std;
   using namespace liboculus;

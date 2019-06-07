@@ -8,7 +8,7 @@
 #include "active_object/active.h"
 #include "liboculus/SimplePingResult.h"
 
-namespace serdprecorder {
+namespace serdp_common {
 
   using std::vector;
   class SerdpRecorder;
