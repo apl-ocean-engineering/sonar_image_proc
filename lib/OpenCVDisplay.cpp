@@ -5,7 +5,7 @@
 
 #include "serdp_common/OpenCVDisplay.h"
 
-#include "serdp_Common/draw_sonar.h"
+#include "serdp_common/DrawSonar.h"
 
 namespace serdp_common {
 
