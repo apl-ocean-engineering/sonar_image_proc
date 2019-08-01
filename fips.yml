@@ -6,7 +6,8 @@ imports:
         git: https://github.com/apl-ocean-engineering/liboculus.git
 
 exports:
-  modules: serdp_common
+  modules:
+    serdp_common: .
   header-dirs:
     - include
 
