@@ -24,7 +24,7 @@ public:
   struct SonarData {
   public:
     SonarData()
-        : frequency(-1), bearings(nullptr), ranges(nullptr),
+        : frequency(-1.0), bearings(nullptr), ranges(nullptr),
           intensities(nullptr) {
       ;
     }
@@ -33,9 +33,8 @@ public:
     float *ranges;
     float *intensities;
   };
-  std::shared_ptr<SonarData>
-  pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping);
+  SonarData pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping);
 
-  std::shared_ptr<SonarData> sonarData;
+  SonarData sonarData;
 };
 } // namespace serdp_common

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <memory>
 #include <functional>
+#include <memory>
 
 #include <opencv2/core.hpp>
 
@@ -10,43 +10,46 @@
 
 namespace serdp_common {
 
-  using std::vector;
-  class SerdpRecorder;
+using std::vector;
+class SerdpRecorder;
 
-  class OpenCVDisplay {
-  public:
+class OpenCVDisplay {
+public:
+  OpenCVDisplay(std::function<void(const char)> callback);
 
-    OpenCVDisplay( std::function<void(const char)> callback  );
+  bool setEnabled(bool e) { return _enabled = e; }
 
-    bool setEnabled( bool e ) { return _enabled = e; }
+  void showVideo(vector<cv::Mat> mats) {
+    if (_enabled)
+      _thread->send(std::bind(&OpenCVDisplay::implShowVideo, this, mats));
+  }
 
-    void showVideo( vector< cv::Mat > mats )
-    { if( _enabled) _thread->send( std::bind(&OpenCVDisplay::implShowVideo, this, mats) ); }
+  void showSonar(const std::shared_ptr<liboculus::SimplePingResult> &ping) {
+    if (_enabled)
+      _thread->send(std::bind(&OpenCVDisplay::implShowSonar, this, ping));
+  }
 
-    void showSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping )
-    { if( _enabled) _thread->send( std::bind(&OpenCVDisplay::implShowSonar, this, ping) ); }
+  float setPreviewScale(float scale) {
+    _previewScale = scale;
+    return _previewScale;
+  }
 
-    float setPreviewScale( float scale )
-    { _previewScale = scale;
-      return _previewScale; }
+  void sonarDisplay(const std::shared_ptr<liboculus::SimplePingResult> &ping) {
+    implShowSonar(ping);
+  }
 
+protected:
+  void implShowVideo(vector<cv::Mat> mats);
+  void resizeImage(const cv::Mat &rawImage, cv::Mat &scaledImage);
 
-  protected:
+  void implShowSonar(const std::shared_ptr<liboculus::SimplePingResult> &ping);
 
-    void implShowVideo( vector< cv::Mat > mats );
-    void resizeImage( const cv::Mat &rawImage, cv::Mat &scaledImage );
+private:
+  bool _enabled;
+  float _previewScale;
 
-    void implShowSonar( const std::shared_ptr<liboculus::SimplePingResult> &ping );
+  std::unique_ptr<active_object::Active> _thread;
+  std::function<void(const char)> _keyHandler;
+};
 
-  private:
-
-    bool _enabled;
-    float _previewScale;
-
-    std::unique_ptr<active_object::Active> _thread;
-    std::function<void(const char)> _keyHandler;
-
-  };
-
-
-}
+} // namespace serdp_common
