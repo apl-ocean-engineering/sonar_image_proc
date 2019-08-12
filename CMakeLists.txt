@@ -38,9 +38,11 @@ if (FIPS_IMPORT)
 
 	   fips_deps( oculus )
 
-		 fips_libs(  ${Boost_LIBRARIES} )
+           fips_libs(  ${Boost_LIBRARIES} )
 
-	 fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
+	   fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
+
+        fips_end_module()
 
 
 	if( NOT FIPS_IMPORT )
@@ -52,8 +54,9 @@ if (FIPS_IMPORT)
 				gtest_end()
 		endif()
 
-	  fips_finish()
+	  
 	endif()
+    fips_finish()
 
 else()
     project(serdp_common)
