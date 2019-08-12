@@ -34,7 +34,7 @@ fips_begin_module( serdp_common )
 
    fips_deps( oculus )
 
-	 fips_libs(  ${Boost_LIBRARIES})
+	 fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
 
 fips_end_module()
 

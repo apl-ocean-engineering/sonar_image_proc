@@ -1,9 +1,7 @@
 
 #include "serdp_common/DrawSonar.h"
 
-#include <opencv2/imgproc.hpp>
-
-#include <opencv2/opencv.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 namespace serdp_common {
 

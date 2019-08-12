@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include <opencv2/core.hpp>
+#include <opencv2/core/core.hpp>
 
 #include "active_object/active.h"
 #include "liboculus/SimplePingResult.h"
