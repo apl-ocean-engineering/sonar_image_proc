@@ -66,7 +66,7 @@ void OpenCVDisplay::resizeImage(const cv::Mat &rawImage, cv::Mat &scaledImage) {
   cv::resize(rawImage, scaledImage, cv::Size(), _previewScale, _previewScale);
 
   //				scaledImages[i] = cv::Mat(tmp.rows, tmp.cols,
-  //CV_8UC3
+  // CV_8UC3
   //);
 
   // Image from camera is BGRA  map to RGB
@@ -74,6 +74,16 @@ void OpenCVDisplay::resizeImage(const cv::Mat &rawImage, cv::Mat &scaledImage) {
   // cv::mixChannels( &tmp, 1, &(scaledImages[i]), 1, from_to, 3 );
   // cv::cvtColor( tmp, scaledImages[i], cv::COLOR_BGRA2RGB );
   // cv::extractChannel(tmp, scaledImages[i], 0 );
+}
+
+cv::Mat OpenCVDisplay::sonarPing2Img(
+    const std::shared_ptr<liboculus::SimplePingResult> &ping) {
+  cv::Mat mat(500, 1000, CV_8UC3);
+  mat.setTo(cv::Vec3b(128, 128, 128));
+
+  drawSonar(ping, mat);
+
+  return mat;
 }
 
 //==== Functions related to showing sonar =====

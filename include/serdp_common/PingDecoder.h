@@ -24,10 +24,11 @@ public:
   struct SonarData {
   public:
     SonarData()
-        : frequency(-1.0), bearings(nullptr), ranges(nullptr),
+        : timestamp(0.0), frequency(-1.0), bearings(nullptr), ranges(nullptr),
           intensities(nullptr) {
       ;
     }
+    float timestamp;
     float frequency;
     float *bearings;
     float *ranges;
