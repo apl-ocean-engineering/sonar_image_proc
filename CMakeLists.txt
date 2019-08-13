@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.5)
 
-find_package(catkin QUIET)
-if( NOT FIPS_IMPORT )
-    if (NOT catkin_FOUND)
+if( FIPS_CONFIG AND NOT FIPS_IMPORT )
 	cmake_minimum_required(VERSION 3.5)
 
 	get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)
 	include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
 
 	fips_setup(PROJECT serdp_common)
-    endif()
+
+else()
+  find_package(catkin QUIET)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -25,38 +25,34 @@ find_package(OpenCV COMPONENTS ${OPENCV_COMPONENTS} REQUIRED)
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 
-if (FIPS_IMPORT)
-## Set global include paths
-    fips_include_directories(
-      ${CMAKE_SOURCE_DIR}/include
-      ${OpenCV_INCLUDE_DIRS}
-     )
-	# The local library
-	fips_begin_module( serdp_common )
+if( FIPS_CONFIG )
+  ## Set global include paths
+  fips_include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${OpenCV_INCLUDE_DIRS}
+   )
 
-	   fips_src( lib *.cpp )
+  # The local library
+  fips_begin_module( serdp_common )
 
-	   fips_deps( oculus )
+    fips_src( lib *.cpp )
+    fips_deps( oculus )
+    fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
 
-           fips_libs(  ${Boost_LIBRARIES} )
-
-	   fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
-
-        fips_end_module()
+  fips_end_module()
 
 
 	if( NOT FIPS_IMPORT )
 
-		if( FIPS_UNITTESTS )
-				 gtest_begin( serdp_common )
-				     fips_src( test/unit/ )
-				     fips_deps( serdp_common )
-				gtest_end()
-		endif()
+    if( FIPS_UNITTESTS )
+      gtest_begin( serdp_common )
+        fips_src( test/unit/ )
+        fips_deps( serdp_common )
+      gtest_end()
+    endif()
 
-	  
 	endif()
-    fips_finish()
+  fips_finish()
 
 else()
     project(serdp_common)
@@ -91,7 +87,7 @@ else()
         FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
         PATTERN ".git" EXCLUDE)
 
-# in your other catkin projects the g2o libraries will be available as:
+# in your other catkin projects the libraries will be available as:
 # ${serdp_common_INCLUDE_DIRS}
 # ${serdp_common_LIBRARIES}
 
