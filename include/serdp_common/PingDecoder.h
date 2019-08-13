@@ -9,9 +9,6 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 
-#include <CLI/CLI.hpp>
-#include <libg3logger/g3logger.h>
-
 #include "liboculus/DataRx.h"
 #include "liboculus/IoServiceThread.h"
 #include "liboculus/SonarPlayer.h"
