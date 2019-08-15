@@ -4,7 +4,7 @@ imports:
         cond: "FIPS_UNITTESTS"
     liboculus:
         git: https://github.com/apl-ocean-engineering/liboculus.git
-        branch: mitchell-dev
+        branch: master
 
 exports:
   modules:
