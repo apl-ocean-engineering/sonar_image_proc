@@ -56,9 +56,19 @@ if( FIPS_CONFIG )
 
 else()
     project(serdp_common)
-    find_package(catkin REQUIRED COMPONENTS
+
+    find_package(catkin REQUIRED
       liboculus REQUIRED
+      g3log_catkin
+      active_object
     )
+
+    catkin_package(
+    	  #CATKIN_DEPENDS liboculus
+        INCLUDE_DIRS include
+        LIBRARIES serdp_LIB
+    )
+
 
     include_directories(
       ${catkin_INCLUDE_DIRS}
@@ -66,19 +76,16 @@ else()
       ${liboculus_INCLUDE_DIRS}
    )
 
-    catkin_package(
-    	  #CATKIN_DEPENDS liboculus
-        INCLUDE_DIRS include
-    )
-
     file(GLOB serdp_common_SRCS
      	  lib/*.cpp
     )
 
-    #add_library(serdp ${serdp_common_SRCS})
+    add_library(serdp_LIB ${serdp_common_SRCS})
 
-    install(FILES ${serdp_common_SRCS}
-            DESTINATION lib)
+    install(TARGETS serdp_LIB
+          ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+          LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+          RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
 
 
     ## Install headers

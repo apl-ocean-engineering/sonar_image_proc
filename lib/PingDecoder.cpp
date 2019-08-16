@@ -2,7 +2,7 @@
 
 namespace serdp_common {
 
-PingDecoder::SonarData
+std::shared_ptr<SonarData>
 PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
 
   const int nBearings = ping->ping()->nBeams;
@@ -23,15 +23,16 @@ PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
       intensities[i] = ping->image().at(i, j);
     }
   }
+  std::shared_ptr<SonarData> sonarData(new SonarData);
   //
   float frequency = ping->ping()->frequency;
   float timestamp = ping->ping()->pingStartTime;
 
-  sonarData.timestamp = timestamp;
-  sonarData.frequency = frequency;
-  sonarData.bearings = bearings;
-  sonarData.ranges = ranges;
-  sonarData.intensities = intensities;
+  sonarData->timestamp = timestamp;
+  sonarData->frequency = frequency;
+  sonarData->bearings = bearings;
+  sonarData->ranges = ranges;
+  sonarData->intensities = intensities;
 
   return sonarData;
 }
