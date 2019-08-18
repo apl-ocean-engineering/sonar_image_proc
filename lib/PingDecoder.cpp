@@ -8,26 +8,29 @@ PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
   const int nBearings = ping->ping()->nBeams;
   const int nRanges = ping->ping()->nRanges;
 
-  float bearings[nBearings];
-  float ranges[nRanges];
-  float intensities[nRanges * nBearings];
+  std::vector<float> bearings;
+  std::vector<float> ranges;
+  std::vector<float> intensities;
   //
   for (unsigned int i = 0; i < nBearings; i++) {
-    bearings[i] = ping->bearings().at(i);
+    bearings.push_back(ping->bearings().at(i));
+    // std::cout << "bearing: " << ping->bearings().at(i) << std::endl;
   }
   for (unsigned int i = 0; i < nRanges; i++) {
-    ranges[i] = float(i + 0.5) * ping->ping()->rangeResolution;
+    ranges.push_back(float(i + 0.5) * ping->ping()->rangeResolution);
   }
-  for (unsigned int i = 0; i < nBearings; i++) {
-    for (unsigned int j = 0; j < nRanges; j++) {
-      intensities[i] = ping->image().at(i, j);
+  for (unsigned int i = 0; i < nRanges; i++) {
+    for (unsigned int j = 0; j < nBearings; j++) {
+      intensities.push_back(ping->image().at(j, i));
     }
   }
   std::shared_ptr<SonarData> sonarData(new SonarData);
   //
   float frequency = ping->ping()->frequency;
   float timestamp = ping->ping()->pingStartTime;
+
   sonarData->nBearings = nBearings;
+
   sonarData->nRanges = nRanges;
   sonarData->timestamp = timestamp;
   sonarData->frequency = frequency;

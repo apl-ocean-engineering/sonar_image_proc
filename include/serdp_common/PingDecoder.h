@@ -16,18 +16,14 @@
 
 namespace serdp_common {
 struct SonarData {
-  SonarData()
-      : timestamp(0.0), frequency(-1.0), bearings(nullptr), ranges(nullptr),
-        intensities(nullptr) {
-    ;
-  }
+  SonarData() : timestamp(0.0), frequency(-1.0) { ; }
   unsigned int nBearings;
   unsigned int nRanges;
   float timestamp;
   float frequency;
-  float *bearings;
-  float *ranges;
-  float *intensities;
+  std::vector<float> bearings;
+  std::vector<float> ranges;
+  std::vector<float> intensities;
 };
 
 class PingDecoder {
