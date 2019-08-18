@@ -21,6 +21,8 @@ struct SonarData {
         intensities(nullptr) {
     ;
   }
+  unsigned int nBearings;
+  unsigned int nRanges;
   float timestamp;
   float frequency;
   float *bearings;
@@ -34,6 +36,6 @@ public:
   std::shared_ptr<SonarData>
   pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping);
 
-  //std::shared_ptr<SonarData> sonarData;
+  // std::shared_ptr<SonarData> sonarData;
 };
 } // namespace serdp_common

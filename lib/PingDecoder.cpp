@@ -27,7 +27,8 @@ PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
   //
   float frequency = ping->ping()->frequency;
   float timestamp = ping->ping()->pingStartTime;
-
+  sonarData->nBearings = nBearings;
+  sonarData->nRanges = nRanges;
   sonarData->timestamp = timestamp;
   sonarData->frequency = frequency;
   sonarData->bearings = bearings;
