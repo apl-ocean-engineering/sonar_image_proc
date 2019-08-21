@@ -12,8 +12,10 @@ namespace serdp_common {
 using namespace liboculus;
 
 OpenCVDisplay::OpenCVDisplay(std::function<void(const char)> keyHandler)
-    : _enabled(false), _previewScale(0.25), _keyHandler(keyHandler),
-      _thread(active_object::Active::createActive()) {}
+    : _enabled(false), _previewScale(0.25),
+      _thread(active_object::Active::createActive()),
+      _keyHandler(keyHandler)
+{}
 
 //=== Functions related to showing video =====
 
