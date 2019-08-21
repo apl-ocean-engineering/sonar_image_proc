@@ -5,8 +5,8 @@ namespace serdp_common {
 std::shared_ptr<SonarData>
 PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
 
-  const int nBearings = ping->ping()->nBeams;
-  const int nRanges = ping->ping()->nRanges;
+  const unsigned int nBearings = ping->ping()->nBeams;
+  const unsigned int nRanges = ping->ping()->nRanges;
 
   std::vector<float> bearings;
   std::vector<float> ranges;
