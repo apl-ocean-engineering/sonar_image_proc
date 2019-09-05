@@ -34,8 +34,7 @@ public:
     return _previewScale;
   }
 
-  cv::Mat
-  sonarPing2Img(const std::shared_ptr<liboculus::SimplePingResult> &ping);
+  cv::Mat sonarPing2Img(const std::shared_ptr<liboculus::SimplePingResult> &ping);
 
 protected:
   void implShowVideo(vector<cv::Mat> mats);
