@@ -54,14 +54,27 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
     angles[b] = make_pair(begin, end);
   }
 
+  // Bearings
+  std::vector<float> bearings;
+  std::vector<float> ranges;
+  for (unsigned int i = 0; i < ping.ping()->nBeams; i++) {
+    bearings.push_back(ping.bearings().at(i));
+  }
+  // Ranges
+  for (unsigned int i = 0; i < ping.ping()->nRanges; i++) {
+    ranges.push_back(float(i + 0.5) * ping.ping()->rangeResolution);
+  }
+
   for (unsigned int r = 0; r < ping.ping()->nRanges; ++r) {
     for (unsigned int b = 0; b < ping.ping()->nBeams; ++b) {
 
-      auto intensity = ping.image().at(b, r);
+      float bearing = bearings.at(b);
+      float range = ranges.at(r);
+      float intensity = ping.image().at(b, r);
 
       // Insert color mapping here
       // cv::Scalar color(intensity, intensity, intensity);
-      cv::Scalar color(r, b, intensity);
+      cv::Scalar color(bearing, range, intensity);
 
       const float begin = angles[b].first + 270, end = angles[b].second + 270;
 
