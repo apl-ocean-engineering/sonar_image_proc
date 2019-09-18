@@ -9,28 +9,26 @@ using namespace std;
 using namespace liboculus;
 using namespace cv;
 
-  void drawSonar( const shared_ptr<SimplePingResult> &ping, Mat &mat ) {
-    drawSonar( *ping, mat );
-  }
+void drawSonar(const shared_ptr<SimplePingResult> &ping, Mat &mat) {
+  drawSonar(*ping, mat);
+}
 
-
-  void drawSonar( const SimplePingResult &ping, Mat &mat ) {
-    // Ensure mat is 8UC3
-    mat.create( mat.size(), CV_8UC3 );
-    // mat.setTo( cv::Vec3b(0,0,0) );
+void drawSonar(const SimplePingResult &ping, Mat &mat) {
+  // Ensure mat is 8UC3
+  mat.create(mat.size(), CV_8UC3);
+  // mat.setTo( cv::Vec3b(0,0,0) );
 
   const unsigned int radius = mat.size().width / 2;
   const cv::Point origin(radius, mat.size().height);
 
-  const float binThickness = 3 * ceil( radius / ping.ping()->nRanges );
+  const float binThickness = 3 * ceil(radius / ping.ping()->nRanges);
 
   LOG(DEBUG) << "binThickness is " << binThickness;
 
   // Build vector of start and end angles
   // (in degrees, with sonar 0 == straight ahead)
 
-  vector<pair<float, float>> angles(ping.ping()->nBeams,
-                                    make_pair(0.0f, 0.0f));
+  vector<pair<float, float>> angles(ping.ping()->nBeams, make_pair(0.0f, 0.0f));
   for (unsigned int b = 0; b < ping.ping()->nBeams; ++b) {
     float begin = 0.0, end = 0.0;
 
@@ -62,7 +60,8 @@ using namespace cv;
       auto intensity = ping.image().at(b, r);
 
       // Insert color mapping here
-      cv::Scalar color(intensity, intensity, intensity);
+      // cv::Scalar color(intensity, intensity, intensity);
+      cv::Scalar color(r, b, intensity);
 
       const float begin = angles[b].first + 270, end = angles[b].second + 270;
 
