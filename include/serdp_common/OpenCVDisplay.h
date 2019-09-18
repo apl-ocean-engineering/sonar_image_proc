@@ -5,6 +5,7 @@
 
 #include <opencv2/core/core.hpp>
 
+#include "OpenCVDisplay.h"
 #include "active_object/active.h"
 #include "liboculus/SimplePingResult.h"
 
@@ -34,7 +35,8 @@ public:
     return _previewScale;
   }
 
-  cv::Mat sonarPing2Img(const std::shared_ptr<liboculus::SimplePingResult> &ping);
+  cv::Mat
+  sonarPing2Img(const std::shared_ptr<liboculus::SimplePingResult> &ping);
 
 protected:
   void implShowVideo(vector<cv::Mat> mats);

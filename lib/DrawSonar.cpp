@@ -3,17 +3,24 @@
 
 #include <opencv2/imgproc/imgproc.hpp>
 
-namespace serdp_common {
+#ifndef THETA_SHIFT
+#define THETA_SHIFT PI;
+#endif
 
 using namespace std;
 using namespace liboculus;
 using namespace cv;
+
+namespace serdp_common {
 
 void drawSonar(const shared_ptr<SimplePingResult> &ping, Mat &mat) {
   drawSonar(*ping, mat);
 }
 
 void drawSonar(const SimplePingResult &ping, Mat &mat) {
+
+  LOG(DEBUG) << "Theta shift " << THETA_SHIFT;
+
   // Ensure mat is 8UC3
   mat.create(mat.size(), CV_8UC3);
   // mat.setTo( cv::Vec3b(0,0,0) );
@@ -58,12 +65,17 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
   std::vector<float> bearings;
   std::vector<float> ranges;
   for (unsigned int i = 0; i < ping.ping()->nBeams; i++) {
-    bearings.push_back(ping.bearings().at(i));
+    bearings.push_back(ping.bearings().at(i) + THETA_SHIFT);
   }
   // Ranges
   for (unsigned int i = 0; i < ping.ping()->nRanges; i++) {
     ranges.push_back(float(i + 0.5) * ping.ping()->rangeResolution);
   }
+
+  const auto [bearingMin, bearingMax] =
+      std::minmax_element(begin(bearings), end(bearings));
+  const auto [rangeMin, rangeMax] =
+      std::minmax_element(begin(ranges), end(ranges));
 
   for (unsigned int r = 0; r < ping.ping()->nRanges; ++r) {
     for (unsigned int b = 0; b < ping.ping()->nBeams; ++b) {

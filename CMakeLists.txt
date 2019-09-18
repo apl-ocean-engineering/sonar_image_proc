@@ -24,6 +24,18 @@ find_package(OpenCV COMPONENTS ${OPENCV_COMPONENTS} REQUIRED)
 ## C++ flags applied to all builds
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+set( PI "3.14159265358979")
+
+add_definitions( -DPI=${PI} )
+
+OPTION(THETA_SHIFT_DEGREES "Define " ON) # Enabled by default
+if(THETA_SHIFT_DEGREES)
+	add_definitions( -DTHETA_SHIFT=90 )
+else()
+	add_definitions( -DTHETA_SHIFT=${PI} )
+endif()
+
+
 
 if( FIPS_CONFIG )
   ## Set global include paths
