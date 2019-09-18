@@ -14,17 +14,9 @@
 #include "liboculus/SonarPlayer.h"
 #include "liboculus/StatusRx.h"
 
+#include "DataStructures.h"
+
 namespace serdp_common {
-struct SonarData {
-  SonarData() : timestamp(0.0), frequency(-1.0) { ; }
-  unsigned int nBearings;
-  unsigned int nRanges;
-  float timestamp;
-  float frequency;
-  std::vector<float> bearings;
-  std::vector<float> ranges;
-  std::vector<float> intensities;
-};
 
 class PingDecoder {
 
