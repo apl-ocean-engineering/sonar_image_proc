@@ -25,8 +25,10 @@ find_package(OpenCV COMPONENTS ${OPENCV_COMPONENTS} REQUIRED)
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 set( PI "3.14159265358979")
-
 add_definitions( -DPI=${PI} )
+
+set( SCALE_FACTOR "250")
+add_definitions( -DSCALE_FACTOR=${SCALE_FACTOR} )
 
 OPTION(THETA_SHIFT_DEGREES "Define " ON) # Enabled by default
 if(THETA_SHIFT_DEGREES)

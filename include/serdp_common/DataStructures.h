@@ -1,3 +1,5 @@
+#include <math.h>
+#include <vector>
 namespace serdp_common {
 
 struct SonarPoint {
@@ -17,4 +19,5 @@ struct SonarData {
   std::vector<float> intensities;
 };
 
+SonarPoint bearingRange2Cartesian(float bearing, float range);
 } // namespace serdp_common

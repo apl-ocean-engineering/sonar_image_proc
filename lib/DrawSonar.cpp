@@ -1,6 +1,7 @@
 
 #include "serdp_common/DrawSonar.h"
 
+#include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 
 #ifndef THETA_SHIFT
@@ -83,10 +84,10 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
       float bearing = bearings.at(b);
       float range = ranges.at(r);
       float intensity = ping.image().at(b, r);
-
       // Insert color mapping here
       // cv::Scalar color(intensity, intensity, intensity);
-      cv::Scalar color(bearing, range, intensity);
+      cv::Scalar color(bearing * SCALE_FACTOR, range * SCALE_FACTOR,
+                       intensity * SCALE_FACTOR);
 
       const float begin = angles[b].first + 270, end = angles[b].second + 270;
 
