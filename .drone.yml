@@ -9,6 +9,7 @@ platform:
 pipeline:
 - name: build-fips-unittest
   image: amarburg/lsdslam-dev-host
+  pull: yes
   commands:
     - ./fips set config linux-make-unittest
     - ./fips build
