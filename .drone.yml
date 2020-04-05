@@ -1,3 +1,11 @@
+kind: pipeline
+type: docker
+name: build
+
+platform:
+  os: linux
+  arch: amd64
+
 pipeline:
 - name: build-fips-unittest
   image: amarburg/lsdslam-dev-host
