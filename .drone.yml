@@ -13,6 +13,16 @@ pipeline:
     - ./fips set config linux-make-unittest
     - ./fips build
 
+- name: trigger-github-downstream
+  image: plugins/downstream
+  settings:
+    server: https://github.drone.camhd.science
+    fork: true
+    token:
+      from_secret: github_drone_token
+    repositories:
+      - apl-ocean-engineering/serdp_player
+
 - name: slack
   image: plugins/slack
   settings:
