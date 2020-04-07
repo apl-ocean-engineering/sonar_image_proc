@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.5)
+c ake_minimum_required(VERSION 3.5)
+project(serdp_common)
 
 if( FIPS_CONFIG AND NOT FIPS_IMPORT )
 	cmake_minimum_required(VERSION 3.5)
@@ -6,7 +7,7 @@ if( FIPS_CONFIG AND NOT FIPS_IMPORT )
 	get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)
 	include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
 
-	fips_setup(PROJECT serdp_common)
+	fips_setup()
 
 else()
   find_package(catkin QUIET)
