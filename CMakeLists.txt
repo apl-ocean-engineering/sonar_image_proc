@@ -1,4 +1,4 @@
-c ake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5)
 project(serdp_common)
 
 if( FIPS_CONFIG AND NOT FIPS_IMPORT )
