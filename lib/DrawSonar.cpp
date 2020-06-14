@@ -29,15 +29,15 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
   const unsigned int radius = mat.size().width / 2;
   const cv::Point origin(radius, mat.size().height);
 
-  const float binThickness = 3 * ceil(radius / ping.ping()->nRanges);
+  const float binThickness = 3 * ceil(radius / ping.oculusPing()->nRanges);
 
   LOG(DEBUG) << "binThickness is " << binThickness;
 
   // Build vector of start and end angles
   // (in degrees, with sonar 0 == straight ahead)
 
-  vector<pair<float, float>> angles(ping.ping()->nBeams, make_pair(0.0f, 0.0f));
-  for (unsigned int b = 0; b < ping.ping()->nBeams; ++b) {
+  vector<pair<float, float>> angles(ping.oculusPing()->nBeams, make_pair(0.0f, 0.0f));
+  for (unsigned int b = 0; b < ping.oculusPing()->nBeams; ++b) {
     float begin = 0.0, end = 0.0;
 
     // LOG(DEBUG) << "Bearing " << b << " is " << ping.bearings().at(b);
@@ -46,7 +46,7 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
       end = (ping.bearings().at(b + 1) + ping.bearings().at(b)) / 2.0;
       begin = 2 * ping.bearings().at(b) - end;
 
-    } else if (b == ping.ping()->nBeams - 1) {
+    } else if (b == ping.oculusPing()->nBeams - 1) {
 
       begin = angles[b - 1].second;
       end = 2 * ping.bearings().at(b) - begin;
@@ -65,12 +65,12 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
   // Bearings
   std::vector<float> bearings;
   std::vector<float> ranges;
-  for (unsigned int i = 0; i < ping.ping()->nBeams; i++) {
+  for (unsigned int i = 0; i < ping.oculusPing()->nBeams; i++) {
     bearings.push_back(ping.bearings().at(i) + THETA_SHIFT);
   }
   // Ranges
-  for (unsigned int i = 0; i < ping.ping()->nRanges; i++) {
-    ranges.push_back(float(i + 0.5) * ping.ping()->rangeResolution);
+  for (unsigned int i = 0; i < ping.oculusPing()->nRanges; i++) {
+    ranges.push_back(float(i + 0.5) * ping.oculusPing()->rangeResolution);
   }
 
   const auto [bearingMin, bearingMax] =
@@ -78,8 +78,8 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
   const auto [rangeMin, rangeMax] =
       std::minmax_element(begin(ranges), end(ranges));
 
-  for (unsigned int r = 0; r < ping.ping()->nRanges; ++r) {
-    for (unsigned int b = 0; b < ping.ping()->nBeams; ++b) {
+  for (unsigned int r = 0; r < ping.oculusPing()->nRanges; ++r) {
+    for (unsigned int b = 0; b < ping.oculusPing()->nBeams; ++b) {
 
       float bearing = bearings.at(b);
       float range = ranges.at(r);
@@ -94,7 +94,7 @@ void drawSonar(const SimplePingResult &ping, Mat &mat) {
       // LOG_IF( DEBUG, r == 128 ) << "From " << begin << " to " << end << ";
       // color " << color;
 
-      const float rad = float(radius * r) / ping.ping()->nRanges;
+      const float rad = float(radius * r) / ping.oculusPing()->nRanges;
 
       const float fudge = 0.7;
 

@@ -5,8 +5,8 @@ namespace serdp_common {
 std::shared_ptr<SonarData>
 PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
 
-  const unsigned int nBearings = ping->ping()->nBeams;
-  const unsigned int nRanges = ping->ping()->nRanges;
+  const unsigned int nBearings = ping->oculusPing()->nBeams;
+  const unsigned int nRanges = ping->oculusPing()->nRanges;
 
   std::vector<float> bearings;
   std::vector<float> ranges;
@@ -17,7 +17,7 @@ PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
     // std::cout << "bearing: " << ping->bearings().at(i) << std::endl;
   }
   for (unsigned int i = 0; i < nRanges; i++) {
-    ranges.push_back(float(i + 0.5) * ping->ping()->rangeResolution);
+    ranges.push_back(float(i + 0.5) * ping->oculusPing()->rangeResolution);
   }
   for (unsigned int i = 0; i < nRanges; i++) {
     for (unsigned int j = 0; j < nBearings; j++) {
@@ -26,8 +26,8 @@ PingDecoder::pingPlayback(std::shared_ptr<liboculus::SimplePingResult> ping) {
   }
   std::shared_ptr<SonarData> sonarData(new SonarData);
   //
-  float frequency = ping->ping()->frequency;
-  float timestamp = ping->ping()->pingStartTime;
+  float frequency = ping->oculusPing()->frequency;
+  float timestamp = ping->oculusPing()->pingStartTime;
 
   sonarData->nBearings = nBearings;
 
