@@ -13,6 +13,14 @@ steps:
     - ./fips set config linux-make-unittest
     - ./fips build
 
+- name: build
+  image: amarburg/drone-ci-ros:melodic
+  commands:
+    - wget -O- https://gitlab.com/amarburg/ros_drone_ci/-/raw/master/bootstrap.sh | /bin/bash
+  environment:
+    WSTOOL_RECURSIVE: true
+    ROS_PACKAGES_TO_INSTALL: cv-bridge image-transport
+
 - name: trigger-github-downstream
   image: plugins/downstream
   settings:
