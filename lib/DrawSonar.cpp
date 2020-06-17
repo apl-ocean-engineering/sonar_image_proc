@@ -36,10 +36,10 @@ cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, 
 
     // Assume bearings are symmetric plus and minus
     // Also assumes bearings are degrees
-    w = 2*fabs(h*sin( M_PI/180 * ping.bearing(0) ));
+    w = 2*ceil(fabs(h*sin( M_PI/180 * ping.bearing(0) )));
 
   } else if( h <= 0 ) {
-    h = (w/2) / fabs(sin( M_PI/180 * ping.bearing(0) ));
+    h = (w/2) / ceil(fabs(sin( M_PI/180 * ping.bearing(0) )));
   }
 
   return Size(w,h);
