@@ -17,42 +17,42 @@ namespace serdp_common {
 const float ThetaShift = 270;
 
 void drawSonar(const shared_ptr<SimplePingResult> &ping, Mat &mat, const SonarColorMap &colorMap) {
-  drawSonar( AbstractSonarData(*ping), mat, colorMap);
+  drawSonar( SimplePingResultInterface(*ping), mat, colorMap);
 }
 
 void drawSonar(const SimplePingResult &ping, Mat &mat, const SonarColorMap &colorMap) {
-  drawSonar( AbstractSonarData(ping), mat, colorMap );
+  drawSonar( SimplePingResultInterface(ping), mat, colorMap );
 }
 
-cv::Size calculateImageSize( const AbstractSonarData &ping, cv::Size hint, int pixPerRangeBin ) {
+cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin ) {
 
   int h = hint.height, w = hint.width;
 
   if( w <= 0 ) {
 
     if( h <= 0 ) {
-        h = ping.ranges.size() * pixPerRangeBin;
+        h = ping.nRanges() * pixPerRangeBin;
     }
 
     // Assume bearings are symmetric plus and minus
     // Also assumes bearings are degrees
-    w = 2*fabs(h*sin( M_PI/180 * ping.bearings[0] ));
+    w = 2*fabs(h*sin( M_PI/180 * ping.bearing(0) ));
 
   } else if( h <= 0 ) {
-    h = (w/2) / fabs(sin( M_PI/180 * ping.bearings[0]));
+    h = (w/2) / fabs(sin( M_PI/180 * ping.bearing(0) ));
   }
 
   return Size(w,h);
 }
 
-void drawSonar( const AbstractSonarData &ping, Mat &mat, const SonarColorMap &colorMap ) {
+void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMap &colorMap ) {
 
   // Ensure mat is 8UC3;
   mat.create(mat.size(), CV_8UC3);
   mat.setTo( cv::Vec3b(0,0,0) );
 
-  const int nRanges = ping.ranges.size();
-  const int nBeams = ping.bearings.size();
+  const int nRanges = ping.nRanges();
+  const int nBeams = ping.nBearings();
 
   const unsigned int radius = mat.size().height;
   const cv::Point origin(mat.size().width/2, mat.size().height);
@@ -72,12 +72,12 @@ void drawSonar( const AbstractSonarData &ping, Mat &mat, const SonarColorMap &co
   angles.reserve( nBeams );
 
   for (unsigned int b = 0; b < nBeams; ++b) {
-    const float center = ping.bearings[b];
+    const float center = ping.bearing(b);
     float begin = 0.0, end = 0.0;
 
     if (b == 0) {
 
-      end = (ping.bearings[b + 1] + center) / 2.0;
+      end = (ping.bearing(b + 1) + center) / 2.0;
       begin = 2 * center - end;
 
     } else if (b == nBeams - 1) {
@@ -88,7 +88,7 @@ void drawSonar( const AbstractSonarData &ping, Mat &mat, const SonarColorMap &co
     } else {
 
       begin = angles[b - 1].end;
-      end = (ping.bearings[b + 1] + center) / 2.0;
+      end = (ping.bearing(b + 1) + center) / 2.0;
     }
 
     angles.push_back( BearingEntry(begin, center, end) );
@@ -97,8 +97,8 @@ void drawSonar( const AbstractSonarData &ping, Mat &mat, const SonarColorMap &co
   for (unsigned int r = 0; r < nRanges; ++r) {
     for (unsigned int b = 0; b < nBeams; ++b) {
 
-      const float range = ping.ranges[r];
-      const uint8_t intensity = ping.intensities[(r * nBeams) + b];
+      const float range = ping.range(r);
+      const uint8_t intensity = ping.intensity(b,r);
 
       const float begin = angles[b].begin + ThetaShift,
                   end = angles[b].end + ThetaShift;

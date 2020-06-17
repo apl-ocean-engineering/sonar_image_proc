@@ -30,18 +30,34 @@ struct SonarData {
 
 // Abstract class strictly for drawing sonar images
 // Designed as a "common type" between SimplePingResults and ROS ImagingSonarMsg
-struct AbstractSonarData {
+struct AbstractSonarInterface {
 
-  AbstractSonarData( const std::vector<float> &bearings,
-                     const std::vector<float> &ranges,
-                     const std::vector<uint8_t> &intensities );
+  virtual int nBearings() const = 0;
+  virtual float bearing( int n ) const = 0;
 
-  // Cast constructor
-  AbstractSonarData( const SimplePingResult &ping );
+  virtual int nRanges() const = 0;
+  virtual float range( int n ) const = 0;
 
-  std::vector<float> bearings;
-  std::vector<float> ranges;
-  std::vector<uint8_t> intensities;
+  virtual uint8_t intensity( int i ) const  = 0;
+  virtual uint8_t intensity( int b, int r ) const
+    { return intensity( (r * nBearings()) + b ); }
+
+};
+
+struct SimplePingResultInterface : public AbstractSonarInterface {
+
+  SimplePingResultInterface( const SimplePingResult &ping )
+    : _ping(ping) {;}
+
+  virtual int nBearings() const { return _ping.bearings().size(); }
+  virtual float bearing( int n ) const { return _ping.bearings().at(n); }
+
+  virtual int nRanges() const { return _ping.oculusPing()->nRanges; }
+  virtual float range( int n ) const { return _ping.oculusPing()->rangeResolution * n; }
+
+  virtual uint8_t intensity( int i ) const { return _ping.image().at( i % nBearings(), floor(i/nBearings()) ); }
+
+  const SimplePingResult &_ping;
 };
 
 
