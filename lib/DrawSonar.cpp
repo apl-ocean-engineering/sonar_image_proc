@@ -42,6 +42,10 @@ cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, 
     h = (w/2) / fabs(sin( M_PI/180 * ping.bearing(0) ));
   }
 
+  // Ensure w and h are both divisible by zero
+  if( w % 2 ) w++;
+  if( h % w ) h++;
+
   return Size(w,h);
 }
 
