@@ -20,7 +20,6 @@
   <depend>g3log_catkin</depend>
   <depend>active_object</depend>
 
-
   <export>
     <!-- You can specify that this package is a metapackage here: -->
     <!-- <metapackage/> -->

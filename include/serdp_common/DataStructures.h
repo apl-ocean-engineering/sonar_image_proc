@@ -1,6 +1,14 @@
+#pragma once
+
+#include <stdint.h>
 #include <math.h>
 #include <vector>
+
+#include "liboculus/SimplePingResult.h"
+
 namespace serdp_common {
+
+using namespace liboculus;
 
 struct SonarPoint {
   SonarPoint(float _x, float _z) : x(_x), z(_z) { ; }
@@ -18,6 +26,24 @@ struct SonarData {
   std::vector<float> ranges;
   std::vector<float> intensities;
 };
+
+
+// Abstract class strictly for drawing sonar images
+// Designed as a "common type" between SimplePingResults and ROS ImagingSonarMsg
+struct AbstractSonarData {
+
+  AbstractSonarData( const std::vector<float> &bearings,
+                     const std::vector<float> &ranges,
+                     const std::vector<uint8_t> &intensities );
+
+  // Cast constructor
+  AbstractSonarData( const SimplePingResult &ping );
+
+  std::vector<float> bearings;
+  std::vector<float> ranges;
+  std::vector<uint8_t> intensities;
+};
+
 
 SonarPoint bearingRange2Cartesian(float bearing, float range);
 } // namespace serdp_common

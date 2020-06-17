@@ -83,7 +83,7 @@ cv::Mat OpenCVDisplay::sonarPing2Img(
   cv::Mat mat(500, 1000, CV_8UC3);
   mat.setTo(cv::Vec3b(128, 128, 128));
 
-  drawSonar(ping, mat);
+  drawSonar(ping, mat );
 
   return mat;
 }
