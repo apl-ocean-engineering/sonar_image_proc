@@ -71,9 +71,8 @@ else()
 
 
     include_directories(
-      ${catkin_INCLUDE_DIRS}
       include/
-      ${liboculus_INCLUDE_DIRS}
+      ${catkin_INCLUDE_DIRS}
    )
 
     file(GLOB serdp_common_SRCS
