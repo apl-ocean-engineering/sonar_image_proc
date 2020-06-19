@@ -16,13 +16,6 @@ namespace serdp_common {
 
 const float ThetaShift = 270;
 
-void drawSonar(const shared_ptr<SimplePingResult> &ping, Mat &mat, const SonarColorMap &colorMap) {
-  drawSonar( SimplePingResultInterface(*ping), mat, colorMap);
-}
-
-void drawSonar(const SimplePingResult &ping, Mat &mat, const SonarColorMap &colorMap) {
-  drawSonar( SimplePingResultInterface(ping), mat, colorMap );
-}
 
 cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin ) {
 
@@ -75,7 +68,7 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
   vector<BearingEntry> angles;
   angles.reserve( nBeams );
 
-  for (unsigned int b = 0; b < nBeams; ++b) {
+  for ( int b = 0; b < nBeams; ++b ) {
     const float center = ping.bearing(b);
     float begin = 0.0, end = 0.0;
 
@@ -98,8 +91,8 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
     angles.push_back( BearingEntry(begin, center, end) );
   }
 
-  for (unsigned int r = 0; r < nRanges; ++r) {
-    for (unsigned int b = 0; b < nBeams; ++b) {
+  for ( int r = 0; r < nRanges; ++r ) {
+    for ( int b = 0; b < nBeams; ++b ) {
 
       const float range = ping.range(r);
       const uint8_t intensity = ping.intensity(b,r);
@@ -107,9 +100,7 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
       const float begin = angles[b].begin + ThetaShift,
                   end = angles[b].end + ThetaShift;
 
-      const float rad = float(radius * r) / nRanges;
-
-      const float fudge = 0; // in degrees
+      const float rad = float(radius) * r / nRanges;
 
       // Assume angles are in image frame x-right, y-down
       cv::ellipse(mat, origin, cv::Size(rad, rad), 0,

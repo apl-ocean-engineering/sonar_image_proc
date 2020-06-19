@@ -16,17 +16,6 @@ struct SonarPoint {
   float z;
 };
 
-struct SonarData {
-  SonarData() : timestamp(0.0), frequency(-1.0) { ; }
-  unsigned int nBearings;
-  unsigned int nRanges;
-  float timestamp;
-  float frequency;
-  std::vector<float> bearings;
-  std::vector<float> ranges;
-  std::vector<float> intensities;
-};
-
 
 // Abstract class strictly for drawing sonar images
 // Designed as a "common type" between SimplePingResults and ROS ImagingSonarMsg
@@ -62,4 +51,5 @@ struct SimplePingResultInterface : public AbstractSonarInterface {
 
 
 SonarPoint bearingRange2Cartesian(float bearing, float range);
+
 } // namespace serdp_common

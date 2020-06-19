@@ -19,7 +19,8 @@ OpenCVDisplay::OpenCVDisplay(std::function<void(const char)> keyHandler)
 
 //=== Functions related to showing video =====
 
-void OpenCVDisplay::implShowVideo(vector<cv::Mat> rawImages) {
+void OpenCVDisplay::implShowVideo(vector<cv::Mat> rawImages, const std::string &windowName) {
+
   const unsigned int numImages = rawImages.size();
   vector<cv::Mat> scaledImages(numImages);
 
@@ -27,7 +28,7 @@ void OpenCVDisplay::implShowVideo(vector<cv::Mat> rawImages) {
   if (numImages == 1) {
 
     resizeImage(rawImages[0], scaledImages[0]);
-    cv::imshow("Image", scaledImages[0]);
+    cv::imshow(windowName, scaledImages[0]);
 
   } else if (numImages == 2) {
 
@@ -56,7 +57,7 @@ void OpenCVDisplay::implShowVideo(vector<cv::Mat> rawImages) {
       scaledImages[1].copyTo(rightROI);
     }
 
-    cv::imshow("Composite", composite);
+    cv::imshow(windowName, composite);
   }
 
   int c = cv::waitKey(1);
@@ -65,38 +66,29 @@ void OpenCVDisplay::implShowVideo(vector<cv::Mat> rawImages) {
 }
 
 void OpenCVDisplay::resizeImage(const cv::Mat &rawImage, cv::Mat &scaledImage) {
+
   cv::resize(rawImage, scaledImage, cv::Size(), _previewScale, _previewScale);
 
-  //				scaledImages[i] = cv::Mat(tmp.rows, tmp.cols,
-  // CV_8UC3
-  //);
-
-  // Image from camera is BGRA  map to RGB
-  // int from_to[] = { 0,0, 1,1, 2,2 };
-  // cv::mixChannels( &tmp, 1, &(scaledImages[i]), 1, from_to, 3 );
-  // cv::cvtColor( tmp, scaledImages[i], cv::COLOR_BGRA2RGB );
-  // cv::extractChannel(tmp, scaledImages[i], 0 );
 }
 
-cv::Mat OpenCVDisplay::sonarPing2Img(
-    const std::shared_ptr<liboculus::SimplePingResult> &ping) {
-  cv::Mat mat(500, 1000, CV_8UC3);
-  mat.setTo(cv::Vec3b(128, 128, 128));
-
-  drawSonar(ping, mat );
-
-  return mat;
-}
+// cv::Mat OpenCVDisplay::sonarPing2Img(const liboculus::SimplePingResult ping) {
+//
+//   cv::Size sz = serdp_common::calculateImageSize( ping, cv::Size(0,0) );
+//   cv::Mat img( sz, CV_8UC3 );
+//   drawSonar( ping, mat );
+//
+//   return mat;
+// }
 
 //==== Functions related to showing sonar =====
 
-void OpenCVDisplay::implShowSonar(
-    const std::shared_ptr<SimplePingResult> &ping) {
-  cv::Mat mat(500, 1000, CV_8UC3);
-  mat.setTo(cv::Vec3b(128, 128, 128));
+void OpenCVDisplay::implShowSonar( const SimplePingResult ping, const std::string &windowName) {
 
-  drawSonar(ping, mat);
-  cv::imshow("Sonar ping", mat);
+  cv::Size sz = serdp_common::calculateImageSize( ping, cv::Size(0,0) );
+  cv::Mat img( sz, CV_8UC3 );
+  drawSonar( ping, img );
+
+  cv::imshow(windowName, img);
 }
 
 } // namespace serdp_common
