@@ -50,7 +50,7 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
   const unsigned int radius = mat.size().height;
   const cv::Point origin(mat.size().width/2, mat.size().height);
 
-  const float binThickness = 3 * ceil(radius / nRanges);
+  const float binThickness = 2 * ceil(radius / nRanges);
 
   // Current ImagingSonarMsg data is in _degrees_
   struct BearingEntry {
@@ -102,7 +102,7 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
       cv::ellipse(mat, origin, cv::Size(rad, rad), 0,
                   begin, end,
                   255*colorMap( angles[b].center, range, intensity ),
-                  binThickness * 1.4);
+                  binThickness);
     }
   }
 }
