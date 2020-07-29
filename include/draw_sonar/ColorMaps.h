@@ -3,7 +3,7 @@
 
 #include <opencv2/core.hpp>
 
-namespace serdp_common {
+namespace draw_sonar {
 
 using cv::Scalar;
 

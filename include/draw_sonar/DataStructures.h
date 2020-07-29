@@ -4,11 +4,7 @@
 #include <math.h>
 #include <vector>
 
-#include "liboculus/SimplePingResult.h"
-
 namespace serdp_common {
-
-using namespace liboculus;
 
 struct SonarPoint {
   SonarPoint(float _x, float _z) : x(_x), z(_z) { ; }
@@ -31,22 +27,6 @@ struct AbstractSonarInterface {
   virtual uint8_t intensity( int b, int r ) const
     { return intensity( (r * nBearings()) + b ); }
 
-};
-
-struct SimplePingResultInterface : public AbstractSonarInterface {
-
-  SimplePingResultInterface( const SimplePingResult &ping )
-    : _ping(ping) {;}
-
-  virtual int nBearings() const { return _ping.bearings().size(); }
-  virtual float bearing( int n ) const { return _ping.bearings().at(n); }
-
-  virtual int nRanges() const { return _ping.oculusPing()->nRanges; }
-  virtual float range( int n ) const { return _ping.oculusPing()->rangeResolution * n; }
-
-  virtual uint8_t intensity( int i ) const { return _ping.image().at( i % nBearings(), floor(i/nBearings()) ); }
-
-  const SimplePingResult &_ping;
 };
 
 

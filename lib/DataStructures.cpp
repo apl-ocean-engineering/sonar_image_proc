@@ -1,6 +1,6 @@
 #include "serdp_common/DataStructures.h"
 
-namespace serdp_common {
+namespace draw_sonar {
 
 SonarPoint bearingRange2Cartesian(float bearing, float range) {
   float x = range * sin(bearing);

@@ -7,10 +7,10 @@
 // As used in matplotlib
 // As released under a CC0 license
 
-#include "serdp_common/ColorMaps.h"
+#include "draw_sonar/ColorMaps.h"
 
 
-namespace serdp_common {
+namespace draw_sonar {
 
 
 const float InfernoColorMap::_inferno_data[256][3] = \

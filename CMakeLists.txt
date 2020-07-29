@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(serdp_common)
+project(draw_sonar)
 
 if( FIPS_CONFIG AND NOT FIPS_IMPORT )
 	cmake_minimum_required(VERSION 3.5)
@@ -8,7 +8,6 @@ if( FIPS_CONFIG AND NOT FIPS_IMPORT )
 	include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
 
 	fips_setup()
-
 else()
   find_package(catkin QUIET)
 endif()
@@ -33,21 +32,19 @@ if( FIPS_CONFIG )
    )
 
   # The local library
-  fips_begin_module( serdp_common )
+  fips_begin_module( draw_sonar )
 
-    fips_src( lib *.cpp )
-    fips_deps( oculus )
-    fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
+	  fips_src( lib *.cpp )
+	  fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
 
   fips_end_module()
-
 
 	if( NOT FIPS_IMPORT )
 
     if( FIPS_UNITTESTS )
-      gtest_begin( serdp_common )
+      gtest_begin( draw_sonar )
         fips_src( test/unit/ )
-        fips_deps( serdp_common )
+        fips_deps( draw_sonar )
       gtest_end()
     endif()
 
@@ -55,18 +52,18 @@ if( FIPS_CONFIG )
   fips_finish()
 
 else()
-    project(serdp_common)
 
     find_package(catkin REQUIRED
-      liboculus REQUIRED
-      g3log_catkin
-      active_object
+      pybind11_catkin
+			OpenCV
     )
 
     catkin_package(
     	  #CATKIN_DEPENDS liboculus
         INCLUDE_DIRS include
-        LIBRARIES serdp_LIB
+        LIBRARIES draw_sonar
+        DEPENDS OpenCV
+        CATKIN_DEPENDS pybind11_catkin
     )
 
 
@@ -76,17 +73,16 @@ else()
       ${OpenCV_INCLUDE_DIRS}
    )
 
-    file(GLOB serdp_common_SRCS
+    file(GLOB draw_sonar_SRCS
      	  lib/*.cpp
     )
 
-    add_library(serdp_LIB ${serdp_common_SRCS})
+    add_library(draw_sonar ${draw_sonar_SRCS})
 
-    install(TARGETS serdp_LIB
+    install(TARGETS draw_sonar
           ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
           LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
           RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
-
 
     ## Install headers
     install(DIRECTORY  include/${PROJECT_NAME}/
@@ -94,8 +90,20 @@ else()
         FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
         PATTERN ".git" EXCLUDE)
 
-# in your other catkin projects the libraries will be available as:
-# ${serdp_common_INCLUDE_DIRS}
-# ${serdp_common_LIBRARIES}
+
+    ## Stuff related to the Python wrapper
+		pybind_add_module(py_draw_sonar SHARED
+											python/draw_sonar_py.cpp
+											python/ndarray_converter.cpp
+											lib/DrawSonar.cpp
+											lib/DataStructures.cpp
+											lib/ColorMaps.cpp
+											)
+		# target_link_libraries( py_draw_sonar ${OpenCV_LIBS} draw_sonar )
+
+		install(TARGETS py_draw_sonar
+						DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} ) #${CATKIN_PACKAGE_PYTHON_DESTINATION})
+
+    catkin_python_setup()
 
 endif()

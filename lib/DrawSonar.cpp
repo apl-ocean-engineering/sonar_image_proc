@@ -1,5 +1,5 @@
 
-#include "serdp_common/DrawSonar.h"
+#include "draw_sonar/DrawSonar.h"
 
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -12,7 +12,7 @@ using namespace std;
 using namespace liboculus;
 using namespace cv;
 
-namespace serdp_common {
+namespace draw_sonar {
 
 const float ThetaShift = 270;
 

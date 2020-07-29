@@ -2,13 +2,10 @@ imports:
     fips-googletest:
         git: https://github.com/amarburg/fips-googletest.git
         cond: "FIPS_UNITTESTS"
-    liboculus:
-        git: https://github.com/apl-ocean-engineering/liboculus.git
-        branch: master
 
 exports:
   modules:
-    serdp_common: .
+    draw_sonar: .
   header-dirs:
     - include
 
