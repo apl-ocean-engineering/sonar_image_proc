@@ -73,6 +73,7 @@ else()
     include_directories(
       include/
       ${catkin_INCLUDE_DIRS}
+      ${OpenCV_INCLUDE_DIRS}
    )
 
     file(GLOB serdp_common_SRCS
