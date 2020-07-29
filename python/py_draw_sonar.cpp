@@ -42,8 +42,8 @@
 
 #include "ndarray_converter.h"
 
-#include "serdp_common/DrawSonar.h"
-#include "serdp_common/DataStructures.h"
+#include "draw_sonar/DrawSonar.h"
+#include "draw_sonar/DataStructures.h"
 
 namespace py = pybind11;
 

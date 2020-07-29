@@ -9,13 +9,11 @@
 #endif
 
 using namespace std;
-using namespace liboculus;
 using namespace cv;
 
 namespace draw_sonar {
 
 const float ThetaShift = 270;
-
 
 cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin ) {
 

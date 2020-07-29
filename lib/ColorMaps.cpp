@@ -1,6 +1,3 @@
-
-
-
 // Color map data from
 //    https://github.com/BIDS/colormap/blob/master/colormaps.py
 //

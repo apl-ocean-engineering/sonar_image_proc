@@ -93,7 +93,7 @@ else()
 
     ## Stuff related to the Python wrapper
 		pybind_add_module(py_draw_sonar SHARED
-											python/draw_sonar_py.cpp
+											python/py_draw_sonar.cpp
 											python/ndarray_converter.cpp
 											lib/DrawSonar.cpp
 											lib/DataStructures.cpp

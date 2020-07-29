@@ -4,7 +4,7 @@
 #include <math.h>
 #include <vector>
 
-namespace serdp_common {
+namespace draw_sonar {
 
 struct SonarPoint {
   SonarPoint(float _x, float _z) : x(_x), z(_z) { ; }
