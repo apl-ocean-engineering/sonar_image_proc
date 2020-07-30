@@ -13,7 +13,7 @@ using namespace cv;
 
 namespace draw_sonar {
 
-const float ThetaShift = 270;
+const float ThetaShift = 1.5*M_PI;
 
 cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin ) {
 
@@ -26,11 +26,11 @@ cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, 
     }
 
     // Assume bearings are symmetric plus and minus
-    // Also assumes bearings are degrees
-    w = 2*ceil(fabs(h*sin( M_PI/180 * ping.bearing(0) )));
+    // Bearings must be radians
+    w = 2*ceil(fabs(h*sin( ping.bearing(0) )));
 
   } else if( h <= 0 ) {
-    h = (w/2) / ceil(fabs(sin( M_PI/180 * ping.bearing(0) )));
+    h = (w/2) / ceil(fabs(sin( ping.bearing(0) )));
   }
 
   // Ensure w and h are both divisible by zero
@@ -102,7 +102,7 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
 
       // Assume angles are in image frame x-right, y-down
       cv::ellipse(mat, origin, cv::Size(rad, rad), 0,
-                  begin, end,
+                  begin * 180/M_PI, end * 180/M_PI,
                   255*colorMap( angles[b].center, range, intensity ),
                   binThickness);
     }

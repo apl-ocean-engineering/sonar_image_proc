@@ -84,6 +84,11 @@ private:
 };
 
 
+int calculateImageWidth( int height ) {
+  return 100;
+}
+
+
 ///
 PYBIND11_MODULE(py_draw_sonar, m) {
 
@@ -96,6 +101,8 @@ PYBIND11_MODULE(py_draw_sonar, m) {
   m.def("clone", &cloneimg, "Clone function", py::arg("image"));
 
   m.def("cppadd", &add, "A function which adds two numbers");
+
+  m.def("calculateImageWidth", &calculateImageWidth, "Given a sonar height, calculate width in pixels");
 
   py::class_<AddClass>(m, "AddClass")
     .def(py::init<int>())

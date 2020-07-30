@@ -18,6 +18,8 @@ struct SonarPoint {
 struct AbstractSonarInterface {
 
   virtual int nBearings() const = 0;
+
+  // bearing is in __radians__
   virtual float bearing( int n ) const = 0;
 
   virtual int nRanges() const = 0;
