@@ -1,4 +1,4 @@
-import serdp_common
+import draw_sonar
 
-print( serdp_common.pyadd(1,2) )
-print( serdp_common.cppadd(1,2) )
+print( draw_sonar.pyadd(1,2) )
+print( draw_sonar.cppadd(1,2) )

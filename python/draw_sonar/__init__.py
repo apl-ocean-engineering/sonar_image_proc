@@ -1,5 +1,5 @@
 
-from py_serdp_common import *
+from py_draw_sonar import *
 
 ## A trivial test function to check if the module is loading properly
 def pyadd(a,b):

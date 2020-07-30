@@ -85,7 +85,7 @@ private:
 
 
 ///
-PYBIND11_MODULE(py_serdp_common, m) {
+PYBIND11_MODULE(py_draw_sonar, m) {
 
   NDArrayConverter::init_numpy();
 
