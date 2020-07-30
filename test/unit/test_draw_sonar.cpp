@@ -5,8 +5,8 @@
 #include <iostream>
 using namespace std;
 
-#include "serdp_common/DrawSonar.h"
-using namespace serdp_common;
+#include "draw_sonar/DrawSonar.h"
+using namespace draw_sonar;
 
 TEST(TestDrawSonar, NullTest ) {
 
