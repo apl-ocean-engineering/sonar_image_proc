@@ -15,6 +15,25 @@ namespace draw_sonar {
 
 const float ThetaShift = 1.5*M_PI;
 
+// Horrible and hacky -- should be pushed into he AbstractSonarInterface...
+float maxRange( const AbstractSonarInterface &ping ) {
+  float maxRange = 0;
+
+  for( int i = 0; i < ping.nRanges(); i++ ) {
+    if( ping.range(i) > maxRange ) maxRange = ping.range(i);
+  }
+  return maxRange;
+}
+
+float minRange( const AbstractSonarInterface &ping ) {
+  float minRange = 1e100;
+
+  for( int i = 0; i < ping.nRanges(); i++ ) {
+    if( ping.range(i) < minRange ) minRange = ping.range(i);
+  }
+  return minRange;
+}
+
 cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin ) {
 
   int h = hint.height, w = hint.width;
@@ -22,7 +41,11 @@ cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, 
   if( w <= 0 ) {
 
     if( h <= 0 ) {
-        h = ping.nRanges() * pixPerRangeBin;
+      const float rangeMax = maxRange(ping);
+      const float rangeRes = (rangeMax - minRange(ping)) / ping.nRanges();
+      const int nEffectiveRanges = ceil(rangeMax / rangeRes);
+
+        h = nEffectiveRanges * pixPerRangeBin;
     }
 
     // Assume bearings are symmetric plus and minus
@@ -49,12 +72,17 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
   const int nRanges = ping.nRanges();
   const int nBeams = ping.nBearings();
 
+  const float rangeMax = maxRange(ping);
+  const float rangeRes = (rangeMax - minRange(ping)) / ping.nRanges();
+  const int nEffectiveRanges = ceil(rangeMax / rangeRes);
+  //const float zeroRange = ping.range(0)*rangeRes;
+
+  // Todo.  Calculate offset for non-zero minimum ranges
   const unsigned int radius = mat.size().height;
   const cv::Point origin(mat.size().width/2, mat.size().height);
 
-  const float binThickness = 2 * ceil(radius / nRanges);
+  const float binThickness = 2 * ceil(radius / nEffectiveRanges);
 
-  // Current ImagingSonarMsg data is in _degrees_
   struct BearingEntry {
       float begin, center, end;
 
@@ -98,7 +126,7 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
       const float begin = angles[b].begin + ThetaShift,
                   end = angles[b].end + ThetaShift;
 
-      const float rad = float(radius) * r / nRanges;
+      const float rad = float(radius) * range/rangeMax;
 
       // Assume angles are in image frame x-right, y-down
       cv::ellipse(mat, origin, cv::Size(rad, rad), 0,

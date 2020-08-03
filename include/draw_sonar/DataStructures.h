@@ -26,6 +26,8 @@ struct AbstractSonarInterface {
   virtual float range( int n ) const = 0;
 
   virtual uint8_t intensity( int i ) const  = 0;
+
+  // Data _must_ be bearing-major
   virtual uint8_t intensity( int b, int r ) const
     { return intensity( (r * nBearings()) + b ); }
 
