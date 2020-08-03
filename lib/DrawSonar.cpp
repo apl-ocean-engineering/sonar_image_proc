@@ -15,37 +15,19 @@ namespace draw_sonar {
 
 const float ThetaShift = 1.5*M_PI;
 
-// Horrible and hacky -- should be pushed into he AbstractSonarInterface...
-float maxRange( const AbstractSonarInterface &ping ) {
-  float maxRange = 0;
-
-  for( int i = 0; i < ping.nRanges(); i++ ) {
-    if( ping.range(i) > maxRange ) maxRange = ping.range(i);
-  }
-  return maxRange;
-}
-
-float minRange( const AbstractSonarInterface &ping ) {
-  float minRange = 1e100;
-
-  for( int i = 0; i < ping.nRanges(); i++ ) {
-    if( ping.range(i) < minRange ) minRange = ping.range(i);
-  }
-  return minRange;
-}
-
-cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin ) {
+cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin, float maxRange ) {
 
   int h = hint.height, w = hint.width;
 
   if( w <= 0 ) {
 
     if( h <= 0 ) {
-      const float rangeMax = maxRange(ping);
-      const float rangeRes = (rangeMax - minRange(ping)) / ping.nRanges();
-      const int nEffectiveRanges = ceil(rangeMax / rangeRes);
+      const float rangeMax = ( (maxRange > 0.0) ? maxRange : ping.maxRange() );
+      const float rangeRes = (ping.maxRange() - ping.minRange()) / ping.nRanges();
 
-        h = nEffectiveRanges * pixPerRangeBin;
+      const int nEffectiveRanges = ceil( rangeMax / rangeRes);
+
+      h = nEffectiveRanges * pixPerRangeBin;
     }
 
     // Assume bearings are symmetric plus and minus
@@ -58,12 +40,12 @@ cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, 
 
   // Ensure w and h are both divisible by zero
   if( w % 2 ) w++;
-  if( h % w ) h++;
+  if( h % 2 ) h++;
 
   return Size(w,h);
 }
 
-void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMap &colorMap ) {
+void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMap &colorMap, float maxRange ) {
 
   // Ensure mat is 8UC3;
   mat.create(mat.size(), CV_8UC3);
@@ -72,10 +54,12 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
   const int nRanges = ping.nRanges();
   const int nBeams = ping.nBearings();
 
-  const float rangeMax = maxRange(ping);
-  const float rangeRes = (rangeMax - minRange(ping)) / ping.nRanges();
+  const float rangeMax = ( maxRange > 0.0 ? maxRange : ping.maxRange() );
+
+  // Calculate effective range resolution
+  const float rangeRes = ( ping.maxRange() - ping.minRange() ) / ping.nRanges();
+
   const int nEffectiveRanges = ceil(rangeMax / rangeRes);
-  //const float zeroRange = ping.range(0)*rangeRes;
 
   // Todo.  Calculate offset for non-zero minimum ranges
   const unsigned int radius = mat.size().height;
@@ -118,6 +102,9 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
   }
 
   for ( int r = 0; r < nRanges; ++r ) {
+
+    if( ping.range(r) > rangeMax ) continue;
+
     for ( int b = 0; b < nBeams; ++b ) {
 
       const float range = ping.range(r);

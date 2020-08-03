@@ -9,10 +9,8 @@
 
 namespace draw_sonar {
 
-cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin = 2);
+cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin = 2, float maxRange = -1.0 );
 
-// Helper wrappers
+void drawSonar(const AbstractSonarInterface &ping, cv::Mat &mat, const SonarColorMap &colorMap=InfernoColorMap(), float maxRange = -1.0 );
 
-void drawSonar(const AbstractSonarInterface &ping, cv::Mat &mat, const SonarColorMap &colorMap=InfernoColorMap() );
-
-} // namespace serdp_common
+}
