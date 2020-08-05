@@ -2,7 +2,7 @@
 <package format="2">
   <name>draw_sonar</name>
   <version>0.0.1</version>
-  <description>A ROS version of  functions </description>
+  <description>ROS nodes for drawing imaging_sonar_msgs/* types to Images</description>
 
   <maintainer email="amarburg@uw.edu">Aaron Marburg</maintainer>
 
@@ -12,6 +12,17 @@
   <license>BSD</license>
 
   <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>rospy</depend>
+
+  <depend>std_msgs</depend>
+  <depend>imaging_sonar_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>cv_bridge</depend>
+
+  <depend>nodelet</depend>
+  <depend>nodelet_topic_tools</depend>
 
   <build_depend>pybind11_catkin</build_depend>
   <exec_depend>pybind11_catkin</exec_depend>
