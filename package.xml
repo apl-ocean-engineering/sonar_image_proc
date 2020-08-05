@@ -27,4 +27,8 @@
   <build_depend>pybind11_catkin</build_depend>
   <exec_depend>pybind11_catkin</exec_depend>
 
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
+
 </package>
