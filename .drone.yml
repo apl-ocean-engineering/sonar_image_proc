@@ -25,7 +25,7 @@ steps:
 
   ## Build in ros noetic
 - name: build-ros-noetic
-  image: ros/noetic:latest
+  image: ros:noetic
   commands:
     - wget -O- https://gitlab.com/amarburg/ros_drone_ci/-/raw/master/bootstrap.sh | /bin/bash
   environment:
