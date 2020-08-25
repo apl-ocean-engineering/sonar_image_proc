@@ -19,13 +19,14 @@ using namespace cv;
 #include "draw_sonar/DataStructures.h"
 #include "draw_sonar/DrawSonar.h"
 
+#include "imaging_sonar_msgs/AbstractSonarInterface.h"
 
 // Subscribes to sonar message topic, draws using opencv then publishes result
 
 namespace draw_sonar {
 
   // \todo These two can be clean up with templates...
-  struct ImagingSonarMsgInterface : public draw_sonar::AbstractSonarInterface {
+  struct ImagingSonarMsgInterface : public imaging_sonar_msgs::AbstractSonarInterface {
 
     ImagingSonarMsgInterface( const imaging_sonar_msgs::ImagingSonarMsg::ConstPtr &ping )
       : _ping(ping) {;}
@@ -44,7 +45,7 @@ namespace draw_sonar {
   };
 
 
-  struct SonarImageMsgInterface : public draw_sonar::AbstractSonarInterface {
+  struct SonarImageMsgInterface : public imaging_sonar_msgs::AbstractSonarInterface {
 
     SonarImageMsgInterface( const imaging_sonar_msgs::SonarImage::ConstPtr &ping )
       : _ping(ping) {;}

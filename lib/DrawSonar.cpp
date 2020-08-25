@@ -13,6 +13,7 @@ using namespace cv;
 
 namespace draw_sonar {
 
+using namespace imaging_sonar_msgs;
 const float ThetaShift = 1.5*M_PI;
 
 cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin, float maxRange ) {

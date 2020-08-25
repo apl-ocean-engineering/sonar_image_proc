@@ -114,19 +114,21 @@ else()
       PATTERN ".git" EXCLUDE)
 
 
+  ## Disable python wrapper for now ...
+  #
   ## == Stuff related to the Python wrapper ==
-  pybind_add_module(py_draw_sonar SHARED
-  python/py_draw_sonar.cpp
-  python/ndarray_converter.cpp
-  lib/DrawSonar.cpp
-  lib/DataStructures.cpp
-  lib/ColorMaps.cpp
-  )
+  # pybind_add_module(py_draw_sonar SHARED
+  # python/py_draw_sonar.cpp
+  # python/ndarray_converter.cpp
+  # lib/DrawSonar.cpp
+  # lib/DataStructures.cpp
+  # lib/ColorMaps.cpp
+  # )
   # target_link_libraries( py_draw_sonar ${OpenCV_LIBS} draw_sonar )
+  #
+  # install(TARGETS py_draw_sonar
+  # DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} ) #${CATKIN_PACKAGE_PYTHON_DESTINATION})
 
-  install(TARGETS py_draw_sonar
-  DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} ) #${CATKIN_PACKAGE_PYTHON_DESTINATION})
-
-  catkin_python_setup()
+  # catkin_python_setup()
 
 endif()
