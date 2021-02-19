@@ -16,13 +16,13 @@
   <depend>roscpp</depend>
   <depend>rospy</depend>
 
-  <depend>std_msgs</depend>
+  <depend>acoustic_msgs</depend>
+  <depend>cv_bridge</depend>
   <depend>imaging_sonar_msgs</depend>
   <depend>image_transport</depend>
-  <depend>cv_bridge</depend>
-
   <depend>nodelet</depend>
   <depend>nodelet_topic_tools</depend>
+  <depend>std_msgs</depend>
 
   <build_depend>pybind11_catkin</build_depend>
   <exec_depend>pybind11_catkin</exec_depend>

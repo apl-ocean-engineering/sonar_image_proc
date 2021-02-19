@@ -56,13 +56,14 @@ if( FIPS_CONFIG )
 else()
 
   find_package(catkin REQUIRED
-    pybind11_catkin
-    nodelet
-    nodelet_topic_tools
+    acoustic_msgs
+    cv_bridge
     imaging_sonar_msgs
     image_transport
-    cv_bridge
+    nodelet
+    nodelet_topic_tools
     OpenCV
+    pybind11_catkin
   )
 
   catkin_package(

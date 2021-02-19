@@ -1,7 +1,7 @@
 #include "ros/ros.h"
 #include "nodelet/nodelet.h"
 
-#include "imaging_sonar_msgs/SonarImage.h"
+#include "acoustic_msgs/SonarImage.h"
 #include "imaging_sonar_msgs/ImagingSonarMsg.h"
 
 #include <opencv2/core/core.hpp>
@@ -47,7 +47,7 @@ namespace draw_sonar {
 
   struct SonarImageMsgInterface : public imaging_sonar_msgs::AbstractSonarInterface {
 
-    SonarImageMsgInterface( const imaging_sonar_msgs::SonarImage::ConstPtr &ping )
+    SonarImageMsgInterface( const acoustic_msgs::SonarImage::ConstPtr &ping )
       : _ping(ping) {;}
 
     int nBearings() const override { return _ping->azimuth_angles.size(); }
@@ -79,7 +79,7 @@ namespace draw_sonar {
 
     }
 
-    imaging_sonar_msgs::SonarImage::ConstPtr _ping;
+    acoustic_msgs::SonarImage::ConstPtr _ping;
   };
 
 
@@ -113,7 +113,7 @@ namespace draw_sonar {
         NODELET_INFO_STREAM("Only drawing to max range " << _maxRange );
       }
 
-      subSonarImage_ = nh.subscribe<imaging_sonar_msgs::SonarImage>("sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this );
+      subSonarImage_ = nh.subscribe<acoustic_msgs::SonarImage>("sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this );
       subImagingSonarMsg_ = nh.subscribe<imaging_sonar_msgs::ImagingSonarMsg>("imaging_sonar", 10, &DrawSonarNodelet::imagingSonarCallback, this );
 
       pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
@@ -137,7 +137,7 @@ namespace draw_sonar {
       _counter++;
     }
 
-    void sonarImageCallback(const imaging_sonar_msgs::SonarImage::ConstPtr &msg) {
+    void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
 
       SonarImageMsgInterface interface( msg );
 
