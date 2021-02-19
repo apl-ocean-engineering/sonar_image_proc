@@ -50,14 +50,13 @@ namespace draw_sonar {
     SonarImageMsgInterface( const imaging_sonar_msgs::SonarImage::ConstPtr &ping )
       : _ping(ping) {;}
 
-    virtual int nBearings() const         { return _ping->azimuth_angles.size(); }
+    int nBearings() const override { return _ping->azimuth_angles.size(); }
+    float bearing( int n ) const override { return _ping->azimuth_angles[n]; }
 
-    virtual float bearing( int n ) const  { return _ping->azimuth_angles[n];  }
+    int nRanges() const override { return _ping->ranges.size(); }
+    float range( int n ) const override { return _ping->ranges[n]; }
 
-    virtual int nRanges() const           { return _ping->ranges.size(); }
-    virtual float range( int n ) const    { return _ping->ranges[n]; }
-
-    virtual uint8_t intensity( int i ) const {
+    uint8_t intensity( int i ) const override {
       if( _ping->data_size == 2 ) {
         uint16_t d;
 
