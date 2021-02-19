@@ -57,7 +57,9 @@ namespace draw_sonar {
     float range( int n ) const override { return _ping->ranges[n]; }
 
     uint8_t intensity( int i ) const override {
-      if( _ping->data_size == 2 ) {
+      if( _ping->data_size == 1 ) {
+        return _ping->intensities[i];
+      } else if( _ping->data_size == 2 ) {
         uint16_t d;
 
         if( _ping->is_bigendian)
@@ -70,9 +72,11 @@ namespace draw_sonar {
           if( d >= (0x1 << (shift+8)) ) return 0xFF;
 
         return (d >> shift);
+      } else {
+        ROS_ERROR_STREAM("SonarImage has unsupported data_size = " << _ping->data_size);
+        return 0;
       }
 
-      return _ping->intensities[i];
     }
 
     imaging_sonar_msgs::SonarImage::ConstPtr _ping;
