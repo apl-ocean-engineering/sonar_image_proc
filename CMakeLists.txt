@@ -25,9 +25,12 @@ find_package(OpenCV COMPONENTS ${OPENCV_COMPONENTS} REQUIRED)
 if( FIPS_CONFIG )
 
   ## Set global include paths
+  ## Pull in imaging_sonar_msgs as a special exception mostly
+  ## so we don't need to fips-ify it for this one use.
   fips_include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${OpenCV_INCLUDE_DIRS}
+    ${FIPS_PROJECT_DIR}/../imaging_sonar_msgs/include
    )
 
   # The local library
