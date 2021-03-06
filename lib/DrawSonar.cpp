@@ -57,15 +57,21 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
 
   const float rangeMax = ( maxRange > 0.0 ? maxRange : ping.maxRange() );
 
-  // Calculate effective range resolution
+  // Calculate effective range resolution of the output image.
+  // The sensor's original resolution
   const float rangeRes = ( ping.maxRange() - ping.minRange() ) / ping.nRanges();
-
+  // How many ranges are required to go from 0 to rangeMax (since the
+  // sensor starts at some minimum)
   const int nEffectiveRanges = ceil(rangeMax / rangeRes);
 
   // Todo.  Calculate offset for non-zero minimum ranges
   const unsigned int radius = mat.size().height;
+  // This effectively flips the origin, presumably so that it will appear
+  // at the bottom fo the image.
   const cv::Point origin(mat.size().width/2, mat.size().height);
 
+  // QUESTION: Why the factor of 2?
+  // If I understand correctly, binThickness is the width of the range-bin, in pixels.
   const float binThickness = 2 * ceil(radius / nEffectiveRanges);
 
   struct BearingEntry {
@@ -111,6 +117,7 @@ void drawSonar( const AbstractSonarInterface &ping, Mat &mat, const SonarColorMa
       const float range = ping.range(r);
       const uint8_t intensity = ping.intensity(b,r);
 
+      // QUESTION: Why are we rotating here?
       const float begin = angles[b].begin + ThetaShift,
                   end = angles[b].end + ThetaShift;
 
