@@ -4,7 +4,6 @@ imports:
         cond: "FIPS_UNITTESTS"
     imaging_sonar_msgs:
         git: https://gitlab.com/apl-ocean-engineering/imaging_sonar_msgs.git
-        cond: "FIPS_UNITTESTS"
 
 exports:
   modules:
