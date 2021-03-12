@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(draw_sonar)
+project(sonar_image_proc)
 
 if( FIPS_CONFIG AND NOT FIPS_IMPORT )
   cmake_minimum_required(VERSION 3.5)
@@ -34,7 +34,7 @@ if( FIPS_CONFIG )
    )
 
   # The local library
-  fips_begin_module( draw_sonar )
+  fips_begin_module( sonar_image_proc )
 
     fips_src( lib *.cpp )
     fips_libs( ${Boost_LIBRARIES} ${OpenCV_LIBS} )
@@ -44,9 +44,9 @@ if( FIPS_CONFIG )
   if( NOT FIPS_IMPORT )
 
     if( FIPS_UNITTESTS )
-      gtest_begin( draw_sonar )
+      gtest_begin( sonar_image_proc )
         fips_src( test/unit/ )
-        fips_deps( draw_sonar )
+        fips_deps( sonar_image_proc )
       gtest_end()
     endif()
 
@@ -57,8 +57,8 @@ else()
 
   find_package(catkin REQUIRED
     acoustic_msgs
-    cv_bridge
     imaging_sonar_msgs
+    cv_bridge
     image_transport
     nodelet
     nodelet_topic_tools
@@ -68,7 +68,7 @@ else()
 
   catkin_package(
       INCLUDE_DIRS include
-      LIBRARIES draw_sonar
+      LIBRARIES sonar_image_proc
       DEPENDS OpenCV
       CATKIN_DEPENDS pybind11_catkin
   )
@@ -80,26 +80,26 @@ else()
     ${OpenCV_INCLUDE_DIRS}
  )
 
-  file(GLOB draw_sonar_SRCS
+  file(GLOB sonar_image_proc_SRCS
    	  lib/*.cpp
   )
 
-  add_library(draw_sonar ${draw_sonar_SRCS} src_ros/draw_sonar_nodelet.cpp )
-  target_link_libraries(draw_sonar ${catkin_LIBRARIES})
-  class_loader_hide_library_symbols(draw_sonar)
+  add_library(sonar_image_proc ${draw_sonar_SRCS} src_ros/draw_sonar_nodelet.cpp )
+  target_link_libraries(sonar_image_proc ${catkin_LIBRARIES})
+  class_loader_hide_library_symbols(sonar_image_proc)
 
-  set_property(TARGET draw_sonar PROPERTY CXX_STANDARD 14)
+  set_property(TARGET sonar_image_proc PROPERTY CXX_STANDARD 14)
 
   add_executable(draw_sonar_node src_ros/draw_sonar_node.cpp)
   target_link_libraries(draw_sonar_node
-     draw_sonar
+     sonar_image_proc
      ${catkin_LIBRARIES})
   add_dependencies(draw_sonar_node ${catkin_EXPORTED_TARGETS})
 
   set_property(TARGET draw_sonar_node PROPERTY CXX_STANDARD 14)
 
 
-  install(TARGETS draw_sonar_node draw_sonar
+  install(TARGETS draw_sonar_node sonar_image_proc
          RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
          LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>draw_sonar</name>
+  <name>sonar_image_proc</name>
   <version>0.0.1</version>
-  <description>ROS nodes for drawing imaging_sonar_msgs/* types to Images</description>
+  <description>Common code for manipulating imaging sonar data.</description>
 
   <maintainer email="amarburg@uw.edu">Aaron Marburg</maintainer>
 
@@ -17,8 +17,8 @@
   <depend>rospy</depend>
 
   <depend>acoustic_msgs</depend>
-  <depend>cv_bridge</depend>
   <depend>imaging_sonar_msgs</depend>
+  <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>nodelet</depend>
   <depend>nodelet_topic_tools</depend>

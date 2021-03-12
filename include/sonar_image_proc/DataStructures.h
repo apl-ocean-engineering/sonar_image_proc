@@ -4,7 +4,7 @@
 #include <math.h>
 #include <vector>
 
-namespace draw_sonar {
+namespace sonar_image_proc {
 
 struct SonarPoint {
   SonarPoint(float _x, float _z) : x(_x), z(_z) { ; }
@@ -14,4 +14,4 @@ struct SonarPoint {
 
 SonarPoint bearingRange2Cartesian(float bearing, float range);
 
-} // namespace serdp_common
+}

@@ -1,0 +1,2 @@
+- git: {local-name: hydrographic_msgs, uri: "https://github.com/apl-ocean-engineering/hydrographic_msgs.git", version: main}
+- git: {local-name: imaging_sonar_msgs, uri: "https://gitlab.com/apl-ocean-engineering/imaging_sonar_msgs.git", version: master}
