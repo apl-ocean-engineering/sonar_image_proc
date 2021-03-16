@@ -84,18 +84,22 @@ else()
    	  lib/*.cpp
   )
 
-  add_library(sonar_image_proc ${draw_sonar_SRCS} src_ros/draw_sonar_nodelet.cpp )
+  # "true" library containing core functionality
+  add_library(sonar_image_proc ${sonar_image_proc_SRCS})
   target_link_libraries(sonar_image_proc ${catkin_LIBRARIES})
-  class_loader_hide_library_symbols(sonar_image_proc)
-
   set_property(TARGET sonar_image_proc PROPERTY CXX_STANDARD 14)
+
+  # Dynamically loadable library containing  nodelets
+  add_library(draw_sonar_nodelet src_ros/draw_sonar_nodelet.cpp )
+  target_link_libraries(draw_sonar_nodelet ${catkin_LIBRARIES} sonar_image_proc )
+  class_loader_hide_library_symbols(draw_sonar_nodelet)
+  set_property(TARGET draw_sonar_nodelet PROPERTY CXX_STANDARD 14)
 
   add_executable(draw_sonar_node src_ros/draw_sonar_node.cpp)
   target_link_libraries(draw_sonar_node
      sonar_image_proc
      ${catkin_LIBRARIES})
   add_dependencies(draw_sonar_node ${catkin_EXPORTED_TARGETS})
-
   set_property(TARGET draw_sonar_node PROPERTY CXX_STANDARD 14)
 
 
