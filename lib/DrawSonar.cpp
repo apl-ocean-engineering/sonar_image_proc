@@ -1,5 +1,5 @@
 
-#include "draw_sonar/DrawSonar.h"
+#include "sonar_image_proc/DrawSonar.h"
 
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -11,9 +11,8 @@
 using namespace std;
 using namespace cv;
 
-namespace draw_sonar {
+namespace sonar_image_proc {
 
-using namespace imaging_sonar_msgs;
 const float ThetaShift = 1.5*M_PI;
 
 cv::Size calculateImageSize( const AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin, float maxRange ) {

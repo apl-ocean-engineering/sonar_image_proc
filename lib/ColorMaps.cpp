@@ -4,10 +4,10 @@
 // As used in matplotlib
 // As released under a CC0 license
 
-#include "draw_sonar/ColorMaps.h"
+#include "sonar_image_proc/ColorMaps.h"
 
 
-namespace draw_sonar {
+namespace sonar_image_proc {
 
 
 const float InfernoColorMap::_inferno_data[256][3] = \

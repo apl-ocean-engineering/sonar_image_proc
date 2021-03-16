@@ -3,7 +3,7 @@
 
 #include <opencv2/core.hpp>
 
-namespace draw_sonar {
+namespace sonar_image_proc {
 
 using cv::Scalar;
 

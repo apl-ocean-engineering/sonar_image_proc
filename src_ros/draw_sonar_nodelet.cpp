@@ -15,18 +15,17 @@ using namespace cv;
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 
-#include "draw_sonar/ColorMaps.h"
-#include "draw_sonar/DataStructures.h"
-#include "draw_sonar/DrawSonar.h"
+#include "sonar_image_proc/ColorMaps.h"
+#include "sonar_image_proc/DrawSonar.h"
 
-#include "imaging_sonar_msgs/AbstractSonarInterface.h"
+#include "sonar_image_proc/AbstractSonarInterface.h"
 
 // Subscribes to sonar message topic, draws using opencv then publishes result
 
 namespace draw_sonar {
 
   // \todo These two can be clean up with templates...
-  struct ImagingSonarMsgInterface : public imaging_sonar_msgs::AbstractSonarInterface {
+  struct ImagingSonarMsgInterface : public sonar_image_proc::AbstractSonarInterface {
 
     ImagingSonarMsgInterface( const imaging_sonar_msgs::ImagingSonarMsg::ConstPtr &ping )
       : _ping(ping) {;}
@@ -45,7 +44,7 @@ namespace draw_sonar {
   };
 
 
-  struct SonarImageMsgInterface : public imaging_sonar_msgs::AbstractSonarInterface {
+  struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface {
 
     SonarImageMsgInterface( const acoustic_msgs::SonarImage::ConstPtr &ping )
       : _ping(ping) {;}
@@ -92,7 +91,7 @@ namespace draw_sonar {
       : Nodelet(),
         _counter(0),
         _height(0), _width(0), _pixPerRangeBin(2), _maxRange(0.0),
-        _colorMap( new draw_sonar::InfernoColorMap )
+        _colorMap( new sonar_image_proc::InfernoColorMap )
     {;}
 
     virtual ~DrawSonarNodelet()
@@ -141,10 +140,10 @@ namespace draw_sonar {
 
       SonarImageMsgInterface interface( msg );
 
-      cv::Size sz = draw_sonar::calculateImageSize( interface, cv::Size( _width, _height),
+      cv::Size sz = sonar_image_proc::calculateImageSize( interface, cv::Size( _width, _height),
                                                     _pixPerRangeBin, _maxRange );
       cv::Mat mat( sz, CV_8UC3 );
-      draw_sonar::drawSonar( interface, mat, *_colorMap, _maxRange );
+      sonar_image_proc::drawSonar( interface, mat, *_colorMap, _maxRange );
 
       callbackCommon(mat);
     }
@@ -153,10 +152,10 @@ namespace draw_sonar {
 
       ImagingSonarMsgInterface interface( msg );
 
-      cv::Size sz = draw_sonar::calculateImageSize( interface, cv::Size( _width, _height),
+      cv::Size sz = sonar_image_proc::calculateImageSize( interface, cv::Size( _width, _height),
                                                     _pixPerRangeBin, _maxRange );
       cv::Mat mat( sz, CV_8UC3 );
-      draw_sonar::drawSonar( interface, mat, *_colorMap, _maxRange );
+      sonar_image_proc::drawSonar( interface, mat, *_colorMap, _maxRange );
 
       callbackCommon(mat);
     }
@@ -169,7 +168,7 @@ namespace draw_sonar {
     int _height, _width, _pixPerRangeBin;
     float _maxRange;
 
-    std::unique_ptr< draw_sonar::SonarColorMap > _colorMap;
+    std::unique_ptr< sonar_image_proc::SonarColorMap > _colorMap;
 
   };
 
