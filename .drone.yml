@@ -42,6 +42,10 @@ steps:
       from_secret: github_drone_token
     repositories:
       - apl-ocean-engineering/serdp_common
+  when:
+    event:
+      exclude:
+        - pull_request
 
 - name: slack
   image: plugins/slack
@@ -50,3 +54,6 @@ steps:
       from_secret: slack_webhook
   when:
     status: [ success, failure ]
+    event:
+      exclude:
+        - pull_request
