@@ -89,7 +89,6 @@ namespace draw_sonar {
 
     DrawSonarNodelet()
       : Nodelet(),
-        _counter(0),
         _height(0), _width(0), _pixPerRangeBin(2), _maxRange(0.0),
         _colorMap( new sonar_image_proc::InfernoColorMap )
     {;}
@@ -118,13 +117,7 @@ namespace draw_sonar {
       pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
     }
 
-    void callbackCommon( const cv::Mat &mat ) {
-
-      // Convert and publish drawn sonar images
-      std_msgs::Header header;
-      header.seq = _counter;
-      header.stamp = ros::Time::now();
-
+    void callbackCommon(const cv::Mat &mat, const std_msgs::Header &header) {
       cv_bridge::CvImage img_bridge(header,
                                     sensor_msgs::image_encodings::RGB8,
                                     mat);
@@ -132,8 +125,6 @@ namespace draw_sonar {
       sensor_msgs::Image output_msg;
       img_bridge.toImageMsg(output_msg);
       pub_.publish(output_msg);
-
-      _counter++;
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
@@ -145,7 +136,7 @@ namespace draw_sonar {
       cv::Mat mat( sz, CV_8UC3 );
       sonar_image_proc::drawSonar( interface, mat, *_colorMap, _maxRange );
 
-      callbackCommon(mat);
+      callbackCommon(mat, msg->header);
     }
 
     void imagingSonarCallback(const imaging_sonar_msgs::ImagingSonarMsg::ConstPtr &msg) {
@@ -157,13 +148,12 @@ namespace draw_sonar {
       cv::Mat mat( sz, CV_8UC3 );
       sonar_image_proc::drawSonar( interface, mat, *_colorMap, _maxRange );
 
-      callbackCommon(mat);
+      callbackCommon(mat, msg->header);
     }
 
 
     ros::Subscriber subSonarImage_, subImagingSonarMsg_;
     ros::Publisher pub_;
-    int _counter;
 
     int _height, _width, _pixPerRangeBin;
     float _maxRange;
