@@ -2,7 +2,6 @@
 #include "nodelet/nodelet.h"
 
 #include "acoustic_msgs/SonarImage.h"
-#include "imaging_sonar_msgs/ImagingSonarMsg.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -23,26 +22,6 @@ using namespace cv;
 // Subscribes to sonar message topic, draws using opencv then publishes result
 
 namespace draw_sonar {
-
-  // \todo These two can be clean up with templates...
-  struct ImagingSonarMsgInterface : public sonar_image_proc::AbstractSonarInterface {
-
-    ImagingSonarMsgInterface( const imaging_sonar_msgs::ImagingSonarMsg::ConstPtr &ping )
-      : _ping(ping) {;}
-
-    virtual int nBearings() const         { return _ping->bearings.size(); }
-
-    // Remember that the _original_ ImagingSonarMsg stored bearings as degrees
-    virtual float bearing( int n ) const  { return _ping->bearings[n] * M_PI/180; }
-
-    virtual int nRanges() const           { return _ping->ranges.size(); }
-    virtual float range( int n ) const    { return _ping->ranges[n]; }
-
-    virtual uint8_t intensity( int i ) const { return _ping->v2intensities[i]; }
-
-    imaging_sonar_msgs::ImagingSonarMsg::ConstPtr _ping;
-  };
-
 
   struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface {
 
@@ -112,7 +91,6 @@ namespace draw_sonar {
       }
 
       subSonarImage_ = nh.subscribe<acoustic_msgs::SonarImage>("sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this );
-      subImagingSonarMsg_ = nh.subscribe<imaging_sonar_msgs::ImagingSonarMsg>("imaging_sonar", 10, &DrawSonarNodelet::imagingSonarCallback, this );
 
       pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
     }
@@ -139,20 +117,8 @@ namespace draw_sonar {
       callbackCommon(mat, msg->header);
     }
 
-    void imagingSonarCallback(const imaging_sonar_msgs::ImagingSonarMsg::ConstPtr &msg) {
 
-      ImagingSonarMsgInterface interface( msg );
-
-      cv::Size sz = sonar_image_proc::calculateImageSize( interface, cv::Size( _width, _height),
-                                                    _pixPerRangeBin, _maxRange );
-      cv::Mat mat( sz, CV_8UC3 );
-      sonar_image_proc::drawSonar( interface, mat, *_colorMap, _maxRange );
-
-      callbackCommon(mat, msg->header);
-    }
-
-
-    ros::Subscriber subSonarImage_, subImagingSonarMsg_;
+    ros::Subscriber subSonarImage_;
     ros::Publisher pub_;
 
     int _height, _width, _pixPerRangeBin;

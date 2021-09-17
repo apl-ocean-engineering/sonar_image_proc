@@ -17,7 +17,6 @@
   <depend>rospy</depend>
 
   <depend>acoustic_msgs</depend>
-  <depend>imaging_sonar_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>nodelet</depend>
