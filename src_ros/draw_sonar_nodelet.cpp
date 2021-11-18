@@ -1,3 +1,6 @@
+// Copyright 2021 University of Washington Applied Physics Laboratory
+//
+
 #include "ros/ros.h"
 #include "nodelet/nodelet.h"
 
@@ -6,9 +9,6 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
-using namespace std;
-using namespace cv;
 
 // For uploading drawn sonar images to Image topic
 #include <cv_bridge/cv_bridge.h>
@@ -23,9 +23,11 @@ using namespace cv;
 
 namespace draw_sonar {
 
-  struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface {
+using namespace std;
+using namespace cv;
 
-    SonarImageMsgInterface( const acoustic_msgs::SonarImage::ConstPtr &ping )
+struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface {
+    explicit SonarImageMsgInterface(const acoustic_msgs::SonarImage::ConstPtr &ping)
       : _ping(ping) {;}
 
     int nBearings() const override { return _ping->azimuth_angles.size(); }
@@ -34,20 +36,20 @@ namespace draw_sonar {
     int nRanges() const override { return _ping->ranges.size(); }
     float range( int n ) const override { return _ping->ranges[n]; }
 
-    uint8_t intensity( int i ) const override {
-      if( _ping->data_size == 1 ) {
+    uint8_t intensity(int i) const override {
+      if (_ping->data_size == 1) {
         return _ping->intensities[i];
-      } else if( _ping->data_size == 2 ) {
+      } else if (_ping->data_size == 2) {
         uint16_t d;
 
-        if( _ping->is_bigendian)
+        if (_ping->is_bigendian)
           d = (_ping->intensities[i * 2] << 8) | _ping->intensities[i * 2 + 1];
         else
-          d =  (_ping->intensities[i * 2 + 1] << 8) | _ping->intensities[i * 2];
+          d = (_ping->intensities[i * 2 + 1] << 8) | _ping->intensities[i * 2];
 
           // Hacky
           const int shift = 6;
-          if( d >= (0x1 << (shift+8)) ) return 0xFF;
+          if (d >= (0x1 << (shift+8))) return 0xFF;
 
         return (d >> shift);
       } else {
@@ -58,14 +60,11 @@ namespace draw_sonar {
     }
 
     acoustic_msgs::SonarImage::ConstPtr _ping;
-  };
+};
 
 
-  class DrawSonarNodelet : public nodelet::Nodelet {
-  public:
-
-    // NB Color Maps are in the draw_sonar package
-
+class DrawSonarNodelet : public nodelet::Nodelet {
+public:
     DrawSonarNodelet()
       : Nodelet(),
         _height(0), _width(0), _pixPerRangeBin(2), _maxRange(0.0),
@@ -75,19 +74,18 @@ namespace draw_sonar {
     virtual ~DrawSonarNodelet()
     {;}
 
-  private:
-
+ private:
     virtual void onInit() {
       ros::NodeHandle nh = getMTNodeHandle();
       ros::NodeHandle pnh = getMTPrivateNodeHandle();
 
       pnh.param<int>("width", _width, 0);
       pnh.param<int>("height", _height, 0);
-      pnh.param<int>("pix_per_range_bin", _pixPerRangeBin, 2 );
-      pnh.param<float>("max_range", _maxRange, 0.0 );
+      pnh.param<int>("pix_per_range_bin", _pixPerRangeBin, 2);
+      pnh.param<float>("max_range", _maxRange, 0.0);
 
-      if( _maxRange > 0.0 ) {
-        NODELET_INFO_STREAM("Only drawing to max range " << _maxRange );
+      if (_maxRange > 0.0) {
+        NODELET_INFO_STREAM("Only drawing to max range " << _maxRange);
       }
 
       subSonarImage_ = nh.subscribe<acoustic_msgs::SonarImage>("sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this );
@@ -106,13 +104,13 @@ namespace draw_sonar {
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
+      SonarImageMsgInterface interface(msg);
 
-      SonarImageMsgInterface interface( msg );
-
-      cv::Size sz = sonar_image_proc::calculateImageSize( interface, cv::Size( _width, _height),
-                                                    _pixPerRangeBin, _maxRange );
-      cv::Mat mat( sz, CV_8UC3 );
-      sonar_image_proc::drawSonar( interface, mat, *_colorMap, _maxRange );
+      cv::Size sz = sonar_image_proc::calculateImageSize( interface,
+                                                cv::Size( _width, _height),
+                                                _pixPerRangeBin, _maxRange );
+      cv::Mat mat(sz, CV_8UC3);
+      sonar_image_proc::drawSonar(interface, mat, *_colorMap, _maxRange);
 
       callbackCommon(mat, msg->header);
     }
@@ -125,10 +123,9 @@ namespace draw_sonar {
     float _maxRange;
 
     std::unique_ptr< sonar_image_proc::SonarColorMap > _colorMap;
+};
 
-  };
-
-}
+}  // namespace draw_sonar
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(draw_sonar::DrawSonarNodelet, nodelet::Nodelet);

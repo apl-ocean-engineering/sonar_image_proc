@@ -1,3 +1,6 @@
+// Copyright 2021 University of Washington Applied Physics Laboratory
+//
+
 #pragma once
 
 #include <memory>
@@ -10,8 +13,14 @@
 
 namespace sonar_image_proc {
 
-cv::Size calculateImageSize( const sonar_image_proc::AbstractSonarInterface &ping, cv::Size hint, int pixPerRangeBin = 2, float maxRange = -1.0 );
+cv::Size calculateImageSize(const sonar_image_proc::AbstractSonarInterface &ping,
+                            cv::Size hint,
+                            int pixPerRangeBin = 2,
+                            float maxRange = -1.0);
 
-void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping, cv::Mat &mat, const SonarColorMap &colorMap=InfernoColorMap(), float maxRange = -1.0 );
+void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+                            cv::Mat &mat,
+                            const SonarColorMap &colorMap = InfernoColorMap(),
+                            float maxRange = -1.0);
 
-}
+}  // namespace sonar_image_proc

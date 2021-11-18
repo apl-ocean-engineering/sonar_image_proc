@@ -1,3 +1,5 @@
+// Copyright 2021 University of Washington Applied Physics Laboratory
+//
 // Color map data from
 //    https://github.com/BIDS/colormap/blob/master/colormaps.py
 //
@@ -6,9 +8,7 @@
 
 #include "sonar_image_proc/ColorMaps.h"
 
-
 namespace sonar_image_proc {
-
 
 const float InfernoColorMap::_inferno_data[256][3] = \
                 {{0.001462, 0.000466, 0.013866},
@@ -268,4 +268,4 @@ const float InfernoColorMap::_inferno_data[256][3] = \
                  {0.982257, 0.994109, 0.631017},
                  {0.988362, 0.998364, 0.644924}};
 
-}
+}  // namespace sonar_image_proc

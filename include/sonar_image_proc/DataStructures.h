@@ -1,3 +1,6 @@
+// Copyright 2021 University of Washington Applied Physics Laboratory
+//
+
 #pragma once
 
 #include <stdint.h>
@@ -14,4 +17,4 @@ struct SonarPoint {
 
 SonarPoint bearingRange2Cartesian(float bearing, float range);
 
-}
+}  // namespace sonar_image_proc
