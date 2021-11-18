@@ -36,7 +36,8 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
     int nRanges() const override { return _ping->ranges.size(); }
     float range( int n ) const override { return _ping->ranges[n]; }
 
-    uint8_t intensity(int i) const override {
+ protected:
+    virtual uint8_t intensity(int i) const override {
       if (_ping->data_size == 1) {
         return _ping->intensities[i];
       } else if (_ping->data_size == 2) {
@@ -47,16 +48,15 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
         else
           d = (_ping->intensities[i * 2 + 1] << 8) | _ping->intensities[i * 2];
 
-          // Hacky
-          const int shift = 6;
-          if (d >= (0x1 << (shift+8))) return 0xFF;
+        // Hacky
+        const int shift = 6;
+        if (d >= (0x1 << (shift+8))) return 0xFF;
 
         return (d >> shift);
       } else {
         ROS_ERROR_STREAM("SonarImage has unsupported data_size = " << _ping->data_size);
         return 0;
       }
-
     }
 
     acoustic_msgs::SonarImage::ConstPtr _ping;
@@ -91,33 +91,49 @@ public:
       subSonarImage_ = nh.subscribe<acoustic_msgs::SonarImage>("sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this );
 
       pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
-    }
-
-    void callbackCommon(const cv::Mat &mat, const std_msgs::Header &header) {
-      cv_bridge::CvImage img_bridge(header,
-                                    sensor_msgs::image_encodings::RGB8,
-                                    mat);
-
-      sensor_msgs::Image output_msg;
-      img_bridge.toImageMsg(output_msg);
-      pub_.publish(output_msg);
+      rectPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_rect", 10);
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
       SonarImageMsgInterface interface(msg);
 
-      cv::Size sz = sonar_image_proc::calculateImageSize( interface,
-                                                cv::Size( _width, _height),
-                                                _pixPerRangeBin, _maxRange );
-      cv::Mat mat(sz, CV_8UC3);
-      sonar_image_proc::drawSonar(interface, mat, *_colorMap, _maxRange);
+      {
+        cv::Size sz = sonar_image_proc::calculateImageSize(interface,
+                                                  cv::Size(_width, _height),
+                                                  _pixPerRangeBin, 
+                                                  _maxRange);
+        cv::Mat mat(sz, CV_8UC3);
+        sonar_image_proc::drawSonar(interface, mat, *_colorMap, _maxRange);
 
-      callbackCommon(mat, msg->header);
+        cv_bridge::CvImage img_bridge(msg->header,
+                                      sensor_msgs::image_encodings::RGB8,
+                                      mat);
+
+        sensor_msgs::Image output_msg;
+        img_bridge.toImageMsg(output_msg);
+        pub_.publish(output_msg);
+      }
+
+
+
+      {
+        cv::Mat rectMat;
+        sonar_image_proc::drawSonarRect(interface, rectMat, *_colorMap, _maxRange);
+
+        cv_bridge::CvImage img_bridge(msg->header,
+                                      sensor_msgs::image_encodings::RGB8,
+                                      rectMat);
+
+        sensor_msgs::Image output_msg;
+        img_bridge.toImageMsg(output_msg);
+        rectPub_.publish(output_msg);
+      }
+
     }
 
 
     ros::Subscriber subSonarImage_;
-    ros::Publisher pub_;
+    ros::Publisher pub_, rectPub_;
 
     int _height, _width, _pixPerRangeBin;
     float _maxRange;

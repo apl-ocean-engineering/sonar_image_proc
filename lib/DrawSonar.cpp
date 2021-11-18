@@ -131,4 +131,30 @@ void drawSonar(const AbstractSonarInterface &ping,
   }
 }
 
+void drawSonarRect(const sonar_image_proc::AbstractSonarInterface &ping,
+                            cv::Mat &rect,
+                            const SonarColorMap &colorMap,
+                            float maxRange) {
+
+  int nRanges = ping.nRanges();
+  if (maxRange > 0) {
+    // Do a direct search in case range bins are unevenly spaced
+    for (nRanges = 0;
+          (nRanges < ping.nRanges()) && (ping.range(nRanges) < maxRange);
+          nRanges++ ) { ; }
+  }
+
+  rect.create(cv::Size(ping.nBearings(), nRanges),
+              CV_8UC3);
+  rect.setTo(cv::Vec3b(0, 0, 0));
+
+  for (int b = 0; b < ping.nBearings(); b++) {
+    for (int r = 0; r < nRanges; r++) {
+      const Scalar pix = 255*colorMap( ping.bearing(b), ping.range(b), ping.intensity(b,r));
+      rect.at<Vec3b>(cv::Point(b, r)) = Vec3b(pix[0], pix[1], pix[2]);
+    }
+  }
+}
+
+
 }  // namespace sonar_image_proc
