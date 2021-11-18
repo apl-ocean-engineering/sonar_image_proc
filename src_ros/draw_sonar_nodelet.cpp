@@ -98,12 +98,8 @@ public:
       SonarImageMsgInterface interface(msg);
 
       {
-        cv::Size sz = sonar_image_proc::calculateImageSize(interface,
-                                                  cv::Size(_width, _height),
-                                                  _pixPerRangeBin, 
-                                                  _maxRange);
-        cv::Mat mat(sz, CV_8UC3);
-        sonar_image_proc::drawSonar(interface, mat, *_colorMap, _maxRange);
+        cv::Mat mat;
+        sonar_image_proc::drawSonarRemap(interface, mat, *_colorMap, _maxRange);
 
         cv_bridge::CvImage img_bridge(msg->header,
                                       sensor_msgs::image_encodings::RGB8,

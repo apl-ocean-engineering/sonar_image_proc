@@ -39,5 +39,9 @@ void drawSonarRect(const sonar_image_proc::AbstractSonarInterface &ping,
                             const SonarColorMap &colorMap = InfernoColorMap(),
                             float maxRange = -1.0);
 
+void drawSonarRemap(const sonar_image_proc::AbstractSonarInterface &ping,
+                            cv::Mat &image,
+                            const SonarColorMap &colorMap = InfernoColorMap(),
+                            float maxRange = -1.0);
 
 }  // namespace sonar_image_proc

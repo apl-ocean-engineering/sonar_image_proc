@@ -4,6 +4,7 @@
 #include "sonar_image_proc/DrawSonar.h"
 
 #include <iostream>
+#include <limits>
 #include <opencv2/imgproc/imgproc.hpp>
 
 #ifndef THETA_SHIFT
@@ -154,6 +155,62 @@ void drawSonarRect(const sonar_image_proc::AbstractSonarInterface &ping,
       rect.at<Vec3b>(cv::Point(b, r)) = Vec3b(pix[0], pix[1], pix[2]);
     }
   }
+}
+
+void drawSonarRemap(const sonar_image_proc::AbstractSonarInterface &ping,
+                            cv::Mat &img,
+                            const SonarColorMap &colorMap,
+                            float maxRange) {
+
+  cv::Mat rect;
+  drawSonarRect(ping, rect, colorMap, maxRange);
+
+  const int nRanges = rect.rows;
+
+  // Find min and max bearing
+  float minBearing = std::numeric_limits<float>::max();
+  float maxBearing = -std::numeric_limits<float>::max();
+
+  for (int i = 0; i < ping.nBearings(); i++) {
+    const float b = ping.bearing(i);
+
+    if (b > maxBearing) maxBearing = b;
+    if (b < minBearing) minBearing = b;
+  }
+
+  std::cerr << "Ping from " << minBearing << " rad to " << maxBearing << " rads" << std::endl;
+
+  const int minusWidth = floor(nRanges * sin(minBearing));
+  const int plusWidth = ceil(nRanges * sin(maxBearing));
+  const int width = plusWidth - minusWidth;
+
+  const int originx = abs(minusWidth);
+
+  std::cerr << "Resulting image is " << minusWidth << " to " << plusWidth << " == image width of " << width << std::endl;
+
+  const cv::Size imgSize(width,nRanges);
+  img.create(imgSize,
+              CV_8UC3);
+  img.setTo(cv::Vec3b(0, 0, 0));
+
+  // Create map
+  cv::Mat mm(imgSize, CV_32FC2);
+  for (int x=0; x<mm.cols; x++) {
+    for (int y=0; y<mm.rows; y++) {
+      // Unoptimized version to start
+      float xp = x;
+      float yp = y;
+
+      mm.at<Vec2f>( cv::Point(x,y) ) = Vec2f(xp,yp);
+    }
+  }
+
+  cv::remap(rect, img, mm, cv::Mat(),
+            cv::INTER_CUBIC, cv::BORDER_CONSTANT, 
+            cv::Scalar(0, 0, 0));
+
+
+
 }
 
 
