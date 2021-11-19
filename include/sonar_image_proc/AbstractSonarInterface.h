@@ -7,6 +7,7 @@
 #include <math.h>
 #include <vector>
 #include <limits>
+#include <utility>
 
 namespace sonar_image_proc {
 
@@ -14,10 +15,12 @@ namespace sonar_image_proc {
 // Designed as a "common type" between SimplePingResults and ROS ImagingSonarMsg
 struct AbstractSonarInterface {
 
-  static const std::pair<float,float> UnsetPair;
+  typedef std::pair<float,float> Bounds_t;
+
+  static const Bounds_t UnsetBounds;
 
   AbstractSonarInterface()
-    : _rangeBounds(UnsetPair), _azimuthBounds(UnsetPair)
+    : _rangeBounds(UnsetBounds), _azimuthBounds(UnsetBounds)
     {;}
 
   // bearings are in **radians**
@@ -27,7 +30,7 @@ struct AbstractSonarInterface {
   int nAzimuth() const       { return nBearings(); }
   float azimuth(int n) const { return bearing(n); }
 
-  std::pair<float,float> azimuthBounds() const;
+  Bounds_t azimuthBounds() const;
 
   float minAzimuth() const { return azimuthBounds().first; }
   float maxAzimuth() const { return azimuthBounds().second; }
@@ -37,7 +40,7 @@ struct AbstractSonarInterface {
   virtual int nRanges() const = 0;
   virtual float range(int n) const = 0;
 
-  std::pair<float,float> rangeBounds() const;
+  Bounds_t rangeBounds() const;
 
   float minRange() const { return rangeBounds().first; }
   float maxRange() const { return rangeBounds().second; }
@@ -46,12 +49,11 @@ struct AbstractSonarInterface {
     { return intensity( (r * nBearings()) + b ); }
 
  protected:
-
-   // i _must_ be bearing-major
+  //  i _must_ be bearing-major
   virtual uint8_t intensity(int i) const  = 0;
 
  private:
-  mutable std::pair<float,float> _rangeBounds, _azimuthBounds;
+  mutable Bounds_t _rangeBounds, _azimuthBounds;
 };
 
 }  // namespace sonar_image_proc

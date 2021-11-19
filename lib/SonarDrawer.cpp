@@ -15,18 +15,15 @@ SonarDrawer::SonarDrawer()
 void SonarDrawer::drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
                         cv::Mat &rect,
                         const SonarColorMap &colorMap) {
+    const cv::Size imgSize(ping.nRanges(), ping.nBearings());
     if ((rect.type() == CV_8UC3) || (rect.type() == CV_32FC2)) {
-        rect.create(cv::Size(ping.nRanges(), ping.nBearings()),
-            rect.type());
+        rect.create(imgSize, rect.type());
     } else {
-        rect.create(cv::Size(ping.nRanges(), ping.nBearings()),
-                    CV_8UC3);
+        rect.create(imgSize, CV_8UC3);
     }
-    rect.setTo(cv::Vec3b(0, 0, 0));
 
     for (int r = 0; r < ping.nRanges(); r++) {
     for (int b = 0; b < ping.nBearings(); b++) {
-
         if (rect.type() == CV_8UC3) {
             rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3b>(ping, b, r);
         } else if (rect.type() == CV_32FC3) {
@@ -43,11 +40,9 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
                     const SonarColorMap &colorMap,
                     const cv::Mat &rect) {
   cv::Mat rectImage(rect);
+  if (rectImage.empty()) drawSonarRectImage(ping, rectImage, colorMap);
 
-  if (rect.empty())
-      drawSonarRectImage(ping, rectImage, colorMap);
-
-    const CachedMap::MapPair maps(_map(ping));
+  const CachedMap::MapPair maps(_map(ping));
   cv::remap(rect, img, maps.first, maps.second,
             cv::INTER_CUBIC, cv::BORDER_CONSTANT,
             cv::Scalar(0, 0, 0));
@@ -87,13 +82,14 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
 
   for (int x=0; x < newmap.cols; x++) {
     for (int y=0; y < newmap.rows; y++) {
-      // Unoptimized version to start
-
       // Map is
       //
       //  dst = src( mapx(x,y), mapy(x,y) )
       //
-      float xp, yp;
+      // This map draws the sonar with range = 0
+      // centered on the bottom edge of the resulting image
+      // with increasing range along azimuth = 0 going
+      // vertically upwards in the image
 
       // Calculate range and bearing of this pixel from origin
       const float dx = x-originx;
@@ -102,9 +98,10 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
       const float range = sqrt(dx*dx + dy*dy);
       const float azimuth = atan2(dx, dy);
 
-      // yp is simply range
-      xp = range;
-      yp = (azimuth - ping.bearing(0))/db;
+      float xp = range;
+
+      // This linear algorithm is not robust if the azimuths are non-linear
+      float yp = (azimuth - azimuthBounds.first)/db;
 
       newmap.at<cv::Vec2f>(cv::Point(x, y)) = cv::Vec2f(xp, yp);
     }

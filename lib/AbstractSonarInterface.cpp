@@ -7,11 +7,11 @@
 
 namespace sonar_image_proc {
 
-const std::pair<float, float> AbstractSonarInterface::UnsetPair = std::pair<float, float>(-1, -1);
+const AbstractSonarInterface::Bounds_t AbstractSonarInterface::UnsetBounds = AbstractSonarInterface::Bounds_t(-1, -1);
 
 
-std::pair<float, float> AbstractSonarInterface::azimuthBounds() const {
-    if (_azimuthBounds == UnsetPair) {
+AbstractSonarInterface::Bounds_t AbstractSonarInterface::azimuthBounds() const {
+    if (_azimuthBounds == UnsetBounds) {
         float minAzimuth = std::numeric_limits<float>::max(),
               maxAzimuth = -std::numeric_limits<float>::max();
 
@@ -30,8 +30,8 @@ std::pair<float, float> AbstractSonarInterface::azimuthBounds() const {
 
 
 
-std::pair<float, float> AbstractSonarInterface::rangeBounds() const {
-    if (_rangeBounds == UnsetPair) {
+AbstractSonarInterface::Bounds_t AbstractSonarInterface::rangeBounds() const {
+    if (_rangeBounds == UnsetBounds) {
         float minRange = std::numeric_limits<float>::max(),
               maxRange = -std::numeric_limits<float>::max();
 
