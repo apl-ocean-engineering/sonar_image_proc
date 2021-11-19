@@ -34,11 +34,8 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
     explicit SonarImageMsgInterface(const acoustic_msgs::SonarImage::ConstPtr &ping)
       : _ping(ping) {;}
 
-    int nBearings() const override { return _ping->azimuth_angles.size(); }
-    float bearing( int n ) const override { return _ping->azimuth_angles[n]; }
-
-    int nRanges() const override { return _ping->ranges.size(); }
-    float range( int n ) const override { return _ping->ranges[n]; }
+    const std::vector<float> &ranges() const override { return _ping->ranges; }
+    const std::vector<float> &azimuths() const override { return _ping->azimuth_angles; }
 
  protected:
     virtual uint8_t intensity(int i) const override {

@@ -23,22 +23,29 @@ struct AbstractSonarInterface {
     : _rangeBounds(UnsetBounds), _azimuthBounds(UnsetBounds)
     {;}
 
+  //
   // bearings are in **radians**
-  virtual int nBearings() const = 0;
-  virtual float bearing(int n) const = 0;
+  //
+  virtual const std::vector<float> &azimuths() const = 0;
 
-  int nAzimuth() const       { return nBearings(); }
-  float azimuth(int n) const { return bearing(n); }
+  int nBearings() const       { return azimuths().size(); }
+  float bearing(int n) const  { return azimuths().at(n);  }
+
+  int nAzimuth() const       { return azimuths().size(); }
+  float azimuth(int n) const { return azimuths().at(n); }
 
   Bounds_t azimuthBounds() const;
 
   float minAzimuth() const { return azimuthBounds().first; }
   float maxAzimuth() const { return azimuthBounds().second; }
 
-
+  //
   // ranges are in **meters**
-  virtual int nRanges() const = 0;
-  virtual float range(int n) const = 0;
+  //
+  virtual const std::vector<float> &ranges() const = 0;
+
+  int nRanges() const      { return ranges().size(); }
+  float range(int n) const { return ranges().at(n); }
 
   Bounds_t rangeBounds() const;
 

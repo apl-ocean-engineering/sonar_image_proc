@@ -2,6 +2,7 @@
 //
 
 #include <utility>
+#include <algorithm>
 
 #include "sonar_image_proc/AbstractSonarInterface.h"
 
@@ -9,20 +10,10 @@ namespace sonar_image_proc {
 
 const AbstractSonarInterface::Bounds_t AbstractSonarInterface::UnsetBounds = AbstractSonarInterface::Bounds_t(-1, -1);
 
-
 AbstractSonarInterface::Bounds_t AbstractSonarInterface::azimuthBounds() const {
     if (_azimuthBounds == UnsetBounds) {
-        float minAzimuth = std::numeric_limits<float>::max(),
-              maxAzimuth = -std::numeric_limits<float>::max();
-
-        // Ah, wish I had iterators
-        for (int i = 0; i < nAzimuth(); i++) {
-        const auto a = azimuth(i);
-        if (a < minAzimuth) minAzimuth = a;
-        if (a > maxAzimuth) maxAzimuth = a;
-        }
-
-        _azimuthBounds = std::make_pair(minAzimuth, maxAzimuth);
+         auto results = std::minmax_element(azimuths().begin(), azimuths().end());
+        _azimuthBounds = std::make_pair(*(results.first), *(results.second));
     }
 
     return _azimuthBounds;
@@ -32,16 +23,8 @@ AbstractSonarInterface::Bounds_t AbstractSonarInterface::azimuthBounds() const {
 
 AbstractSonarInterface::Bounds_t AbstractSonarInterface::rangeBounds() const {
     if (_rangeBounds == UnsetBounds) {
-        float minRange = std::numeric_limits<float>::max(),
-              maxRange = -std::numeric_limits<float>::max();
-
-        // Ah, wish I had iterators
-        for (int i = 0; i < nRanges(); i++) {
-        if (range(i) < minRange) minRange = range(i);
-        if (range(i) > maxRange) maxRange = range(i);
-        }
-
-        _rangeBounds = std::make_pair(minRange, maxRange);
+        auto results = std::minmax_element(ranges().begin(), ranges().end());
+        _rangeBounds = std::make_pair(*(results.first), *(results.second));
     }
 
     return _rangeBounds;
