@@ -1,6 +1,8 @@
 // Copyright 2021 University of Washington Applied Physics Laboratory
 //
 
+#include <sstream>
+
 #include "ros/ros.h"
 #include "nodelet/nodelet.h"
 
@@ -13,6 +15,7 @@
 // For uploading drawn sonar images to Image topic
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
+#include <std_msgs/String.h>
 
 #include "sonar_image_proc/ColorMaps.h"
 #include "sonar_image_proc/DrawSonar.h"
@@ -85,6 +88,7 @@ public:
       pnh.param<float>("max_range", _maxRange, 0.0);
 
       pnh.param<bool>("publish_old", _publishOldApi, true);
+      pnh.param<bool>("publish_timing", _publishTiming, true);
 
       if (_maxRange > 0.0) {
         NODELET_INFO_STREAM("Only drawing to max range " << _maxRange);
@@ -97,64 +101,94 @@ public:
 
       if (_publishOldApi)
         oldPub_ = nh.advertise<sensor_msgs::Image>("old_drawn_sonar", 10);
+
+      if (_publishTiming)
+        timingPub_ = nh.advertise<std_msgs::String>("timing",10);
+    }
+
+
+    void cvBridgeAndPublish(const acoustic_msgs::SonarImage::ConstPtr &msg,
+                              const cv::Mat &mat,
+                              ros::Publisher &pub )
+    {
+        cv_bridge::CvImage img_bridge(msg->header,
+                                      sensor_msgs::image_encodings::RGB8,
+                                      mat);
+
+        sensor_msgs::Image output_msg;
+        img_bridge.toImageMsg(output_msg);
+        pub.publish(output_msg);
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
       SonarImageMsgInterface interface(msg);
 
+      ros::WallDuration oldApiElapsed, rectElapsed, drawElapsed;
+
       if (_publishOldApi) {
+        ros::WallTime begin = ros::WallTime::now();
+
         cv::Size sz = sonar_image_proc::old_api::calculateImageSize(interface,
                                                   cv::Size(_width, _height),
                                                   _pixPerRangeBin, _maxRange);
         cv::Mat mat(sz, CV_8UC3);
         sonar_image_proc::old_api::drawSonar(interface, mat, *_colorMap, _maxRange);
 
-        cv_bridge::CvImage img_bridge(msg->header,
-                                      sensor_msgs::image_encodings::RGB8,
-                                      mat);
+        cvBridgeAndPublish(msg, mat, oldPub_);
 
-        sensor_msgs::Image output_msg;
-        img_bridge.toImageMsg(output_msg);
-        oldPub_.publish(output_msg);
+        oldApiElapsed = ros::WallTime::now() - begin;
       }
 
       {
+        ros::WallTime begin = ros::WallTime::now();
+
         cv::Mat mat;
         sonar_image_proc::drawSonar(interface, mat, *_colorMap);
+        cvBridgeAndPublish(msg, mat, pub_);
 
-        cv_bridge::CvImage img_bridge(msg->header,
-                                      sensor_msgs::image_encodings::RGB8,
-                                      mat);
-
-        sensor_msgs::Image output_msg;
-        img_bridge.toImageMsg(output_msg);
-        pub_.publish(output_msg);
+        drawElapsed = ros::WallTime::now() - begin;
       }
 
 
 
       {
+        ros::WallTime begin = ros::WallTime::now();
+
         cv::Mat rectMat;
         sonar_image_proc::drawSonarRectImage(interface, rectMat, *_colorMap);
-
-        cv_bridge::CvImage img_bridge(msg->header,
-                                      sensor_msgs::image_encodings::RGB8,
-                                      rectMat);
-
-        sensor_msgs::Image output_msg;
-        img_bridge.toImageMsg(output_msg);
-        rectPub_.publish(output_msg);
+        cvBridgeAndPublish(msg, rectMat, rectPub_);
+        
+        rectElapsed = ros::WallTime::now() - begin;
       }
+
+      if (_publishTiming) {
+        ostringstream output;
+
+        output << "{\n";
+        output << "\"draw\" : " << drawElapsed.toSec() << "\n";
+        output << "\"rect\" : " << rectElapsed.toSec() << "\n";
+        if (_publishOldApi) 
+          output << "\"old_api\" : " << oldApiElapsed.toSec() << "\n";
+
+        output << "}";
+
+        std_msgs::String out_msg;
+        out_msg.data = output.str();
+
+        timingPub_.publish(out_msg);      
+
+      }
+      
 
     }
 
 
     ros::Subscriber subSonarImage_;
-    ros::Publisher pub_, rectPub_, oldPub_;
+    ros::Publisher pub_, rectPub_, oldPub_, timingPub_;
 
     int _height, _width, _pixPerRangeBin;
     float _maxRange;
-    bool _publishOldApi;
+    bool _publishOldApi, _publishTiming;
 
     std::unique_ptr< sonar_image_proc::SonarColorMap > _colorMap;
 };
