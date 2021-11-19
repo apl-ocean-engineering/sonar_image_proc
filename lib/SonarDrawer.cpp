@@ -120,9 +120,7 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
   }
 
   // Save metadata
-  _mapF = newmap;
-
-  cv::convertMaps(_mapF, cv::Mat(), _scMap1, _scMap2, CV_16SC2);
+  cv::convertMaps(newmap, cv::Mat(), _scMap1, _scMap2, CV_16SC2);
 
   _numRanges = ping.nRanges();
   _numAzimuth = ping.nBearings();

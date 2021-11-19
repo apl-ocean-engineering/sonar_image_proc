@@ -59,7 +59,7 @@ class SonarDrawer {
         bool isValid(const sonar_image_proc::AbstractSonarInterface &ping) const;
 
      private:
-        cv::Mat _mapF, _scMap1, _scMap2;
+        cv::Mat _scMap1, _scMap2;
 
         // Meta-information to validate map
         std::pair<float, float> _rangeBounds, _azimuthBounds;
