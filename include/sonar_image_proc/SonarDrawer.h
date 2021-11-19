@@ -51,13 +51,15 @@ class SonarDrawer {
         CachedMap()
             {;}
 
-        cv::Mat operator()(const sonar_image_proc::AbstractSonarInterface &ping);
+        typedef std::pair<cv::Mat,cv::Mat> MapPair;
+
+        MapPair operator()(const sonar_image_proc::AbstractSonarInterface &ping);
         void create(const sonar_image_proc::AbstractSonarInterface &ping);
 
-        bool isValid(const sonar_image_proc::AbstractSonarInterface &ping);
+        bool isValid(const sonar_image_proc::AbstractSonarInterface &ping) const;
 
      private:
-        cv::Mat _mapF;
+        cv::Mat _mapF, _scMap1, _scMap2;
 
         // Meta-information to validate map
         std::pair<float, float> _rangeBounds, _azimuthBounds;

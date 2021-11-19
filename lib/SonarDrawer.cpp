@@ -52,7 +52,8 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
   if (rect.empty())
       drawSonarRectImage(ping, rectImage, colorMap);
 
-  cv::remap(rect, img, _map(ping), cv::Mat(),
+    const CachedMap::MapPair maps(_map(ping));
+  cv::remap(rect, img, maps.first, maps.second,
             cv::INTER_CUBIC, cv::BORDER_CONSTANT, 
             cv::Scalar(0, 0, 0));
 }
@@ -61,10 +62,11 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
 
 // ==== SonarDrawer::CachedMap ====
 
-cv::Mat SonarDrawer::CachedMap::operator()(const sonar_image_proc::AbstractSonarInterface &ping) {
+SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(const sonar_image_proc::AbstractSonarInterface &ping) {
+    // Break const to update the cache
     if (!isValid(ping)) create(ping);
 
-    return _mapF;
+    return std::make_pair(_scMap1,_scMap2);
 }
 
 
@@ -120,6 +122,8 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
   // Save metadata
   _mapF = newmap;
 
+  cv::convertMaps(_mapF, cv::Mat(), _scMap1, _scMap2, CV_16SC2);
+
   _numRanges = ping.nRanges();
   _numAzimuth = ping.nBearings();
 
@@ -127,8 +131,8 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
   _azimuthBounds = ping.azimuthBounds();
 }
 
-bool SonarDrawer::CachedMap::isValid(const sonar_image_proc::AbstractSonarInterface &ping) {
-    if (_mapF.empty()) return false;
+bool SonarDrawer::CachedMap::isValid(const sonar_image_proc::AbstractSonarInterface &ping) const {
+    if (_scMap1.empty() || _scMap2.empty()) return false;
 
     // Check for cache invalidation...
     if ((_numAzimuth != ping.nAzimuth()) ||
