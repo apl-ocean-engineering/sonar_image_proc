@@ -92,10 +92,27 @@ public:
 
       pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
       rectPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_rect", 10);
+      oldPub_ = nh.advertise<sensor_msgs::Image>("old_drawn_sonar", 10);
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
       SonarImageMsgInterface interface(msg);
+
+       {
+        cv::Size sz = sonar_image_proc::calculateImageSize(interface,
+                                                  cv::Size(_width, _height),
+                                                  _pixPerRangeBin, _maxRange);
+        cv::Mat mat(sz, CV_8UC3);
+        sonar_image_proc::drawSonar(interface, mat, *_colorMap, _maxRange);
+
+        cv_bridge::CvImage img_bridge(msg->header,
+                                      sensor_msgs::image_encodings::RGB8,
+                                      mat);
+
+        sensor_msgs::Image output_msg;
+        img_bridge.toImageMsg(output_msg);
+        oldPub_.publish(output_msg);
+      }
 
       {
         cv::Mat mat;
@@ -129,7 +146,7 @@ public:
 
 
     ros::Subscriber subSonarImage_;
-    ros::Publisher pub_, rectPub_;
+    ros::Publisher pub_, rectPub_, oldPub_;
 
     int _height, _width, _pixPerRangeBin;
     float _maxRange;

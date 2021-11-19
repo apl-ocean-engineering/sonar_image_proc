@@ -197,6 +197,7 @@ void drawSonarRemap(const sonar_image_proc::AbstractSonarInterface &ping,
       // Map is
       //
       //  dst = src( mapx(x,y), mapy(x,y) )
+      //
       float xp, yp;
 
       // Calculate range and bearing of this pixel from origin
