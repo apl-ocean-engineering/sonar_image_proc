@@ -8,10 +8,35 @@
 #include <opencv2/core/core.hpp>
 
 #include "sonar_image_proc/ColorMaps.h"
-
 #include "sonar_image_proc/AbstractSonarInterface.h"
 
 namespace sonar_image_proc {
+
+void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+                    cv::Mat &image,
+                    const SonarColorMap &colorMap = InfernoColorMap());
+
+// Maps the sonar ping to an RGB image.
+// rectImage is reshaped to be numRanges rows x numBearings columns
+//
+// If rectImage is either 8UC3 or 32FC3, it retains that type, otherwise
+// rectImage is converted to 8UC3
+//
+// Cell (0,0) is the color mapping of the data with the smallest range and
+// smallest (typically, most negative) bearing in the ping.
+//
+// Cell (nRange,0) is the data at the max range, most negative bearing
+//
+// Cell (nRange,nBearing) is the data at the max range, most positive bearing
+//
+void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
+                    cv::Mat &rectImage,
+                    const SonarColorMap &colorMap = InfernoColorMap());
+
+
+namespace old_api {
+
+// === Old / Legacy API below ===
 
 // Given an sonar image, calculates the bounding rectangle required to
 // draw it.   Assumes zero range (the point of the fan) occurs on the
@@ -30,18 +55,10 @@ cv::Size calculateImageSize(const sonar_image_proc::AbstractSonarInterface &ping
                             float maxRange = -1.0);
 
 void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
-                            cv::Mat &mat,
-                            const SonarColorMap &colorMap = InfernoColorMap(),
-                            float maxRange = -1.0);
+                    cv::Mat &mat,
+                    const SonarColorMap &colorMap = InfernoColorMap(),
+                    float maxRange = -1.0);
 
-void drawSonarRect(const sonar_image_proc::AbstractSonarInterface &ping,
-                            cv::Mat &rectImage,
-                            const SonarColorMap &colorMap = InfernoColorMap(),
-                            float maxRange = -1.0);
-
-void drawSonarRemap(const sonar_image_proc::AbstractSonarInterface &ping,
-                            cv::Mat &image,
-                            const SonarColorMap &colorMap = InfernoColorMap(),
-                            float maxRange = -1.0);
+}
 
 }  // namespace sonar_image_proc

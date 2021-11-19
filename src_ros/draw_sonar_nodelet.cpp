@@ -84,6 +84,8 @@ public:
       pnh.param<int>("pix_per_range_bin", _pixPerRangeBin, 2);
       pnh.param<float>("max_range", _maxRange, 0.0);
 
+      pnh.param<bool>("publish_old", _publishOldApi, true);
+
       if (_maxRange > 0.0) {
         NODELET_INFO_STREAM("Only drawing to max range " << _maxRange);
       }
@@ -92,18 +94,20 @@ public:
 
       pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
       rectPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_rect", 10);
-      oldPub_ = nh.advertise<sensor_msgs::Image>("old_drawn_sonar", 10);
+
+      if (_publishOldApi)
+        oldPub_ = nh.advertise<sensor_msgs::Image>("old_drawn_sonar", 10);
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
       SonarImageMsgInterface interface(msg);
 
-       {
-        cv::Size sz = sonar_image_proc::calculateImageSize(interface,
+      if (_publishOldApi) {
+        cv::Size sz = sonar_image_proc::old_api::calculateImageSize(interface,
                                                   cv::Size(_width, _height),
                                                   _pixPerRangeBin, _maxRange);
         cv::Mat mat(sz, CV_8UC3);
-        sonar_image_proc::drawSonar(interface, mat, *_colorMap, _maxRange);
+        sonar_image_proc::old_api::drawSonar(interface, mat, *_colorMap, _maxRange);
 
         cv_bridge::CvImage img_bridge(msg->header,
                                       sensor_msgs::image_encodings::RGB8,
@@ -116,7 +120,7 @@ public:
 
       {
         cv::Mat mat;
-        sonar_image_proc::drawSonarRemap(interface, mat, *_colorMap, _maxRange);
+        sonar_image_proc::drawSonar(interface, mat, *_colorMap);
 
         cv_bridge::CvImage img_bridge(msg->header,
                                       sensor_msgs::image_encodings::RGB8,
@@ -131,7 +135,7 @@ public:
 
       {
         cv::Mat rectMat;
-        sonar_image_proc::drawSonarRect(interface, rectMat, *_colorMap, _maxRange);
+        sonar_image_proc::drawSonarRectImage(interface, rectMat, *_colorMap);
 
         cv_bridge::CvImage img_bridge(msg->header,
                                       sensor_msgs::image_encodings::RGB8,
@@ -150,6 +154,7 @@ public:
 
     int _height, _width, _pixPerRangeBin;
     float _maxRange;
+    bool _publishOldApi;
 
     std::unique_ptr< sonar_image_proc::SonarColorMap > _colorMap;
 };

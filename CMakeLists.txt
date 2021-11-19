@@ -77,7 +77,9 @@ else()
  )
 
   file(GLOB sonar_image_proc_SRCS
-   	  lib/*.cpp
+   	  lib/ColorMaps.cpp
+      lib/DrawSonar.cpp
+      lib/OldDrawSonar.cpp
   )
 
   # "true" library containing core functionality
