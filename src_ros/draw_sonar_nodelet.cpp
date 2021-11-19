@@ -103,14 +103,13 @@ public:
         oldPub_ = nh.advertise<sensor_msgs::Image>("old_drawn_sonar", 10);
 
       if (_publishTiming)
-        timingPub_ = nh.advertise<std_msgs::String>("timing",10);
+        timingPub_ = nh.advertise<std_msgs::String>("sonar_image_proc_timing",10);
     }
 
 
     void cvBridgeAndPublish(const acoustic_msgs::SonarImage::ConstPtr &msg,
                               const cv::Mat &mat,
-                              ros::Publisher &pub )
-    {
+                              ros::Publisher &pub) {
         cv_bridge::CvImage img_bridge(msg->header,
                                       sensor_msgs::image_encodings::RGB8,
                                       mat);
@@ -142,23 +141,17 @@ public:
       {
         ros::WallTime begin = ros::WallTime::now();
 
-        cv::Mat mat;
-        sonar_image_proc::drawSonar(interface, mat, *_colorMap);
-        cvBridgeAndPublish(msg, mat, pub_);
-
-        drawElapsed = ros::WallTime::now() - begin;
-      }
-
-
-
-      {
-        ros::WallTime begin = ros::WallTime::now();
-
         cv::Mat rectMat;
         sonar_image_proc::drawSonarRectImage(interface, rectMat, *_colorMap);
         cvBridgeAndPublish(msg, rectMat, rectPub_);
-        
+
         rectElapsed = ros::WallTime::now() - begin;
+
+        cv::Mat mat;
+        sonar_image_proc::drawSonar(interface, mat, *_colorMap, rectMat);
+        cvBridgeAndPublish(msg, mat, pub_);
+
+        drawElapsed = ros::WallTime::now() - begin;
       }
 
       if (_publishTiming) {
@@ -167,7 +160,7 @@ public:
         output << "{\n";
         output << "\"draw\" : " << drawElapsed.toSec() << "\n";
         output << "\"rect\" : " << rectElapsed.toSec() << "\n";
-        if (_publishOldApi) 
+        if (_publishOldApi)
           output << "\"old_api\" : " << oldApiElapsed.toSec() << "\n";
 
         output << "}";
@@ -175,7 +168,7 @@ public:
         std_msgs::String out_msg;
         out_msg.data = output.str();
 
-        timingPub_.publish(out_msg);      
+        timingPub_.publish(out_msg);
 
       }
       

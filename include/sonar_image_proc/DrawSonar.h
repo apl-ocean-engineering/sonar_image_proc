@@ -14,7 +14,8 @@ namespace sonar_image_proc {
 
 void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                     cv::Mat &image,
-                    const SonarColorMap &colorMap = InfernoColorMap());
+                    const SonarColorMap &colorMap = InfernoColorMap(),
+                    const cv::Mat &rectImage = cv::Mat());
 
 // Maps the sonar ping to an RGB image.
 // rectImage is reshaped to be numRanges rows x numBearings columns

@@ -40,10 +40,13 @@ void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
 
 void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                     cv::Mat &img,
-                    const SonarColorMap &colorMap) {
+                    const SonarColorMap &colorMap,
+                    const cv::Mat &rect) {
 
-  cv::Mat rect;
-  drawSonarRectImage(ping, rect, colorMap);
+  cv::Mat rectImage(rect);
+
+  if (rect.empty())
+      drawSonarRectImage(ping, rectImage, colorMap);
 
   const int nRanges = ping.nRanges();
 
