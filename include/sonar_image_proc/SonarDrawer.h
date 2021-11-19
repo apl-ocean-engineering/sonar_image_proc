@@ -37,13 +37,32 @@ class SonarDrawer {
     //
     // Cell (nRange,0) is the data at the max range, most negative bearing
     //
-    // Cell (nRange,nBearing) is the data at the max range, most positive bearing
+    // Cell (nRange,nBearing) is the data at the max range, most positive
+    // bearing
     //
     void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
                         cv::Mat &rectImage,
                         const SonarColorMap &colorMap = InfernoColorMap());
 
  private:
+
+    struct CachedMap {
+     public:
+        CachedMap()
+            {;}
+
+        cv::Mat operator()(const sonar_image_proc::AbstractSonarInterface &ping);
+        void create(const sonar_image_proc::AbstractSonarInterface &ping);
+
+        bool isValid(const sonar_image_proc::AbstractSonarInterface &ping);
+
+     private:
+        cv::Mat _mapF;
+
+        // Meta-information to validate map
+        std::pair<float, float> _rangeBounds, _azimuthBounds;
+        int _numRanges, _numAzimuth;
+    } _map;
 
 };
 

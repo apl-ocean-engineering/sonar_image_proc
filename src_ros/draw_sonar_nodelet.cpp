@@ -19,6 +19,7 @@
 
 #include "sonar_image_proc/ColorMaps.h"
 #include "sonar_image_proc/DrawSonar.h"
+#include "sonar_image_proc/SonarDrawer.h"
 
 #include "sonar_image_proc/AbstractSonarInterface.h"
 
@@ -142,13 +143,13 @@ public:
         ros::WallTime begin = ros::WallTime::now();
 
         cv::Mat rectMat;
-        sonar_image_proc::drawSonarRectImage(interface, rectMat, *_colorMap);
+        _sonarDrawer.drawSonarRectImage(interface, rectMat, *_colorMap);
         cvBridgeAndPublish(msg, rectMat, rectPub_);
 
         rectElapsed = ros::WallTime::now() - begin;
 
         cv::Mat mat;
-        sonar_image_proc::drawSonar(interface, mat, *_colorMap, rectMat);
+        _sonarDrawer.drawSonar(interface, mat, *_colorMap, rectMat);
         cvBridgeAndPublish(msg, mat, pub_);
 
         drawElapsed = ros::WallTime::now() - begin;
@@ -175,6 +176,8 @@ public:
 
     ros::Subscriber subSonarImage_;
     ros::Publisher pub_, rectPub_, oldPub_, timingPub_;
+
+    sonar_image_proc::SonarDrawer _sonarDrawer;
 
     int _height, _width, _pixPerRangeBin;
     float _maxRange;

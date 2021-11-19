@@ -52,33 +52,48 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
   if (rect.empty())
       drawSonarRectImage(ping, rectImage, colorMap);
 
+  cv::remap(rect, img, _map(ping), cv::Mat(),
+            cv::INTER_CUBIC, cv::BORDER_CONSTANT, 
+            cv::Scalar(0, 0, 0));
+}
+
+
+
+// ==== SonarDrawer::CachedMap ====
+
+cv::Mat SonarDrawer::CachedMap::operator()(const sonar_image_proc::AbstractSonarInterface &ping) {
+    if (!isValid(ping)) create(ping);
+
+    return _mapF;
+}
+
+
+// Create **assumes** the structure of the rectImage:
+//   ** nBearings cols and nRanges rows
+//
+void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterface &ping) {
+    std::cerr << "Recreating map..." << std::endl;
+
+  // Create map
+  cv::Mat newmap;
+  //newmap.create(cv::Size(ping.nRanges(), ping.nBearings()), CV_32FC2);
+
   const int nRanges = ping.nRanges();
+  const auto azimuthBounds = ping.azimuthBounds();
 
-  // Find min and max bearing
-  float minBearing = std::numeric_limits<float>::max();
-  float maxBearing = -std::numeric_limits<float>::max();
-
-  for (int i = 0; i < ping.nBearings(); i++) {
-    const float b = ping.bearing(i);
-
-    if (b > maxBearing) maxBearing = b;
-    if (b < minBearing) minBearing = b;
-  }
-
-  const int minusWidth = floor(nRanges * sin(minBearing));
-  const int plusWidth = ceil(nRanges * sin(maxBearing));
+  const int minusWidth = floor(nRanges * sin(azimuthBounds.first));
+  const int plusWidth = ceil(nRanges * sin(azimuthBounds.second));
   const int width = plusWidth - minusWidth;
 
   const int originx = abs(minusWidth);
 
   const cv::Size imgSize(width,nRanges);
+  newmap.create(imgSize, CV_32FC2);
 
-  const float db = (ping.bearing(ping.nBearings()-1) - ping.bearing(0)) / ping.nBearings();
+  const float db = (azimuthBounds.second - azimuthBounds.first) / ping.nAzimuth();
 
-  // Create map
-  cv::Mat mm(imgSize, CV_32FC2);
-  for (int x=0; x<mm.cols; x++) {
-    for (int y=0; y<mm.rows; y++) {
+  for (int x=0; x<newmap.cols; x++) {
+    for (int y=0; y<newmap.rows; y++) {
       // Unoptimized version to start
 
       // Map is
@@ -89,26 +104,41 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
 
       // Calculate range and bearing of this pixel from origin
       const float dx = x-originx;
-      const float dy = mm.rows-y;
+      const float dy = newmap.rows-y;
 
-      const float range = sqrt( dx*dx + dy*dy );
-      const float azimuth = atan2(dx,dy);
+      const float range = sqrt(dx*dx + dy*dy);
+      const float azimuth = atan2(dx, dy);
 
       // yp is simply range
       xp = range;
       yp = (azimuth - ping.bearing(0))/db;
 
-      mm.at<Vec2f>( cv::Point(x,y) ) = Vec2f(xp,yp);
+      newmap.at<Vec2f>(cv::Point(x, y)) = Vec2f(xp,yp);
     }
   }
 
-  cv::remap(rect, img, mm, cv::Mat(),
-            cv::INTER_CUBIC, cv::BORDER_CONSTANT, 
-            cv::Scalar(0, 0, 0));
+  // Save metadata
+  _mapF = newmap;
 
+  _numRanges = ping.nRanges();
+  _numAzimuth = ping.nBearings();
 
-
+  _rangeBounds = ping.rangeBounds();
+  _azimuthBounds = ping.azimuthBounds();
 }
+
+bool SonarDrawer::CachedMap::isValid(const sonar_image_proc::AbstractSonarInterface &ping) {
+    if (_mapF.empty()) return false;
+
+    // Check for cache invalidation...
+    if ((_numAzimuth != ping.nAzimuth()) ||
+        (_numRanges != ping.nRanges()) ||
+        (_rangeBounds != ping.rangeBounds() ||
+        (_azimuthBounds != ping.azimuthBounds()))) return false;
+
+    return true;
+}
+
 
 
 }  // namespace sonar_image_proc
