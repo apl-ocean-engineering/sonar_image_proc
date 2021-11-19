@@ -65,10 +65,10 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
 
 
 class DrawSonarNodelet : public nodelet::Nodelet {
-public:
+ public:
     DrawSonarNodelet()
       : Nodelet(),
-        _height(0), _width(0), _pixPerRangeBin(2), _maxRange(0.0),
+        _maxRange(0.0),
         _colorMap( new sonar_image_proc::InfernoColorMap )
     {;}
 
@@ -80,9 +80,6 @@ public:
       ros::NodeHandle nh = getMTNodeHandle();
       ros::NodeHandle pnh = getMTPrivateNodeHandle();
 
-      pnh.param<int>("width", _width, 0);
-      pnh.param<int>("height", _height, 0);
-      pnh.param<int>("pix_per_range_bin", _pixPerRangeBin, 2);
       pnh.param<float>("max_range", _maxRange, 0.0);
 
       pnh.param<bool>("publish_old", _publishOldApi, true);
@@ -125,9 +122,11 @@ public:
       if (_publishOldApi) {
         ros::WallTime begin = ros::WallTime::now();
 
+      const int pixPerRangeBin = 2;   // Used to be a configurable parameter, but now
+                                      // only meaningful in the deprecated API
         cv::Size sz = sonar_image_proc::old_api::calculateImageSize(interface,
-                                                  cv::Size(_width, _height),
-                                                  _pixPerRangeBin, _maxRange);
+                                                  cv::Size(0, 0), pixPerRangeBin,
+                                                  _maxRange);
         cv::Mat mat(sz, CV_8UC3);
         sonar_image_proc::old_api::drawSonar(interface, mat, *_colorMap, _maxRange);
 
@@ -176,7 +175,6 @@ public:
 
     sonar_image_proc::SonarDrawer _sonarDrawer;
 
-    int _height, _width, _pixPerRangeBin;
     float _maxRange;
     bool _publishOldApi, _publishTiming;
 

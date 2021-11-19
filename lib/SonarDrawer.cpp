@@ -16,6 +16,7 @@ void SonarDrawer::drawSonarRectImage(const sonar_image_proc::AbstractSonarInterf
                         cv::Mat &rect,
                         const SonarColorMap &colorMap) {
     const cv::Size imgSize(ping.nRanges(), ping.nBearings());
+
     if ((rect.type() == CV_8UC3) || (rect.type() == CV_32FC2)) {
         rect.create(imgSize, rect.type());
     } else {
@@ -23,15 +24,15 @@ void SonarDrawer::drawSonarRectImage(const sonar_image_proc::AbstractSonarInterf
     }
 
     for (int r = 0; r < ping.nRanges(); r++) {
-    for (int b = 0; b < ping.nBearings(); b++) {
-        if (rect.type() == CV_8UC3) {
-            rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3b>(ping, b, r);
-        } else if (rect.type() == CV_32FC3) {
-            rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3f>(ping, b, r);
-        } else {
-            assert("Should never get here.");
+        for (int b = 0; b < ping.nBearings(); b++) {
+            if (rect.type() == CV_8UC3) {
+                rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3b>(ping, b, r);
+            } else if (rect.type() == CV_32FC3) {
+                rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3f>(ping, b, r);
+            } else {
+                assert("Should never get here.");
+            }
         }
-    }
     }
 }
 
@@ -60,7 +61,7 @@ SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(const sonar_i
 }
 
 
-// Create **assumes** the structure of the rectImage:
+//  **assumes** the structure of the rectImage:
 //   ** It has nBearings cols and nRanges rows
 //
 void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterface &ping) {
@@ -82,7 +83,7 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
 
   for (int x=0; x < newmap.cols; x++) {
     for (int y=0; y < newmap.rows; y++) {
-      // Map is
+      // For cv::remap, a map is
       //
       //  dst = src( mapx(x,y), mapy(x,y) )
       //

@@ -19,8 +19,6 @@ AbstractSonarInterface::Bounds_t AbstractSonarInterface::azimuthBounds() const {
     return _azimuthBounds;
 }
 
-
-
 AbstractSonarInterface::Bounds_t AbstractSonarInterface::rangeBounds() const {
     if (_rangeBounds == UnsetBounds) {
         auto results = std::minmax_element(ranges().begin(), ranges().end());
