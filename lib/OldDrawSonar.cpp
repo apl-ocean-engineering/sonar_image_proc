@@ -48,7 +48,7 @@ cv::Size calculateImageSize(const AbstractSonarInterface &ping,
   if (w % 2) w++;
   if (h % 2) h++;
 
-  return Size(w,h);
+  return Size(w, h);
 }
 
 void drawSonar(const AbstractSonarInterface &ping,
@@ -57,7 +57,7 @@ void drawSonar(const AbstractSonarInterface &ping,
                 float maxRange) {
   // Ensure mat is 8UC3;
   mat.create(mat.size(), CV_8UC3);
-  mat.setTo(cv::Vec3b(0,0,0));
+  mat.setTo(cv::Vec3b(0, 0, 0));
 
   const int nRanges = ping.nRanges();
   const int nBeams = ping.nBearings();
@@ -114,7 +114,7 @@ void drawSonar(const AbstractSonarInterface &ping,
   }
 
   for (int r = 0; r < nRanges; ++r) {
-    if(ping.range(r) > rangeMax) continue;
+    if (ping.range(r) > rangeMax) continue;
 
     for ( int b = 0; b < nBeams; ++b ) {
       const float range = ping.range(r);

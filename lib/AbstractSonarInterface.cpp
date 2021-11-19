@@ -7,7 +7,7 @@
 
 namespace sonar_image_proc {
 
-const std::pair<float, float> AbstractSonarInterface::UnsetPair = std::pair<float,float>(-1, -1);
+const std::pair<float, float> AbstractSonarInterface::UnsetPair = std::pair<float, float>(-1, -1);
 
 
 std::pair<float, float> AbstractSonarInterface::azimuthBounds() const {

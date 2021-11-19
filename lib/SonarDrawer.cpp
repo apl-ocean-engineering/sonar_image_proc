@@ -9,10 +9,6 @@
 
 namespace sonar_image_proc {
 
-using namespace std;
-using namespace cv;
-
-
 SonarDrawer::SonarDrawer()
 {;}
 
@@ -32,9 +28,9 @@ void SonarDrawer::drawSonarRectImage(const sonar_image_proc::AbstractSonarInterf
     for (int b = 0; b < ping.nBearings(); b++) {
 
         if (rect.type() == CV_8UC3) {
-            rect.at<Vec3b>(cv::Point(r, b)) = colorMap.lookup<Vec3b>(ping, b, r);
+            rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3b>(ping, b, r);
         } else if (rect.type() == CV_32FC3) {
-            rect.at<Vec3f>(cv::Point(r, b)) = colorMap.lookup<Vec3f>(ping, b, r);
+            rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3f>(ping, b, r);
         } else {
             assert("Should never get here.");
         }
@@ -46,7 +42,6 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
                     cv::Mat &img,
                     const SonarColorMap &colorMap,
                     const cv::Mat &rect) {
-
   cv::Mat rectImage(rect);
 
   if (rect.empty())
@@ -54,7 +49,7 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
 
     const CachedMap::MapPair maps(_map(ping));
   cv::remap(rect, img, maps.first, maps.second,
-            cv::INTER_CUBIC, cv::BORDER_CONSTANT, 
+            cv::INTER_CUBIC, cv::BORDER_CONSTANT,
             cv::Scalar(0, 0, 0));
 }
 
@@ -66,19 +61,15 @@ SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(const sonar_i
     // Break const to update the cache
     if (!isValid(ping)) create(ping);
 
-    return std::make_pair(_scMap1,_scMap2);
+    return std::make_pair(_scMap1, _scMap2);
 }
 
 
 // Create **assumes** the structure of the rectImage:
-//   ** nBearings cols and nRanges rows
+//   ** It has nBearings cols and nRanges rows
 //
 void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterface &ping) {
-    std::cerr << "Recreating map..." << std::endl;
-
-  // Create map
   cv::Mat newmap;
-  //newmap.create(cv::Size(ping.nRanges(), ping.nBearings()), CV_32FC2);
 
   const int nRanges = ping.nRanges();
   const auto azimuthBounds = ping.azimuthBounds();
@@ -89,13 +80,13 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
 
   const int originx = abs(minusWidth);
 
-  const cv::Size imgSize(width,nRanges);
+  const cv::Size imgSize(width, nRanges);
   newmap.create(imgSize, CV_32FC2);
 
   const float db = (azimuthBounds.second - azimuthBounds.first) / ping.nAzimuth();
 
-  for (int x=0; x<newmap.cols; x++) {
-    for (int y=0; y<newmap.rows; y++) {
+  for (int x=0; x < newmap.cols; x++) {
+    for (int y=0; y < newmap.rows; y++) {
       // Unoptimized version to start
 
       // Map is
@@ -115,7 +106,7 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
       xp = range;
       yp = (azimuth - ping.bearing(0))/db;
 
-      newmap.at<Vec2f>(cv::Point(x, y)) = Vec2f(xp,yp);
+      newmap.at<cv::Vec2f>(cv::Point(x, y)) = cv::Vec2f(xp, yp);
     }
   }
 
