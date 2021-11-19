@@ -78,7 +78,7 @@ else()
 
   file(GLOB sonar_image_proc_SRCS
    	  lib/ColorMaps.cpp
-      lib/DrawSonar.cpp
+      lib/SonarDrawer.cpp
       lib/OldDrawSonar.cpp
   )
 

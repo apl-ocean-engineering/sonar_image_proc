@@ -1,5 +1,10 @@
 // Copyright 2021 University of Washington Applied Physics Laboratory
 //
+// This file contains the "functional" API.  These are really just
+// thin wrappers around a single-use instance of SonarDrawer
+//
+// See SonarDrawer.h for a class-based API (which is more efficients)
+// as it can store and reuse intermediate results
 
 #pragma once
 
@@ -7,15 +12,19 @@
 
 #include <opencv2/core/core.hpp>
 
+#include "sonar_image_proc/SonarDrawer.h"
 #include "sonar_image_proc/ColorMaps.h"
 #include "sonar_image_proc/AbstractSonarInterface.h"
 
 namespace sonar_image_proc {
 
-void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+inline void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                     cv::Mat &image,
                     const SonarColorMap &colorMap = InfernoColorMap(),
-                    const cv::Mat &rectImage = cv::Mat());
+                    const cv::Mat &rectImage = cv::Mat()) {
+    SonarDrawer drawer;
+    drawer.drawSonar(ping, image, colorMap, rectImage);
+}
 
 // Maps the sonar ping to an RGB image.
 // rectImage is reshaped to be numRanges rows x numBearings columns
@@ -30,9 +39,12 @@ void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
 //
 // Cell (nRange,nBearing) is the data at the max range, most positive bearing
 //
-void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
+inline void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
                     cv::Mat &rectImage,
-                    const SonarColorMap &colorMap = InfernoColorMap());
+                    const SonarColorMap &colorMap = InfernoColorMap()) {
+    SonarDrawer drawer;
+    drawer.drawSonarRectImage(ping, rectImage, colorMap);
+}
 
 
 namespace old_api {

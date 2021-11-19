@@ -12,7 +12,11 @@ namespace sonar_image_proc {
 using namespace std;
 using namespace cv;
 
-void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
+
+SonarDrawer::SonarDrawer()
+{;}
+
+void SonarDrawer::drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
                         cv::Mat &rect,
                         const SonarColorMap &colorMap) {
     if ((rect.type() == CV_8UC3) || (rect.type() == CV_32FC2)) {
@@ -38,7 +42,7 @@ void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
     }
 }
 
-void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                     cv::Mat &img,
                     const SonarColorMap &colorMap,
                     const cv::Mat &rect) {

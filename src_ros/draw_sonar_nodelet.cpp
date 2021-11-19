@@ -169,10 +169,7 @@ public:
         out_msg.data = output.str();
 
         timingPub_.publish(out_msg);
-
       }
-      
-
     }
 
 
