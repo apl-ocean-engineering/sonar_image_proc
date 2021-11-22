@@ -9,6 +9,7 @@
 
 namespace sonar_image_proc {
 
+// \todo.  Are these used anymore?
 struct SonarPoint {
   SonarPoint(float _x, float _z) : x(_x), z(_z) { ; }
   float x;

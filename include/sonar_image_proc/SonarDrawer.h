@@ -1,9 +1,9 @@
 // Copyright 2021 University of Washington Applied Physics Laboratory
 //
-// This file contains the "functional" API.
+// This file contains the class-based API (which is more efficient)
+// as it can store and reuse intermediate results.
 //
-// See SonarDrawer.h for a class-based API (which is more efficients)
-// as it can store and reuse intermediate results
+// See "DrawSonar.h" for the function-based API
 
 #pragma once
 
@@ -45,27 +45,30 @@ class SonarDrawer {
                         const SonarColorMap &colorMap = InfernoColorMap());
 
  private:
-
+   // Utility class which can generate and store the two cv::Mats 
+   // required for the cv::remap() function
+   //
+   // Also stores meta-information to determine if the map is
+   // invalid and needs to be regenerated.
     struct CachedMap {
      public:
         CachedMap()
             {;}
 
-        typedef std::pair<cv::Mat,cv::Mat> MapPair;
+        typedef std::pair<cv::Mat, cv::Mat> MapPair;
 
         MapPair operator()(const sonar_image_proc::AbstractSonarInterface &ping);
-        void create(const sonar_image_proc::AbstractSonarInterface &ping);
-
-        bool isValid(const sonar_image_proc::AbstractSonarInterface &ping) const;
 
      private:
+        void create(const sonar_image_proc::AbstractSonarInterface &ping);
+        bool isValid(const sonar_image_proc::AbstractSonarInterface &ping) const;
+
         cv::Mat _scMap1, _scMap2;
 
         // Meta-information to validate map
         std::pair<float, float> _rangeBounds, _azimuthBounds;
         int _numRanges, _numAzimuth;
     } _map;
-
 };
 
 }  // namespace sonar_image_proc
