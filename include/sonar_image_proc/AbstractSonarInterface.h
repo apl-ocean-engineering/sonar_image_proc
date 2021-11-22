@@ -30,8 +30,8 @@ struct AbstractSonarInterface {
   int nBearings() const       { return azimuths().size(); }
   float bearing(int n) const  { return azimuths().at(n);  }
 
-  int nAzimuth() const       { return azimuths().size(); }
-  float azimuth(int n) const { return azimuths().at(n); }
+  int nAzimuth() const        { return azimuths().size(); }
+  float azimuth(int n) const  { return azimuths().at(n); }
 
   Bounds_t azimuthBounds() const;
 

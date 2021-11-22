@@ -25,7 +25,7 @@ struct SonarColorMap {
     tp lookup(float bearing,
                             float range,
                             uint8_t intensity) const {
-        return tp(scalarLookup(bearing,range,intensity));
+      return tp(scalarLookup(bearing,range,intensity));
     }
 
     // Overload which works on the ping type directly
@@ -33,9 +33,9 @@ struct SonarColorMap {
     template <typename tp>
     tp lookup(const sonar_image_proc::AbstractSonarInterface &ping,
                             int bearing_idx, int range_idx) const {
-    return lookup<tp>(ping.bearing(bearing_idx),
-                        ping.range(range_idx),
-                        ping.intensity(bearing_idx, range_idx));
+      return lookup<tp>(ping.bearing(bearing_idx),
+                          ping.range(range_idx),
+                          ping.intensity(bearing_idx, range_idx));
     }
 
 };
@@ -60,11 +60,7 @@ inline cv::Vec3f SonarColorMap::lookup(float bearing,
     return cv::Vec3f(result[0], result[1], result[2]);
 }
 
-
-
-
 //=== Implementations of specific color maps ===
-
 
 struct MitchellColorMap : public SonarColorMap {
   virtual cv::Scalar scalarLookup(float bearing,
@@ -88,9 +84,9 @@ struct InfernoColorMap : public SonarColorMap {
   virtual Scalar scalarLookup(float bearing,
                             float range,
                             uint8_t intensity) const {
-    return Scalar( _inferno_data[intensity][0],
-                    _inferno_data[intensity][1],
-                    _inferno_data[intensity][2]);
+    return Scalar(_inferno_data[intensity][0],
+                  _inferno_data[intensity][1],
+                  _inferno_data[intensity][2]);
   }
 };
 
