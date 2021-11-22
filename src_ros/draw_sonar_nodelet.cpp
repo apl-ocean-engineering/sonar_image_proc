@@ -23,45 +23,14 @@
 
 #include "sonar_image_proc/AbstractSonarInterface.h"
 
+#include "sonar_image_msg_interface.h"
+
 // Subscribes to sonar message topic, draws using opencv then publishes result
 
 namespace draw_sonar {
 
 using namespace std;
 using namespace cv;
-
-struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface {
-    explicit SonarImageMsgInterface(const acoustic_msgs::SonarImage::ConstPtr &ping)
-      : _ping(ping) {;}
-
-    const std::vector<float> &ranges() const override { return _ping->ranges; }
-    const std::vector<float> &azimuths() const override { return _ping->azimuth_angles; }
-
- protected:
-    virtual uint8_t intensity(int i) const override {
-      if (_ping->data_size == 1) {
-        return _ping->intensities[i];
-      } else if (_ping->data_size == 2) {
-        uint16_t d;
-
-        if (_ping->is_bigendian)
-          d = (_ping->intensities[i * 2] << 8) | _ping->intensities[i * 2 + 1];
-        else
-          d = (_ping->intensities[i * 2 + 1] << 8) | _ping->intensities[i * 2];
-
-        // Hacky
-        const int shift = 6;
-        if (d >= (0x1 << (shift+8))) return 0xFF;
-
-        return (d >> shift);
-      } else {
-        ROS_ERROR_STREAM("SonarImage has unsupported data_size = " << _ping->data_size);
-        return 0;
-      }
-    }
-
-    acoustic_msgs::SonarImage::ConstPtr _ping;
-};
 
 
 class DrawSonarNodelet : public nodelet::Nodelet {
@@ -82,7 +51,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
 
       pnh.param<float>("max_range", _maxRange, 0.0);
 
-      pnh.param<bool>("publish_old", _publishOldApi, true);
+      pnh.param<bool>("publish_old", _publishOldApi, false);
       pnh.param<bool>("publish_timing", _publishTiming, true);
 
       if (_maxRange > 0.0) {
@@ -154,13 +123,13 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       if (_publishTiming) {
         ostringstream output;
 
-        output << "{\n";
-        output << "\"draw\" : " << drawElapsed.toSec() << "\n";
-        output << "\"rect\" : " << rectElapsed.toSec() << "\n";
+        output << "{";
+        output << "\n\"draw\" : " << drawElapsed.toSec();
+        output << ",\n\"rect\" : " << rectElapsed.toSec();
         if (_publishOldApi)
-          output << "\"old_api\" : " << oldApiElapsed.toSec() << "\n";
+          output << ",\n\"old_api\" : " << oldApiElapsed.toSec();
 
-        output << "}";
+        output << "\n}";
 
         std_msgs::String out_msg;
         out_msg.data = output.str();
