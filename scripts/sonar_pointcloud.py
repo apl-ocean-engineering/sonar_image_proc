@@ -7,7 +7,7 @@ import time
 from matplotlib import cm
 import numpy as np
 
-from imaging_sonar_msgs.msg import SonarImage
+from acoustic_msgs.msg import SonarImage
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 
@@ -122,7 +122,7 @@ class SonarTranslator(object):
         rospy.logdebug("published pointcloud: npts = {}, dt0 = {:0.3f}, dt1 = {:0.3f}".format(npts, dt0, dt1))
 
 if __name__ == "__main__":
-    rospy.init_node("sonar_translator")
+    rospy.init_node("sonar_pointcloud")
 
     translator = SonarTranslator()
     rospy.spin()
