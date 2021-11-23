@@ -120,6 +120,10 @@ else()
       FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
       PATTERN ".git" EXCLUDE)
 
+  catkin_install_python(PROGRAMS
+    scripts/sonar_pointcloud.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  )
 
   ## Disable python wrapper for now ...
   #
