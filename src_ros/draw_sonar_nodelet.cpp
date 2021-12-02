@@ -107,9 +107,14 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       {
         ros::WallTime begin = ros::WallTime::now();
 
-        cv::Mat rectMat;
+        cv::Mat rectMat, rotatedRect;
         _sonarDrawer.drawSonarRectImage(interface, rectMat, *_colorMap);
-        cvBridgeAndPublish(msg, rectMat, rectPub_);
+
+        // Rotate rectangular image to the more expected format where zero range
+        // is at the bottom of the image, with negative azimuth to the right 
+        // aka (rotated 90 degrees CCW)
+        cv::rotate(rectMat, rotatedRect, cv::ROTATE_90_COUNTERCLOCKWISE);
+        cvBridgeAndPublish(msg, rotatedRect, rectPub_);
 
         rectElapsed = ros::WallTime::now() - begin;
 
