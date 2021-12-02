@@ -7,55 +7,64 @@
 #include <math.h>
 #include <vector>
 #include <limits>
+#include <utility>
 
 namespace sonar_image_proc {
 
 // Abstract class strictly for drawing sonar images
 // Designed as a "common type" between SimplePingResults and ROS ImagingSonarMsg
 struct AbstractSonarInterface {
+  typedef std::pair<float, float> Bounds_t;
+
+  static const Bounds_t UnsetBounds;
+
   AbstractSonarInterface()
-    : _minRange(-1), _maxRange(-1)
+    : _rangeBounds(UnsetBounds), _azimuthBounds(UnsetBounds)
     {;}
 
-  virtual int nBearings() const = 0;
+  //
+  // azimuths are in **radians**
+  //
+  virtual const std::vector<float> &azimuths() const = 0;
 
-  // bearing is in __radians__
-  virtual float bearing(int n) const = 0;
+  int nBearings() const       { return azimuths().size(); }
+  float bearing(int n) const  { return azimuths().at(n);  }
 
-  virtual int nRanges() const = 0;
-  virtual float range(int n) const = 0;
+  int nAzimuth() const        { return azimuths().size(); }
+  float azimuth(int n) const  { return azimuths().at(n); }
 
-  float minRange() const {
-    if (_minRange > 0.0) return _minRange;
+  Bounds_t azimuthBounds() const;
 
-    _minRange = std::numeric_limits<float>::max();
+  float minAzimuth() const { return azimuthBounds().first; }
+  float maxAzimuth() const { return azimuthBounds().second; }
 
-    // Ah, wish I had iterators
-    for (int i = 0; i < nRanges(); i++) {
-      if (range(i) < _minRange) _minRange = range(i);
-    }
+  //
+  // ranges are in **meters**
+  //
+  virtual const std::vector<float> &ranges() const = 0;
 
-    return _minRange;
-  }
+  int nRanges() const      { return ranges().size(); }
+  float range(int n) const { return ranges().at(n); }
 
-  float maxRange() const {
-    if (_maxRange > 0.0) return _maxRange;
+  Bounds_t rangeBounds() const;
 
-    for (int i = 0; i < nRanges(); i++) {
-      if (range(i) > _maxRange) _maxRange = range(i);
-    }
+  float minRange() const   { return rangeBounds().first; }
+  float maxRange() const   { return rangeBounds().second; }
 
-    return _maxRange;
-  }
-
-  virtual uint8_t intensity(int i) const  = 0;
-
-  // Data _must_ be bearing-major
-  uint8_t intensity(int b, int r) const
+  virtual uint8_t intensity(int b, int r) const
     { return intensity( (r * nBearings()) + b ); }
 
+ protected:
+  // I'm not hugely enamored with this API, might deprecate this
+  // and use intensity(b,r) above as the main point of entry.
+  //  i _must_ be bearing-major
+  virtual uint8_t intensity(int i) const  = 0;
+
  private:
-  mutable float _minRange, _maxRange;
+  // Since we search extensively for the bounds
+  // (rather than assuming the first and last are the bounds),
+  // cache the results
+  mutable Bounds_t _rangeBounds, _azimuthBounds;
 };
 
 }  // namespace sonar_image_proc

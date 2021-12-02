@@ -7,6 +7,6 @@ from distutils.core import setup
 setup(
     version='0.0.1',
     # scripts=['bin/myscript'],
-    packages=['image_sonar_proc'],
+    packages=['sonar_image_proc'],
     package_dir={'': 'python/'}
 )
