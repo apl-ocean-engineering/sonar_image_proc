@@ -32,9 +32,6 @@ class SonarTranslator(object):
         self.elev_step = np.radians(elev_step_deg)
         self.elevations = np.arange(self.min_elev, self.max_elev+self.elev_step, self.elev_step)
 
-        self.frame_id = rospy.get_param("~frame_id", "")
-        rospy.loginfo("Using frame: %s" % self.frame_id)
-
         # TODO: assert that this is in range of uint8? (Or, msg.data_size)
         self.intensity_threshold = rospy.get_param("~intensity_threshold", 100)
 
@@ -81,8 +78,11 @@ class SonarTranslator(object):
     def callback(self, image_msg):
         header = Header()
         header = image_msg.header
-        if self.frame_id:
-            header.frame_id = self.frame_id
+
+        # If specified, rewrite the frame in th
+        frame_id = rospy.get_param("~frame_id", None)
+        if frame_id:
+            header.frame_id = frame_id
 
         if image_msg.data_size != 1:
             raise Exception("NYI: mult-byte intensity data")
