@@ -21,10 +21,12 @@ class SonarDrawer {
  public:
     SonarDrawer();
 
-    void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
-                        cv::Mat &image,
+    // Calls drawRectSonarImage followed by remapRectSonarImage inline
+    // The intermediate rectangular image is not returned, if required,
+    // use the two functions individually...
+    cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                         const SonarColorMap &colorMap = InfernoColorMap(),
-                        const cv::Mat &rectImage = cv::Mat());
+                        const cv::Mat &image = cv::Mat(0,0,CV_8UC3));
 
     // Maps the sonar ping to an RGB image.
     // rectImage is reshaped to be numRanges rows x numBearings columns
@@ -40,9 +42,13 @@ class SonarDrawer {
     // Cell (nRange,nBearing) is the data at the max range, most positive
     // bearing
     //
-    void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
-                        cv::Mat &rectImage,
-                        const SonarColorMap &colorMap = InfernoColorMap());
+    cv::Mat drawRectSonarImage(const sonar_image_proc::AbstractSonarInterface &ping,
+                        const SonarColorMap &colorMap = InfernoColorMap(),
+                        const cv::Mat &rectImage = cv::Mat(0,0,CV_8UC3));
+
+    cv::Mat remapRectSonarImage(const sonar_image_proc::AbstractSonarInterface &ping,
+                                const cv::Mat &rectImage);
+
 
  private:
    // Utility class which can generate and store the two cv::Mats 
