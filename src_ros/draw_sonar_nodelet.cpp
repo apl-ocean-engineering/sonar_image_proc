@@ -58,7 +58,8 @@ class DrawSonarNodelet : public nodelet::Nodelet {
         NODELET_INFO_STREAM("Only drawing to max range " << _maxRange);
       }
 
-      subSonarImage_ = nh.subscribe<acoustic_msgs::SonarImage>("sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this );
+      subSonarImage_ = nh.subscribe<acoustic_msgs::SonarImage>("sonar_image",
+                            10, &DrawSonarNodelet::sonarImageCallback, this );
 
       pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
       rectPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_rect", 10);
@@ -67,7 +68,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
         oldPub_ = nh.advertise<sensor_msgs::Image>("old_drawn_sonar", 10);
 
       if (_publishTiming)
-        timingPub_ = nh.advertise<std_msgs::String>("sonar_image_proc_timing",10);
+        timingPub_ = nh.advertise<std_msgs::String>("sonar_image_proc_timing", 10);
     }
 
 
@@ -91,13 +92,15 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       if (_publishOldApi) {
         ros::WallTime begin = ros::WallTime::now();
 
-      const int pixPerRangeBin = 2;   // Used to be a configurable parameter, but now
-                                      // only meaningful in the deprecated API
+        // Used to be a configurable parameter, but now only meaningful
+        // in the deprecated API
+        const int pixPerRangeBin = 2;
+
         cv::Size sz = sonar_image_proc::old_api::calculateImageSize(interface,
                                                   cv::Size(0, 0), pixPerRangeBin,
                                                   _maxRange);
         cv::Mat mat(sz, CV_8UC3);
-        sonar_image_proc::old_api::drawSonar(interface, mat, *_colorMap, _maxRange);
+        mat = sonar_image_proc::old_api::drawSonar(interface, mat, *_colorMap, _maxRange);
 
         cvBridgeAndPublish(msg, mat, oldPub_);
 
@@ -107,20 +110,19 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       {
         ros::WallTime begin = ros::WallTime::now();
 
-        cv::Mat rectMat, rotatedRect;
-        _sonarDrawer.drawSonarRectImage(interface, rectMat, *_colorMap);
+        cv::Mat rectMat = _sonarDrawer.drawRectSonarImage(interface, *_colorMap);
 
         // Rotate rectangular image to the more expected format where zero range
-        // is at the bottom of the image, with negative azimuth to the right 
+        // is at the bottom of the image, with negative azimuth to the right
         // aka (rotated 90 degrees CCW)
+        cv::Mat rotatedRect;
         cv::rotate(rectMat, rotatedRect, cv::ROTATE_90_COUNTERCLOCKWISE);
         cvBridgeAndPublish(msg, rotatedRect, rectPub_);
 
         rectElapsed = ros::WallTime::now() - begin;
 
-        cv::Mat mat;
-        _sonarDrawer.drawSonar(interface, mat, *_colorMap, rectMat);
-        cvBridgeAndPublish(msg, mat, pub_);
+        cv::Mat sonarMat = _sonarDrawer.remapRectSonarImage(interface, rectMat);
+        cvBridgeAndPublish(msg, sonarMat, pub_);
 
         drawElapsed = ros::WallTime::now() - begin;
       }

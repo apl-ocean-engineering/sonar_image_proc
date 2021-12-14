@@ -18,12 +18,12 @@
 
 namespace sonar_image_proc {
 
-inline void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
-                    cv::Mat &image,
-                    const SonarColorMap &colorMap = InfernoColorMap(),
-                    const cv::Mat &rectImage = cv::Mat()) {
+inline cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+                        const SonarColorMap &colorMap = InfernoColorMap(),
+                        const cv::Mat &image = cv::Mat(0,0,CV_8UC3)) {
     SonarDrawer drawer;
-    drawer.drawSonar(ping, image, colorMap, rectImage);
+    cv::Mat rectImage = drawer.drawRectSonarImage(ping, colorMap, image);
+    return drawer.remapRectSonarImage(ping, rectImage);
 }
 
 // Maps the sonar ping to an RGB image.
@@ -39,11 +39,11 @@ inline void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
 //
 // Cell (nRange,nBearing) is the data at the max range, most positive bearing
 //
-inline void drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
-                    cv::Mat &rectImage,
-                    const SonarColorMap &colorMap = InfernoColorMap()) {
+inline cv::Mat drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
+                                const SonarColorMap &colorMap = InfernoColorMap(),
+                                const cv::Mat &rectImage = cv::Mat(0,0,CV_8UC3)) {
     SonarDrawer drawer;
-    drawer.drawSonarRectImage(ping, rectImage, colorMap);
+    return drawer.drawRectSonarImage(ping, colorMap, rectImage);
 }
 
 
@@ -67,7 +67,7 @@ cv::Size calculateImageSize(const sonar_image_proc::AbstractSonarInterface &ping
                             int pixPerRangeBin = 2,
                             float maxRange = -1.0);
 
-void drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                     cv::Mat &mat,
                     const SonarColorMap &colorMap = InfernoColorMap(),
                     float maxRange = -1.0);

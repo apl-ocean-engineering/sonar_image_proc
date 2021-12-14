@@ -16,8 +16,9 @@ namespace sonar_image_proc {
 
 namespace old_api {
 
-using namespace std;
-using namespace cv;
+using std::vector;
+using cv::Mat;
+using cv::Size;
 
 const float ThetaShift = 1.5*M_PI;
 
@@ -51,13 +52,14 @@ cv::Size calculateImageSize(const AbstractSonarInterface &ping,
   return Size(w, h);
 }
 
-void drawSonar(const AbstractSonarInterface &ping,
-                Mat &mat,
+cv::Mat drawSonar(const AbstractSonarInterface &ping,
+                const Mat &mat,
                 const SonarColorMap &colorMap,
                 float maxRange) {
   // Ensure mat is 8UC3;
-  mat.create(mat.size(), CV_8UC3);
-  mat.setTo(cv::Vec3b(0, 0, 0));
+  cv::Mat out(mat);
+  out.create(mat.size(), CV_8UC3);
+  out.setTo(cv::Vec3b(0, 0, 0));
 
   const int nRanges = ping.nRanges();
   const int nBeams = ping.nBearings();
@@ -79,7 +81,8 @@ void drawSonar(const AbstractSonarInterface &ping,
   const cv::Point origin(mat.size().width/2, mat.size().height);
 
   // QUESTION: Why the factor of 2?
-  // If I understand correctly, binThickness is the width of the range-bin, in pixels.
+  // If I understand correctly, binThickness is the width 
+  // of the range-bin, in pixels.
   const float binThickness = 2 * ceil(radius / nEffectiveRanges);
 
   struct BearingEntry {
@@ -118,7 +121,6 @@ void drawSonar(const AbstractSonarInterface &ping,
 
     for ( int b = 0; b < nBeams; ++b ) {
       const float range = ping.range(r);
-      const uint8_t intensity = ping.intensity(b, r);
 
       // QUESTION: Why are we rotating here?
       const float begin = angles[b].begin + ThetaShift,
@@ -127,12 +129,14 @@ void drawSonar(const AbstractSonarInterface &ping,
       const float rad = static_cast<float>(radius) * range/rangeMax;
 
       // Assume angles are in image frame x-right, y-down
-      cv::ellipse(mat, origin, cv::Size(rad, rad), 0,
+      cv::ellipse(out, origin, cv::Size(rad, rad), 0,
                   begin * 180/M_PI, end * 180/M_PI,
-                  255*colorMap.scalarLookup(angles[b].center, range, intensity),
+                  colorMap.lookup_vec3b(ping, angles[b].center, range),
                   binThickness);
     }
   }
+
+  return out;
 }
 
 

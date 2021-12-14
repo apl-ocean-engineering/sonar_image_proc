@@ -12,12 +12,14 @@ namespace sonar_image_proc {
 SonarDrawer::SonarDrawer()
 {;}
 
-void SonarDrawer::drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
-                        cv::Mat &rect,
-                        const SonarColorMap &colorMap) {
+cv::Mat SonarDrawer::drawRectSonarImage(const sonar_image_proc::AbstractSonarInterface &ping,
+                                        const SonarColorMap &colorMap,
+                                        const cv::Mat &rectIn ) {
+    cv::Mat rect(rectIn);
+
     const cv::Size imgSize(ping.nRanges(), ping.nBearings());
 
-    if ((rect.type() == CV_8UC3) || (rect.type() == CV_32FC2)) {
+    if ((rect.type() == CV_8UC3) || (rect.type() == CV_32FC3) ||(rect.type() == CV_32FC1) ) {
         rect.create(imgSize, rect.type());
     } else {
         rect.create(imgSize, CV_8UC3);
@@ -26,27 +28,36 @@ void SonarDrawer::drawSonarRectImage(const sonar_image_proc::AbstractSonarInterf
     for (int r = 0; r < ping.nRanges(); r++) {
         for (int b = 0; b < ping.nBearings(); b++) {
             if (rect.type() == CV_8UC3) {
-                rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3b>(ping, b, r);
+                rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup_vec3b(ping, b, r);
             } else if (rect.type() == CV_32FC3) {
-                rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup<cv::Vec3f>(ping, b, r);
+                rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup_vec3f(ping, b, r);
+            } else if (rect.type() == CV_32FC1) {
+                rect.at<float>(cv::Point(r, b)) = colorMap.lookup_float(ping, b, r);
             } else {
                 assert("Should never get here.");
             }
         }
     }
+
+    return rect;
 }
 
-void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
-                    cv::Mat &img,
-                    const SonarColorMap &colorMap,
-                    const cv::Mat &rect) {
-  cv::Mat rectImage(rect);
-  if (rectImage.empty()) drawSonarRectImage(ping, rectImage, colorMap);
-
-  const CachedMap::MapPair maps(_map(ping));
-  cv::remap(rect, img, maps.first, maps.second,
+cv::Mat SonarDrawer::remapRectSonarImage(const sonar_image_proc::AbstractSonarInterface &ping,
+                    const cv::Mat &rectImage) {
+    cv::Mat out;
+    const CachedMap::MapPair maps(_map(ping));
+    cv::remap(rectImage, out, maps.first, maps.second,
             cv::INTER_CUBIC, cv::BORDER_CONSTANT,
             cv::Scalar(0, 0, 0));
+
+    return out;
+}
+
+cv::Mat SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+                                const SonarColorMap &colorMap,
+                                const cv::Mat &img) {
+    cv::Mat rect = drawRectSonarImage(ping, colorMap, img);
+    return remapRectSonarImage(ping, rect);
 }
 
 
@@ -54,15 +65,15 @@ void SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping
 // ==== SonarDrawer::CachedMap ====
 
 SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(const sonar_image_proc::AbstractSonarInterface &ping) {
-    // Break const to update the cache
+    // _scMap[12] are mutable to break out of const
     if (!isValid(ping)) create(ping);
 
     return std::make_pair(_scMap1, _scMap2);
 }
 
 
-//  **assumes** the structure of the rectImage:
-//   ** It has nBearings cols and nRanges rows
+//  **assumes** this structure for the rectImage:
+//   * It has nBearings cols and nRanges rows
 //
 void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterface &ping) {
   cv::Mat newmap;
@@ -101,7 +112,8 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
 
       float xp = range;
 
-      // This linear algorithm is not robust if the azimuths are non-linear
+      //\todo This linear algorithm is not robust if the azimuths are non-linear.
+      // Should implement a real interpolation...
       float yp = (azimuth - azimuthBounds.first)/db;
 
       newmap.at<cv::Vec2f>(cv::Point(x, y)) = cv::Vec2f(xp, yp);
