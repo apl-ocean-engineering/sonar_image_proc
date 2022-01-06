@@ -9,10 +9,12 @@
 
 namespace sonar_image_proc {
 
+using sonar_image_proc::AbstractSonarInterface;
+
 SonarDrawer::SonarDrawer()
 {;}
 
-cv::Mat SonarDrawer::drawRectSonarImage(const sonar_image_proc::AbstractSonarInterface &ping,
+cv::Mat SonarDrawer::drawRectSonarImage(const AbstractSonarInterface &ping,
                                         const SonarColorMap &colorMap,
                                         const cv::Mat &rectIn ) {
     cv::Mat rect(rectIn);
@@ -44,7 +46,7 @@ cv::Mat SonarDrawer::drawRectSonarImage(const sonar_image_proc::AbstractSonarInt
     return rect;
 }
 
-cv::Mat SonarDrawer::remapRectSonarImage(const sonar_image_proc::AbstractSonarInterface &ping,
+cv::Mat SonarDrawer::remapRectSonarImage(const AbstractSonarInterface &ping,
                     const cv::Mat &rectImage) {
     cv::Mat out;
     const CachedMap::MapPair maps(_map(ping));
@@ -55,7 +57,7 @@ cv::Mat SonarDrawer::remapRectSonarImage(const sonar_image_proc::AbstractSonarIn
     return out;
 }
 
-cv::Mat SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+cv::Mat SonarDrawer::drawSonar(const AbstractSonarInterface &ping,
                                 const SonarColorMap &colorMap,
                                 const cv::Mat &img) {
     cv::Mat rect = drawRectSonarImage(ping, colorMap, img);
@@ -66,7 +68,7 @@ cv::Mat SonarDrawer::drawSonar(const sonar_image_proc::AbstractSonarInterface &p
 
 // ==== SonarDrawer::CachedMap ====
 
-SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(const sonar_image_proc::AbstractSonarInterface &ping) {
+SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(const AbstractSonarInterface &ping) {
     // _scMap[12] are mutable to break out of const
     if (!isValid(ping)) create(ping);
 
@@ -77,7 +79,7 @@ SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(const sonar_i
 //  **assumes** this structure for the rectImage:
 //   * It has nBearings cols and nRanges rows
 //
-void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterface &ping) {
+void SonarDrawer::CachedMap::create(const AbstractSonarInterface &ping) {
   cv::Mat newmap;
 
   const int nRanges = ping.nRanges();
@@ -100,6 +102,10 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
       //
       //  dst = src( mapx(x,y), mapy(x,y) )
       //
+      // That is, the map is the size of the dst array,
+      // and contains the coords in the source image
+      // for each pixel in the dst image.
+      //
       // This map draws the sonar with range = 0
       // centered on the bottom edge of the resulting image
       // with increasing range along azimuth = 0 going
@@ -114,17 +120,17 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
 
       float xp = range;
 
-      //\todo This linear algorithm is not robust if the azimuths are non-linear.
-      // Should implement a real interpolation...
+      //\todo This linear algorithm is not robust if the azimuths
+      // are non-linear.   Should implement a real interpolation...
       float yp = (azimuth - azimuthBounds.first)/db;
 
       newmap.at<cv::Vec2f>(cv::Point(x, y)) = cv::Vec2f(xp, yp);
     }
   }
 
-  // Save metadata
   cv::convertMaps(newmap, cv::Mat(), _scMap1, _scMap2, CV_16SC2);
 
+  // Save meta-information to check for cache expiry
   _numRanges = ping.nRanges();
   _numAzimuth = ping.nBearings();
 
@@ -132,7 +138,7 @@ void SonarDrawer::CachedMap::create(const sonar_image_proc::AbstractSonarInterfa
   _azimuthBounds = ping.azimuthBounds();
 }
 
-bool SonarDrawer::CachedMap::isValid(const sonar_image_proc::AbstractSonarInterface &ping) const {
+bool SonarDrawer::CachedMap::isValid(const AbstractSonarInterface &ping) const {
     if (_scMap1.empty() || _scMap2.empty()) return false;
 
     // Check for cache invalidation...
