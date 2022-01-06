@@ -19,7 +19,9 @@ cv::Mat SonarDrawer::drawRectSonarImage(const sonar_image_proc::AbstractSonarInt
 
     const cv::Size imgSize(ping.nRanges(), ping.nBearings());
 
-    if ((rect.type() == CV_8UC3) || (rect.type() == CV_32FC3) ||(rect.type() == CV_32FC1) ) {
+    if ((rect.type() == CV_8UC3)
+            || (rect.type() == CV_32FC3)
+            || (rect.type() == CV_32FC1)) {
         rect.create(imgSize, rect.type());
     } else {
         rect.create(imgSize, CV_8UC3);
@@ -28,11 +30,11 @@ cv::Mat SonarDrawer::drawRectSonarImage(const sonar_image_proc::AbstractSonarInt
     for (int r = 0; r < ping.nRanges(); r++) {
         for (int b = 0; b < ping.nBearings(); b++) {
             if (rect.type() == CV_8UC3) {
-                rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup_vec3b(ping, b, r);
+                rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup_cv8uc3(ping, b, r);
             } else if (rect.type() == CV_32FC3) {
-                rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup_vec3f(ping, b, r);
+                rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup_cv32fc3(ping, b, r);
             } else if (rect.type() == CV_32FC1) {
-                rect.at<float>(cv::Point(r, b)) = colorMap.lookup_float(ping, b, r);
+                rect.at<float>(cv::Point(r, b)) = colorMap.lookup_cv32fc1(ping, b, r);
             } else {
                 assert("Should never get here.");
             }

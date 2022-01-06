@@ -10,7 +10,7 @@
 
 namespace sonar_image_proc {
 
-const float InfernoColorMap::_inferno_data[256][3] = \
+const float InfernoColorMap::_inferno_data_float[256][3] = \
                 {{0.001462, 0.000466, 0.013866},
                  {0.002267, 0.001270, 0.018570},
                  {0.003299, 0.002249, 0.024239},
