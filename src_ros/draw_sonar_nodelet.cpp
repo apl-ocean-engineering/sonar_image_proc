@@ -64,7 +64,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       pnh.param<bool>("publish_old", _publishOldApi, false);
       pnh.param<bool>("publish_timing", _publishTiming, true);
 
-      pnh.param<bool>("publish_histogram", _publishHistogram, true);
+      pnh.param<bool>("publish_histogram", _publishHistogram, false);
 
       std::string colorMapName;
       pnh.param<string>("color_map", colorMapName, "inferno");
