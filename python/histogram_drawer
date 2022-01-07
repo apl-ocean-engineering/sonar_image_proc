@@ -39,7 +39,7 @@ class HistogramDrawer:
 
         plt.yscale("log") 
         ax.plot(np.linspace(0,xmax,128), new_histogram,'b.-')
-        ax.set_xlabel("Bin")
+        ax.set_xlabel("Intensity")
         ax.set_ylabel("Count")
         ax.set_ylim([1, self.bin_max*2])
 
