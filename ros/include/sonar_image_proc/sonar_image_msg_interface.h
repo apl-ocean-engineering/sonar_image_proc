@@ -31,34 +31,49 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
 
   float verticalTanSquared() const { return _verticalTanSquared; }
 
-  uint8_t intensity( const AzimuthRangeIndices &idx ) const override {
+  // Optimized version...
+  uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
+      const auto i = index(idx);
 
-    if (_ping->data_size == 1) {
-      const size_t i = idx.azimuth() * nAzimuth() + idx.range();
-      return _ping->intensities[i];
-    } else if (_ping->data_size == 2) {
-      uint16_t d;
-      const size_t i = (idx.azimuth() * nAzimuth() + idx.range()) * 2;
+      if (_ping->data_size == 1) {
+          return _ping->intensities[i];
+      } else if (_ping->data_size == 2) {
+          return 255 * intensity_float(idx);
+      }
 
-      if (_ping->is_bigendian)
-        d = (_ping->intensities[i] << 8) | _ping->intensities[i + 1];
-      else
-        d = (_ping->intensities[i + 1] << 8) | _ping->intensities[i];
-
-      // Hacky
-      const int shift = 6;
-      if (d >= (0x1 << (shift+8))) return 0xFF;
-
-      return (d >> shift);
-    } else {
-      ROS_ERROR_STREAM("SonarImage has unsupported data_size = " << _ping->data_size);
       return 0;
-    }
+  }
+
+  uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const override {
+      const auto i = index(idx);
+
+      if (_ping->data_size == 1) {
+          return _ping->intensities[i] << 8;
+      } else if (_ping->data_size == 2) {
+          return _ping->intensities[i] << 8 | _ping->intensities[i+1];
+      }
+      return 0;
+  }
+
+  virtual float intensity_float(const AzimuthRangeIndices &idx) const {
+      const auto i = index(idx);
+
+      if (_ping->data_size == 1) {
+          return _ping->intensities[i]/255;
+      } else if (_ping->data_size == 2) {
+          return (_ping->intensities[i] << 8 | _ping->intensities[i+1])/65535;
+      }
+      return 0.0;
   }
 
   acoustic_msgs::SonarImage::ConstPtr _ping;
 
   float _verticalTanSquared;
+
+  size_t index(const AzimuthRangeIndices &idx) const {
+    assert( (_ping->data_size == 1) || (_ping->data_size == 2));
+    return _ping->data_size*((idx.range() * nBearings()) + idx.azimuth());
+  }
 };
 
 }  // namespace draw_sonar
