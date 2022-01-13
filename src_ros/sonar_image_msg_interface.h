@@ -17,8 +17,15 @@ using acoustic_msgs::SonarImage;
 
 struct SonarImageMsgInterface : public AbstractSonarInterface {
     explicit SonarImageMsgInterface(const SonarImage::ConstPtr &ping)
-        : _ping(ping), _gain(1)
+        : _ping(ping)
     {;}
+
+    AbstractSonarInterface::DataType_t data_type() const override { 
+        if (_ping->data_size == 1)
+            return AbstractSonarInterface::TYPE_UINT8;
+        else if (_ping->data_size == 2)
+            return AbstractSonarInterface::TYPE_UINT16;
+    }
 
     const std::vector<float> &ranges() const override {
       return _ping->ranges;
@@ -33,7 +40,7 @@ struct SonarImageMsgInterface : public AbstractSonarInterface {
         const auto i = index(b, r);
 
         if (_ping->data_size == 1) {
-            return _ping->intensities[i] * _gain;
+            return _ping->intensities[i];
         } else if (_ping->data_size == 2) {
             return 255 * intensity_float(b, r);
         }
@@ -45,10 +52,10 @@ struct SonarImageMsgInterface : public AbstractSonarInterface {
         const auto i = index(b, r);
 
         if (_ping->data_size == 1) {
-            return (_ping->intensities[i] << 8) * _gain;
+            return (_ping->intensities[i] << 8);
         } else if (_ping->data_size == 2) {
             return (static_cast<uint16_t>(_ping->intensities[i]) |
-                    (static_cast<uint16_t>(_ping->intensities[i+1]) << 8)) * _gain;
+                    (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
         }
         return 0;
     }
@@ -57,20 +64,18 @@ struct SonarImageMsgInterface : public AbstractSonarInterface {
         const auto i = index(b, r);
 
         if (_ping->data_size == 1) {
-            return static_cast<float>(_ping->intensities[i]) * _gain/255.0;
+            return static_cast<float>(_ping->intensities[i])/255.0;
         } else if (_ping->data_size == 2) {
             // Data is stored LSB
             const uint16_t v = (static_cast<uint16_t>(_ping->intensities[i]) |
                                (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
-            return static_cast<float>(v)*_gain / 65535.0;
+            return static_cast<float>(v) / 65535.0;
         }
         return 0.0;
     }
 
  protected:
     SonarImage::ConstPtr _ping;
-
-    unsigned int _gain;
 
     size_t index(int b, int r) const {
         assert( (_ping->data_size == 1) || (_ping->data_size == 2));

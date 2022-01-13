@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+
+import rospy
+
+from std_msgs.msg import UInt32MultiArray
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+
+import io
+import numpy as np
+import matplotlib
+matplotlib.use('agg')  # turn off interactive backend
+import matplotlib.pyplot as plt
+
+class HistogramDrawer:
+
+    def __init__(self):
+
+        self.pub = rospy.Publisher("drawn_histogram", Image, queue_size=10)
+        self.sub = rospy.Subscriber("/histogram", UInt32MultiArray, self.rx_histogram)
+
+        self.bin_max = 0
+
+    def rx_histogram(self, data):
+        #print(data.data)
+
+        xmax = len(data.data)
+
+        ## Regardless, compress to 128 bins .. this algorithm assumes the new
+        # number of bins is a factor of the original histogram bins
+        d = np.reshape(data.data, (128,-1), 'C')
+
+        new_histogram = np.sum(d,axis=1)
+
+        self.bin_max = np.max((self.bin_max, max(new_histogram)))
+
+        #print(new_histogram)
+        fig, ax = plt.subplots()
+
+        plt.yscale("log") 
+        ax.plot(np.linspace(0,xmax,128), new_histogram,'b.-')
+        ax.set_xlabel("Intensity")
+        ax.set_ylabel("Count")
+        ax.set_ylim([1, self.bin_max*2])
+
+        with io.BytesIO() as buff:
+            fig.savefig(buff, format='raw')
+            buff.seek(0)
+            data = np.frombuffer(buff.getvalue(), dtype=np.uint8)
+        w, h = fig.canvas.get_width_height()
+        im = data.reshape((int(h), int(w), -1))
+
+        # Drop alpha channel
+        im = im[:,:,:3]
+
+        bridge = CvBridge()
+        image_message = bridge.cv2_to_imgmsg(im, encoding="rgb8")
+
+        self.pub.publish(image_message)
+
+        plt.close(fig)
+
+
+
+if __name__ == "__main__":
+
+  rospy.init_node('histogram_drawer', anonymous=True) 
+
+  drawer = HistogramDrawer()
+
+  rospy.spin();

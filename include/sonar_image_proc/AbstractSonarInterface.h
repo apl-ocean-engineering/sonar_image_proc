@@ -75,6 +75,14 @@ struct AbstractSonarInterface {
         return 65535*intensity_float(b, r);
     }
 
+    enum DataType_t {
+        TYPE_UINT8,
+        TYPE_UINT16,
+        TYPE_FLOAT32
+    };
+
+    virtual DataType_t data_type() const = 0;
+
  private:
     // Since we search extensively for the bounds
     // (rather than assuming the first and last are the bounds),
