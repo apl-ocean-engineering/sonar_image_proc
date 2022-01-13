@@ -79,7 +79,6 @@ class SonarTranslator(object):
         header = Header()
         header = image_msg.header
 
-        # If specified, rewrite the frame in th
         frame_id = rospy.get_param("~frame_id", None)
         if frame_id:
             header.frame_id = frame_id
