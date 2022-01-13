@@ -21,9 +21,7 @@
 #include "sonar_image_proc/DrawSonar.h"
 #include "sonar_image_proc/SonarDrawer.h"
 
-#include "sonar_image_proc/AbstractSonarInterface.h"
-
-#include "sonar_image_msg_interface.h"
+#include "sonar_image_proc/sonar_image_msg_interface.h"
 
 // Subscribes to sonar message topic, draws using opencv then publishes result
 
@@ -32,6 +30,7 @@ namespace draw_sonar {
 using namespace std;
 using namespace cv;
 
+using sonar_image_proc::SonarImageMsgInterface;
 
 class DrawSonarNodelet : public nodelet::Nodelet {
  public:
