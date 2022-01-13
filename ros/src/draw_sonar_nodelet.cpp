@@ -23,9 +23,7 @@
 #include "sonar_image_proc/SonarDrawer.h"
 #include "sonar_image_proc/HistogramGenerator.h"
 
-#include "sonar_image_proc/AbstractSonarInterface.h"
-
-#include "sonar_image_msg_interface.h"
+#include "sonar_image_proc/sonar_image_msg_interface.h"
 
 // Subscribes to sonar message topic, draws using opencv then publishes result
 
@@ -34,6 +32,7 @@ namespace draw_sonar {
 using namespace std;
 using namespace cv;
 
+using sonar_image_proc::SonarImageMsgInterface;
 using std_msgs::UInt32MultiArray;
 
 using sonar_image_proc::HistogramGenerator;
@@ -41,7 +40,6 @@ using sonar_image_proc::HistogramGenerator;
 using sonar_image_proc::SonarColorMap;
 using sonar_image_proc::InfernoColorMap;
 using sonar_image_proc::InfernoSaturationColorMap;
-
 
 class DrawSonarNodelet : public nodelet::Nodelet {
  public:

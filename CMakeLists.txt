@@ -63,7 +63,7 @@ else()
   )
 
   catkin_package(
-      INCLUDE_DIRS include
+      INCLUDE_DIRS include/ ros/include/
       LIBRARIES sonar_image_proc
       DEPENDS OpenCV
       CATKIN_DEPENDS pybind11_catkin
@@ -72,6 +72,7 @@ else()
 
   include_directories(
     include/
+    ros/include/
     ${catkin_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
  )
@@ -90,12 +91,12 @@ else()
   set_property(TARGET sonar_image_proc PROPERTY CXX_STANDARD 14)
 
   # Dynamically loadable library containing nodelets
-  add_library(draw_sonar_nodelet src_ros/draw_sonar_nodelet.cpp )
+  add_library(draw_sonar_nodelet ros/src/draw_sonar_nodelet.cpp )
   target_link_libraries(draw_sonar_nodelet ${catkin_LIBRARIES} sonar_image_proc )
   class_loader_hide_library_symbols(draw_sonar_nodelet)
   set_property(TARGET draw_sonar_nodelet PROPERTY CXX_STANDARD 14)
 
-  add_executable(draw_sonar_node src_ros/draw_sonar_node.cpp)
+  add_executable(draw_sonar_node ros/src/draw_sonar_node.cpp)
   target_link_libraries(draw_sonar_node
      sonar_image_proc
      ${catkin_LIBRARIES})
