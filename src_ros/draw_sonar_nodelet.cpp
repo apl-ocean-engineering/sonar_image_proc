@@ -38,7 +38,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
     DrawSonarNodelet()
       : Nodelet(),
         _maxRange(0.0),
-        _colorMap( new sonar_image_proc::InfernoColorMap )
+        _colorMap( new sonar_image_proc::InfernoColorMap ) // Set a reasonable default
     {;}
 
     virtual ~DrawSonarNodelet()
@@ -53,6 +53,12 @@ class DrawSonarNodelet : public nodelet::Nodelet {
 
       pnh.param<bool>("publish_old", _publishOldApi, false);
       pnh.param<bool>("publish_timing", _publishTiming, true);
+
+      std::string colorMapName;
+      pnh.param<string>("color_map", colorMapName, "inferno");
+
+      // Set color map
+      setColorMap(colorMapName);
 
       if (_maxRange > 0.0) {
         NODELET_INFO_STREAM("Only drawing to max range " << _maxRange);
@@ -85,6 +91,8 @@ class DrawSonarNodelet : public nodelet::Nodelet {
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
+      ROS_FATAL_COND(!_colorMap, "Colormap is undefined, this shouldn't happen");
+
       SonarImageMsgInterface interface(msg);
 
       ros::WallDuration oldApiElapsed, rectElapsed, drawElapsed;
@@ -143,6 +151,11 @@ class DrawSonarNodelet : public nodelet::Nodelet {
 
         timingPub_.publish(out_msg);
       }
+    }
+
+    void setColorMap(const std::string &colorMapName) {
+      // TBD actually implement the parameter processing here...
+      _colorMap.reset( new sonar_image_proc::InfernoSaturationColorMap() );
     }
 
 
