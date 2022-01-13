@@ -12,39 +12,47 @@ namespace sonar_image_proc {
 using sonar_image_proc::AbstractSonarInterface;
 
 struct SonarColorMap {
-    // The "native" operation is a simple greyscale based on floats
-    virtual float lookup_float(const AbstractSonarInterface &ping,
+    // A ColorMap is a mapping from one pixel of sonar data to
+    // one pixel in the image.  Each virtual function in
+    // this class corresponds to one possible OpenCV pixel format.
+    //
+    // By default "lookup_cv32fc1()" is the only operation
+    // implemented in this version.  It returns the sonar pixel
+    // as a float (in the interval [0,1])
+    // which OpenCV will interpret as a greyscale.
+    //
+    // The other virtuals are naive wrappers which convert that float
+    // to other OpenCV formats ... though still representing the data
+    // as a greyscale.
+    //
+    // Inherited classes can override any/all of the classes to
+    // cover other input/output combinations.
+
+    // The "native" operation returns a single greyscale values a as float
+    virtual float lookup_cv32fc1(const AbstractSonarInterface &ping,
                                 int bearing_idx, int range_idx) const {
         return ping.intensity_float(bearing_idx, range_idx);
     }
 
-    // The 3-channel implementations are simple copies of the
-    // greyscale version
-    virtual cv::Scalar lookup_scalar(const AbstractSonarInterface &ping,
+    virtual cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
                                     int bearing_idx, int range_idx) const {
-        const float f = lookup_float(ping, bearing_idx, range_idx);
-        return cv::Scalar(f, f, f);
-    }
-
-    virtual cv::Vec3b lookup_vec3b(const AbstractSonarInterface &ping,
-                                    int bearing_idx, int range_idx) const {
-        const auto f = lookup_float(ping, bearing_idx, range_idx);
+        const auto f = lookup_cv32fc1(ping, bearing_idx, range_idx);
         return cv::Vec3b(f*255, f*255, f*255);
     }
 
-    virtual cv::Vec3f lookup_vec3f(const AbstractSonarInterface &ping,
+    virtual cv::Vec3f lookup_cv32fc3(const AbstractSonarInterface &ping,
                                     int bearing_idx, int range_idx) const {
-        const auto f = lookup_float(ping, bearing_idx, range_idx);
+        const auto f = lookup_cv32fc1(ping, bearing_idx, range_idx);
         return cv::Vec3f(f, f, f);
     }
 };
 
 //=== Implementations of specific color maps ===
 struct MitchellColorMap : public SonarColorMap {
-    cv::Scalar lookup_scalar(const AbstractSonarInterface &ping,
+    cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
                             int bearing_idx, int range_idx) const override {
         const auto i = ping.intensity_float(bearing_idx, range_idx);
-        return cv::Scalar( 1-i, i, i );
+        return cv::Vec3b( 1-i, i, i );
     }
 };
 
@@ -54,32 +62,56 @@ struct MitchellColorMap : public SonarColorMap {
 // As used in matplotlib
 // As released under a CC0 license
 struct InfernoColorMap : public SonarColorMap {
-    static const float _inferno_data[][3];
-
-    cv::Scalar lookup_scalar(const AbstractSonarInterface &ping,
-                            int bearing_idx, int range_idx) const override {
-        const auto i = ping.intensity_uint8(bearing_idx, range_idx);
-        return cv::Scalar(_inferno_data[i][0],
-                            _inferno_data[i][1],
-                            _inferno_data[i][2]);
-    }
+    static const float _inferno_data_float[][3];
+    static const float _inferno_data_uint8[][3];
 
     // Minor optimization ... don't go through the intermediate Scalar
-    cv::Vec3b lookup_vec3b(const AbstractSonarInterface &ping,
+    cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
                            int bearing_idx, int range_idx) const override {
         const auto i = ping.intensity_uint8(bearing_idx, range_idx);
-        return cv::Vec3b(_inferno_data[i][0]*255,
-                            _inferno_data[i][1]*255,
-                            _inferno_data[i][2]*255);
+        return cv::Vec3b(_inferno_data_uint8[i][0],
+                            _inferno_data_uint8[i][1],
+                            _inferno_data_uint8[i][2]);
     }
 
-    cv::Vec3f lookup_vec3f(const AbstractSonarInterface &ping,
+    cv::Vec3f lookup_cv32fc3(const AbstractSonarInterface &ping,
                            int bearing_idx, int range_idx) const override {
         const auto i = ping.intensity_uint8(bearing_idx, range_idx);
-        return cv::Vec3f(_inferno_data[i][0],
-                            _inferno_data[i][1],
-                            _inferno_data[i][2]);
+        return cv::Vec3f(_inferno_data_float[i][0],
+                            _inferno_data_float[i][1],
+                            _inferno_data_float[i][2]);
     }
 };
+
+
+struct InfernoSaturationColorMap : public InfernoColorMap {
+
+    // Minor optimization ... don't go through the intermediate Scalar
+    cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
+                           int bearing_idx, int range_idx) const override {
+        const auto i = ping.intensity_uint8(bearing_idx, range_idx);
+        if (i == 255) {
+            return cv::Vec3b(0, 255, 0);
+        } else {
+            return cv::Vec3b(_inferno_data_uint8[i][0],
+                                _inferno_data_uint8[i][1],
+                                _inferno_data_uint8[i][2]);
+        }
+    }
+
+    cv::Vec3f lookup_cv32fc3(const AbstractSonarInterface &ping,
+                           int bearing_idx, int range_idx) const override {
+        const auto i = ping.intensity_uint8(bearing_idx, range_idx);
+        if (i == 255) {
+            return cv::Vec3f(0.0, 1.0, 0.0);
+        } else {
+            return cv::Vec3f(_inferno_data_float[i][0],
+                                _inferno_data_float[i][1],
+                                _inferno_data_float[i][2]);
+        }
+    }
+};
+
+
 
 }  // namespace sonar_image_proc

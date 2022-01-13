@@ -29,7 +29,15 @@ struct AzimuthRangeIndices {
 // Subsea SimplePingResult and ROS ImagingSonarMsg
 struct AbstractSonarInterface {
  public:
-    AbstractSonarInterface();
+  AbstractSonarInterface();
+
+  enum DataType_t {
+        TYPE_UINT8,
+        TYPE_UINT16,
+        TYPE_FLOAT32
+  };
+
+  virtual DataType_t data_type() const = 0;
 
   //
   // azimuths are in **radians**

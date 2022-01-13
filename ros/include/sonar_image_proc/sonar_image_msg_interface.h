@@ -10,7 +10,9 @@
 
 namespace sonar_image_proc {
 
-using namespace std;
+using std::vector;
+using sonar_image_proc::AbstractSonarInterface;
+using acoustic_msgs::SonarImage;
 
 struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface {
 
@@ -20,6 +22,13 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
     // z / sqrt(x^2 + y^2) to tan(elevation_beamwidth/2)
     _verticalTanSquared = std::pow(std::tan(ping->elevation_beamwidth/2.0), 2);
   }
+
+    AbstractSonarInterface::DataType_t data_type() const override { 
+        if (_ping->data_size == 1)
+            return AbstractSonarInterface::TYPE_UINT8;
+        else if (_ping->data_size == 2)
+            return AbstractSonarInterface::TYPE_UINT16;
+    }
 
   const std::vector<float> &ranges() const override {
     return _ping->ranges;
@@ -31,7 +40,10 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
 
   float verticalTanSquared() const { return _verticalTanSquared; }
 
-  // Optimized version...
+  // When the underlying data is 8-bit, this optimized version
+  // returns that exact value.
+  //
+  // If the underlying data is 16-bit, it returns a scaled value.
   uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
       const auto i = index(idx);
 
@@ -50,7 +62,8 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
       if (_ping->data_size == 1) {
           return _ping->intensities[i] << 8;
       } else if (_ping->data_size == 2) {
-          return _ping->intensities[i] << 8 | _ping->intensities[i+1];
+            return (static_cast<uint16_t>(_ping->intensities[i]) |
+                   (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
       }
       return 0;
   }
@@ -61,11 +74,15 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
       if (_ping->data_size == 1) {
           return _ping->intensities[i]/255;
       } else if (_ping->data_size == 2) {
-          return (_ping->intensities[i] << 8 | _ping->intensities[i+1])/65535;
+            // Data is stored LSB
+            const uint16_t v = (static_cast<uint16_t>(_ping->intensities[i]) |
+                               (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
+            return static_cast<float>(v) / 65535.0;
       }
       return 0.0;
   }
 
+ protected:
   acoustic_msgs::SonarImage::ConstPtr _ping;
 
   float _verticalTanSquared;

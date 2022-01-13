@@ -68,7 +68,12 @@ to the topic `sonar_image_proc_timing`.  Defaults to `true`
 If `publish_old` is `true` the node will also draw the sonar using the old
 algorithm to the topic `old_drawn_sonar`.   Defaults to `false`
 
+If `publish_histogram` is `true` the node will publish a "raw" histogram information as a `UInt32MultiArray` to the topic `histogram`.   It contains a vector of unsigned ints giving the count for each intensity value -- so for 8 bit data the vector will be 256 elements in length, and for 16-bit data it will be 65536 elements in length.
 
+
+# histogram_drawer
+
+`python/histogram_drawer` is a Python script which subscribes to the `histogram` topic and uses numpy+Matplotlib to bin the data (into a fixed set of 128 bin right now), and draw a plot to the topic `drawn_histogram`.
 # Python API
 
 Long term, I'd like to be able to call this drawing function from Python,

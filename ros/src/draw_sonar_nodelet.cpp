@@ -16,10 +16,12 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/String.h>
+#include <std_msgs/UInt32MultiArray.h>
 
 #include "sonar_image_proc/ColorMaps.h"
 #include "sonar_image_proc/DrawSonar.h"
 #include "sonar_image_proc/SonarDrawer.h"
+#include "sonar_image_proc/HistogramGenerator.h"
 
 #include "sonar_image_proc/sonar_image_msg_interface.h"
 
@@ -31,13 +33,20 @@ using namespace std;
 using namespace cv;
 
 using sonar_image_proc::SonarImageMsgInterface;
+using std_msgs::UInt32MultiArray;
+
+using sonar_image_proc::HistogramGenerator;
+
+using sonar_image_proc::SonarColorMap;
+using sonar_image_proc::InfernoColorMap;
+using sonar_image_proc::InfernoSaturationColorMap;
 
 class DrawSonarNodelet : public nodelet::Nodelet {
  public:
     DrawSonarNodelet()
       : Nodelet(),
         _maxRange(0.0),
-        _colorMap( new sonar_image_proc::InfernoColorMap )
+        _colorMap( new InfernoColorMap ) // Set a reasonable default
     {;}
 
     virtual ~DrawSonarNodelet()
@@ -52,6 +61,14 @@ class DrawSonarNodelet : public nodelet::Nodelet {
 
       pnh.param<bool>("publish_old", _publishOldApi, false);
       pnh.param<bool>("publish_timing", _publishTiming, true);
+
+      pnh.param<bool>("publish_histogram", _publishHistogram, false);
+
+      std::string colorMapName;
+      pnh.param<string>("color_map", colorMapName, "inferno");
+
+      // Set color map
+      setColorMap(colorMapName);
 
       if (_maxRange > 0.0) {
         NODELET_INFO_STREAM("Only drawing to max range " << _maxRange);
@@ -68,8 +85,11 @@ class DrawSonarNodelet : public nodelet::Nodelet {
 
       if (_publishTiming)
         timingPub_ = nh.advertise<std_msgs::String>("sonar_image_proc_timing", 10);
-    }
 
+      if (_publishHistogram)
+        histogramPub_ = nh.advertise<std_msgs::UInt32MultiArray>("histogram", 10);
+
+    }
 
     void cvBridgeAndPublish(const acoustic_msgs::SonarImage::ConstPtr &msg,
                               const cv::Mat &mat,
@@ -84,9 +104,11 @@ class DrawSonarNodelet : public nodelet::Nodelet {
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
+      ROS_FATAL_COND(!_colorMap, "Colormap is undefined, this shouldn't happen");
+
       SonarImageMsgInterface interface(msg);
 
-      ros::WallDuration oldApiElapsed, rectElapsed, drawElapsed;
+      ros::WallDuration oldApiElapsed, rectElapsed, mapElapsed, histogramElapsed;
 
       if (_publishOldApi) {
         ros::WallTime begin = ros::WallTime::now();
@@ -106,6 +128,17 @@ class DrawSonarNodelet : public nodelet::Nodelet {
         oldApiElapsed = ros::WallTime::now() - begin;
       }
 
+      if (_publishHistogram) {
+        ros::WallTime begin = ros::WallTime::now();
+
+        auto histogramOut = UInt32MultiArray();
+        histogramOut.data = HistogramGenerator::Generate(interface);
+
+        histogramPub_.publish(histogramOut);
+
+        histogramElapsed = ros::WallTime::now() - begin;
+      }
+
       {
         ros::WallTime begin = ros::WallTime::now();
 
@@ -119,23 +152,30 @@ class DrawSonarNodelet : public nodelet::Nodelet {
         cvBridgeAndPublish(msg, rotatedRect, rectPub_);
 
         rectElapsed = ros::WallTime::now() - begin;
+        begin = ros::WallTime::now();
 
         cv::Mat sonarMat = _sonarDrawer.remapRectSonarImage(interface, rectMat);
         cvBridgeAndPublish(msg, sonarMat, pub_);
 
-        drawElapsed = ros::WallTime::now() - begin;
+        mapElapsed = ros::WallTime::now() - begin;
       }
+
+
 
       if (_publishTiming) {
         ostringstream output;
 
         output << "{";
-        output << "\n\"draw\" : " << drawElapsed.toSec();
-        output << ",\n\"rect\" : " << rectElapsed.toSec();
-        if (_publishOldApi)
-          output << ",\n\"old_api\" : " << oldApiElapsed.toSec();
+        output << "\"draw_total\" : " << (mapElapsed + rectElapsed).toSec();
+        output << ", \"rect\" : " << rectElapsed.toSec();
+        output << ", \"map\" : " << mapElapsed.toSec();
 
-        output << "\n}";
+        if (_publishOldApi)
+          output << ", \"old_api\" : " << oldApiElapsed.toSec();
+        if (_publishHistogram)
+          output << ", \"histogram\" : " << histogramElapsed.toSec();
+
+        output << "}";
 
         std_msgs::String out_msg;
         out_msg.data = output.str();
@@ -144,16 +184,21 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       }
     }
 
+    void setColorMap(const std::string &colorMapName) {
+      // TBD actually implement the parameter processing here...
+      _colorMap.reset( new InfernoSaturationColorMap() );
+    }
+
 
     ros::Subscriber subSonarImage_;
-    ros::Publisher pub_, rectPub_, oldPub_, timingPub_;
+    ros::Publisher pub_, rectPub_, oldPub_, timingPub_, histogramPub_;
 
     sonar_image_proc::SonarDrawer _sonarDrawer;
 
     float _maxRange;
-    bool _publishOldApi, _publishTiming;
+    bool _publishOldApi, _publishTiming, _publishHistogram;
 
-    std::unique_ptr< sonar_image_proc::SonarColorMap > _colorMap;
+    std::unique_ptr< SonarColorMap > _colorMap;
 };
 
 }  // namespace draw_sonar
