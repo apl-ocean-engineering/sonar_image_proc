@@ -76,6 +76,9 @@ class SonarTranslator(object):
         self.geometry = points
 
     def callback(self, image_msg):
+
+        rospy.logdebug("Received new image, seq %d at %f" % (image_msg.header.seq, image_msg.header.stamp.to_sec()))
+
         header = Header()
         header = image_msg.header
 
@@ -123,6 +126,7 @@ class SonarTranslator(object):
 
         self.pub.publish(cloud_msg)
         rospy.logdebug("published pointcloud: npts = {}, dt0 = {:0.3f}, dt1 = {:0.3f}".format(npts, dt0, dt1))
+        #rospy.loginfo("Point cloud seq = %d, frame = %s, timestamp = %f" % (cloud_msg.header.seq, cloud_msg.header.frame_id, cloud_msg.header.stamp.to_sec()))
 
 if __name__ == "__main__":
     rospy.init_node("sonar_pointcloud")
