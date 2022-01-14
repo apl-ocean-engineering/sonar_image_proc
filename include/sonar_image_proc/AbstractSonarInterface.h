@@ -99,8 +99,8 @@ struct AbstractSonarInterface {
   }
 
   // Trivial wrappers.  These should probably be deprecated eventually
-  float intensity_float(size_t a, size_t r) const { return intensity_float(AzimuthRangeIndices(a,r)); }
-  uint8_t intensity_uint8(size_t a, size_t r) const { return intensity_uint8(AzimuthRangeIndices(a,r)); }
+  float intensity_float(size_t a, size_t r)     const { return intensity_float(AzimuthRangeIndices(a,r)); }
+  uint8_t intensity_uint8(size_t a, size_t r)   const { return intensity_uint8(AzimuthRangeIndices(a,r)); }
   uint16_t intensity_uint16(size_t a, size_t r) const { return intensity_uint16(AzimuthRangeIndices(a,r)); }
 
  private:
