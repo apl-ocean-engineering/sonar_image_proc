@@ -92,6 +92,8 @@ void SonarDrawer::CachedMap::create(const AbstractSonarInterface &ping) {
   const int originx = abs(minusWidth);
 
   const cv::Size imgSize(width, nRanges);
+  if ((width <= 0) || (nRanges <= 0)) return;
+
   newmap.create(imgSize, CV_32FC2);
 
   const float db = (azimuthBounds.second - azimuthBounds.first) / ping.nAzimuth();
