@@ -12,6 +12,7 @@ from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 from sensor_msgs import point_cloud2
 
+
 class SonarTranslator(object):
     def __init__(self):
         # NB: if queue_size is set, have to be sure buff_size is sufficiently large,
@@ -80,7 +81,8 @@ class SonarTranslator(object):
 
     def make_geometry_fast(self, image_msg):
         """
-        Vectorizing make_geometry() for faster creation
+        Vectorizing make_geometry() for faster creation.
+        This doesn't really matter because it only happens once.
         """
         rospy.loginfo("make_geometry")
         nranges = len(image_msg.ranges)
@@ -109,6 +111,7 @@ class SonarTranslator(object):
         output = output[np.newaxis, :, :]
 
         self.geometry = list(output)
+        self.geometry_np = output
 
     def callback(self, image_msg):
 
@@ -165,6 +168,9 @@ class SonarTranslator(object):
         rospy.loginfo(f"published pointcloud: npts = {npts}, Find Pts = {dt0:0.3f}, Convert to Cloud = {dt1:0.3f}. Total Time = {(total_time - t0):0.3f}")
 
     def callback_fast(self, image_msg):
+        """
+        Convert img_msg into point cloud with intensity mappings.
+        """
         header = Header()
         header = image_msg.header
 
