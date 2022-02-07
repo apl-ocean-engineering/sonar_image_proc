@@ -36,6 +36,8 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
                             10, &SonarPostprocessorNodelet::sonarImageCallback, this);
 
       pubSonarImage_ = nh.advertise<SonarImage>("sonar_image_postproc", 10);
+
+      ROS_DEBUG("sonar_processor ready to run...");
     }
 
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
