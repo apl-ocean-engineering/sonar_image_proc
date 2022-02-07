@@ -40,49 +40,71 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
     return _ping->azimuth_angles;
   }
 
-  float verticalTanSquared() const { return _verticalTanSquared; }
+    float verticalTanSquared() const { return _verticalTanSquared; }
 
-  // When the underlying data is 8-bit, this optimized version
-  // returns that exact value.
-  //
-  // If the underlying data is 16-bit, it returns a scaled value.
-  uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
-      const auto i = index(idx);
+    // When the underlying data is 8-bit, this optimized version
+    // returns that exact value.
+    //
+    // If the underlying data is 16-bit, it returns a scaled value.
+    uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
+        const auto i = index(idx);
 
-      if (_ping->data_size == 1) {
-          return _ping->intensities[i];
-      } else if (_ping->data_size == 2) {
-          return 255 * intensity_float(idx);
-      }
+        if (_ping->data_size == 1) {
+        return _ping->intensities[i];
+        } else if (_ping->data_size == 2) {
+        return intensity_uint32(idx) >> 16;
+        } else if (_ping->data_size == 4) {
+            return intensity_uint32(idx) >> 24;
+        }
 
-      return 0;
-  }
+        return 0;
+    }
 
-  uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const override {
-      const auto i = index(idx);
+    uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const override {
+        const auto i = index(idx);
 
-      if (_ping->data_size == 1) {
-          return _ping->intensities[i] << 8;
-      } else if (_ping->data_size == 2) {
+        if (_ping->data_size == 1) {
+            return _ping->intensities[i];
+        } else if (_ping->data_size == 2) {
             return (static_cast<uint16_t>(_ping->intensities[i]) |
-                   (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
-      }
-      return 0;
-  }
+                (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
+        } else if (_ping->data_size == 4) {
+            return intensity_uint32(idx) >> 16;
+        }
+        return 0;
+    }
 
-  virtual float intensity_float(const AzimuthRangeIndices &idx) const {
-      const auto i = index(idx);
+    uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const override {
+        const auto i = index(idx);
 
-      if (_ping->data_size == 1) {
-          return _ping->intensities[i]/255;
-      } else if (_ping->data_size == 2) {
+        if (_ping->data_size == 1) {
+            return intensity_uint8(idx);
+        } else if (_ping->data_size == 2) {
+            return intensity_uint16(idx);
+        } else if (_ping->data_size == 4) {
+            const uint32_t v = (static_cast<uint32_t>(_ping->intensities[i]) |
+                                (static_cast<uint32_t>(_ping->intensities[i+1]) << 8) |
+                                (static_cast<uint32_t>(_ping->intensities[i+2]) << 16) |
+                                (static_cast<uint32_t>(_ping->intensities[i+3]) << 24));
+            return v;
+        }
+        return 0;
+    }
+
+    float intensity_float(const AzimuthRangeIndices &idx) const override {
+        const auto i = index(idx);
+
+        // !! n.b.  Need to ensure these calls aren't circular!!
+        if (_ping->data_size == 1) {
+            return static_cast<float>(intensity_uint8(idx)) / UINT8_MAX;
+        } else if (_ping->data_size == 2) {
             // Data is stored LSB
-            const uint16_t v = (static_cast<uint16_t>(_ping->intensities[i]) |
-                               (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
-            return static_cast<float>(v) / 65535.0;
-      }
-      return 0.0;
-  }
+            return static_cast<float>(intensity_uint16(idx)) / UINT16_MAX;
+        } else if (_ping->data_size == 4) {
+            return static_cast<float>(intensity_uint32(idx)) / UINT32_MAX;
+        }
+        return 0.0;
+    }
 
  protected:
   acoustic_msgs::SonarImage::ConstPtr _ping;

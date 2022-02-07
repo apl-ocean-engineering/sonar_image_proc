@@ -45,11 +45,11 @@ struct AbstractSonarInterface {
   //
   virtual const std::vector<float> &azimuths() const = 0;
 
-  int nBearings() const       { return azimuths().size(); }
-  float bearing(int n) const  { return azimuths().at(n);  }
+  int nBearings() const       { return azimuths().size(); }    __attribute__ ((deprecated));
+  float bearing(int n) const  { return azimuths().at(n);  }    __attribute__ ((deprecated));
 
   int nAzimuth() const        { return azimuths().size(); }
-  int nAzimuths() const        { return azimuths().size(); } // Whoops, should be consistent
+  int nAzimuths() const       { return azimuths().size(); } // Whoops, should be consistent
   float azimuth(int n) const  { return azimuths().at(n); }
 
   Bounds_t azimuthBounds() const;
@@ -92,17 +92,21 @@ struct AbstractSonarInterface {
   virtual float intensity_float(const AzimuthRangeIndices &idx) const = 0;
 
   virtual uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const {
-      return 255*intensity_float(idx);
+      return INT8_MAX*intensity_float(idx);
   }
 
   virtual uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const {
-      return 65535*intensity_float(idx);
+      return INT16_MAX*intensity_float(idx);
+  }
+
+  virtual uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const {
+      return INT32_MAX*intensity_float(idx);
   }
 
   // Trivial wrappers.  These should probably be deprecated eventually
-  float intensity_float(size_t a, size_t r)     const { return intensity_float(AzimuthRangeIndices(a,r)); }
-  uint8_t intensity_uint8(size_t a, size_t r)   const { return intensity_uint8(AzimuthRangeIndices(a,r)); }
-  uint16_t intensity_uint16(size_t a, size_t r) const { return intensity_uint16(AzimuthRangeIndices(a,r)); }
+  float intensity_float(size_t a, size_t r)     const { return intensity_float(AzimuthRangeIndices(a,r)); }     __attribute__ ((deprecated));
+  uint8_t intensity_uint8(size_t a, size_t r)   const { return intensity_uint8(AzimuthRangeIndices(a,r)); }     __attribute__ ((deprecated));
+  uint16_t intensity_uint16(size_t a, size_t r) const { return intensity_uint16(AzimuthRangeIndices(a,r)); }    __attribute__ ((deprecated));
 
  private:
 
