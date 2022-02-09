@@ -50,9 +50,9 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
         const auto i = index(idx);
 
         if (_ping->data_size == 1) {
-        return _ping->intensities[i];
+            return _ping->intensities[i];
         } else if (_ping->data_size == 2) {
-        return intensity_uint32(idx) >> 16;
+            return intensity_float(idx) * UINT8_MAX;
         } else if (_ping->data_size == 4) {
             return intensity_uint32(idx) >> 24;
         }
@@ -67,7 +67,7 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
             return _ping->intensities[i];
         } else if (_ping->data_size == 2) {
             return (static_cast<uint16_t>(_ping->intensities[i]) |
-                (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
+                   (static_cast<uint16_t>(_ping->intensities[i+1]) << 8));
         } else if (_ping->data_size == 4) {
             return intensity_uint32(idx) >> 16;
         }
