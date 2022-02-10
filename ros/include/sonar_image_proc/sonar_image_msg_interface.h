@@ -52,7 +52,7 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
         if (_ping->data_size == 1) {
             return _ping->intensities[i];
         } else if (_ping->data_size == 2) {
-            return intensity_float(idx) * UINT8_MAX;
+            return intensity_uint16(idx) >> 8;
         } else if (_ping->data_size == 4) {
             return intensity_uint32(idx) >> 24;
         }
