@@ -121,8 +121,9 @@ else()
               sonar_image_proc
          LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
-#	install( DIRECTORY launch/
-#	        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch )
+	install( DIRECTORY launch/
+	        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch )
+
 #	install( DIRECTORY rqt_config/
 #	        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/rqt_config )
 

@@ -1,0 +1,50 @@
+<!-- Launches oculus_publisher, oculus_subscriber, and dynamic reconfigure gui
+     with default sonar parameters (as defined in SimpleFireMessage.cpp)
+-->
+<launch>
+  <!-- If true, also launches a sonar_draw node -->
+
+  <node pkg="nodelet" type="nodelet" name="nodelet_manager"  args="manager" output="screen"/>
+
+  <!--  launch-prefix="gdb -ex run args" -->
+  <group ns="oculus">
+    <node pkg="nodelet" type="nodelet" name="draw_sonar"
+          args="load sonar_image_proc/draw_sonar /nodelet_manager"
+          output="screen">
+
+        <remap from="sonar_image" to="/oculus/sonar_image"/>
+
+        <param name="publish_histogram" value="true"/>
+    </node>
+
+    <node pkg="sonar_image_proc" type="histogram_drawer"
+            name="histogram_drawer" output="screen">
+    </node>
+  </group>
+
+
+  <group ns="postprocess">
+    <node pkg="nodelet" type="nodelet" name="sonar_postprocessor"
+          args="load sonar_image_proc/sonar_postprocessor /nodelet_manager">
+      <!-- Use /oculus/sonar_image as input -->
+      <remap from="sonar_image" to="/oculus/sonar_image"/>
+
+      <!-- Map the output to /postprocess/sonar_image -->
+      <remap from="sonar_image_postproc" to="/postprocess/sonar_image"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="draw_sonar"
+          args="load sonar_image_proc/draw_sonar /nodelet_manager"
+          output="screen">
+        <param name="publish_histogram" value="true"/>
+
+        <remap from="sonar_image" to="/postprocess/sonar_image"/>
+    </node>
+
+    <node pkg="sonar_image_proc" type="histogram_drawer"
+            name="histogram_drawer" output="screen">
+    </node>
+
+  </group>
+
+</launch>
