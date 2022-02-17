@@ -1,5 +1,5 @@
 <library path="lib/libdraw_sonar_nodelet">
-  <class name="draw_sonar" type="draw_sonar::DrawSonarNodelet" base_class_type="nodelet::Nodelet">
+  <class name="sonar_image_proc/draw_sonar" type="draw_sonar::DrawSonarNodelet" base_class_type="nodelet::Nodelet">
     <description>
       A nodelet version of the DrawSonar
     </description>
