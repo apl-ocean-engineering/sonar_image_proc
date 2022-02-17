@@ -17,7 +17,7 @@ class HistogramDrawer:
     def __init__(self):
 
         self.pub = rospy.Publisher("drawn_histogram", Image, queue_size=10)
-        self.sub = rospy.Subscriber("/histogram", UInt32MultiArray, self.rx_histogram)
+        self.sub = rospy.Subscriber("histogram", UInt32MultiArray, self.rx_histogram)
 
         self.bin_max = 0
 

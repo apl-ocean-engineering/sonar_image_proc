@@ -30,7 +30,7 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
       ros::NodeHandle nh = getMTNodeHandle();
       ros::NodeHandle pnh = getMTPrivateNodeHandle();
 
-      pnh.param<float>("gain", gain_, 0.0);
+      pnh.param<float>("gain", gain_, 1.0);
       pnh.param<float>("gamma", gamma_, 0.0);
 
 
@@ -45,6 +45,7 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
     void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
       SonarImageMsgInterface interface(msg);
 
+      // For now, only postprocess 32bit images
       if (msg->data_size != 4) {
         pubSonarImage_.publish(msg);
         return;
@@ -58,23 +59,47 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
       out.intensities.clear();
       out.intensities.reserve(interface.ranges().size() * interface.azimuths().size());
 
+      double logmin, logmax;
+
       for (unsigned int r_idx = 0; r_idx < interface.nRanges(); ++r_idx) {
         for (unsigned int a_idx = 0; a_idx < interface.nAzimuth(); ++a_idx) {
           sonar_image_proc::AzimuthRangeIndices idx(a_idx,r_idx);
 
-          const uint32_t pix = interface.intensity_uint32(idx);
-          const auto range = interface.range(r_idx);
+          //const uint32_t pix = interface.intensity_uint32(idx);
+          //const auto range = interface.range(r_idx);
+
+          auto v = log(interface.intensity_uint32(idx))/log(UINT32_MAX) ;
+
+          if ((r_idx==0) && (a_idx==0)) {
+            logmin = v;
+            logmax = v;
+          } else {
+            logmin = std::min(v,logmin);
+            logmax = std::max(v,logmax);
+          }
+
+          const float vmax = 1.0, threshold = 0.74;
+
+          v = (v-threshold)/(vmax-threshold);
+          
+          v = std::min(1.0,std::max(0.0,v));
+
+          out.intensities.push_back(UINT8_MAX*v);
 
           // Just do the math in float for now
-          float i = static_cast<float>(pix)/UINT32_MAX;
+          // float i = static_cast<float>(pix)/UINT32_MAX;
 
-          //ROS_INFO_STREAM(a_idx << "," << r_idx << " : " << pix << " => " << i);
+          // //ROS_INFO_STREAM(a_idx << "," << r_idx << " : " << pix << " => " << i);
 
-          i *= gain_;
+          // i *= gain_;
 
-          out.intensities.push_back(UINT8_MAX * i);
+          // UINT8_MAX * i);
         }
       }
+
+      // 
+      float dr = exp(logmax-logmin);
+      ROS_INFO_STREAM("Dynamic range " << dr);
 
       pubSonarImage_.publish(out);
     }
