@@ -89,6 +89,8 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       if (_publishHistogram)
         histogramPub_ = nh.advertise<std_msgs::UInt32MultiArray>("histogram", 10);
 
+      ROS_DEBUG("draw_sonar ready to run...");
+
     }
 
     void cvBridgeAndPublish(const acoustic_msgs::SonarImage::ConstPtr &msg,

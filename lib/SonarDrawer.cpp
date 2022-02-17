@@ -31,12 +31,14 @@ cv::Mat SonarDrawer::drawRectSonarImage(const AbstractSonarInterface &ping,
 
     for (int r = 0; r < ping.nRanges(); r++) {
         for (int b = 0; b < ping.nBearings(); b++) {
+            const AzimuthRangeIndices loc(b, r);
+
             if (rect.type() == CV_8UC3) {
-                rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup_cv8uc3(ping, b, r);
+                rect.at<cv::Vec3b>(cv::Point(r, b)) = colorMap.lookup_cv8uc3(ping, loc);
             } else if (rect.type() == CV_32FC3) {
-                rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup_cv32fc3(ping, b, r);
+                rect.at<cv::Vec3f>(cv::Point(r, b)) = colorMap.lookup_cv32fc3(ping, loc);
             } else if (rect.type() == CV_32FC1) {
-                rect.at<float>(cv::Point(r, b)) = colorMap.lookup_cv32fc1(ping, b, r);
+                rect.at<float>(cv::Point(r, b)) = colorMap.lookup_cv32fc1(ping, loc);
             } else {
                 assert("Should never get here.");
             }

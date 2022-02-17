@@ -131,7 +131,7 @@ cv::Mat drawSonar(const AbstractSonarInterface &ping,
       // Assume angles are in image frame x-right, y-down
       cv::ellipse(out, origin, cv::Size(rad, rad), 0,
                   begin * 180/M_PI, end * 180/M_PI,
-                  colorMap.lookup_cv8uc3(ping, angles[b].center, range),
+                  colorMap.lookup_cv8uc3(ping, AzimuthRangeIndices(angles[b].center, range)),
                   binThickness);
     }
   }

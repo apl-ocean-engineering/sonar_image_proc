@@ -22,7 +22,7 @@ std::vector<unsigned int> HistogramGenerator::GenerateUint8( const AbstractSonar
 
     for (int r = 0; r < ping.nRanges(); r++) {
         for (int b = 0; b < ping.nBearings(); b++) {
-            const auto val = ping.intensity_uint8(b,r);
+            const auto val = ping.intensity_uint8(AzimuthRangeIndices(b,r));
             result[ val ]++;
         }
     }
@@ -35,7 +35,7 @@ std::vector<unsigned int> HistogramGenerator::GenerateUint16( const AbstractSona
 
     for (int r = 0; r < ping.nRanges(); r++) {
         for (int b = 0; b < ping.nBearings(); b++) {
-            const auto val = ping.intensity_uint16(b,r);
+            const auto val = ping.intensity_uint16(AzimuthRangeIndices(b,r));
 
             result[ val ]++;
         }

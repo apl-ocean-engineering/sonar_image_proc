@@ -30,19 +30,19 @@ struct SonarColorMap {
 
     // The "native" operation returns a single greyscale values a as float
     virtual float lookup_cv32fc1(const AbstractSonarInterface &ping,
-                                int bearing_idx, int range_idx) const {
-        return ping.intensity_float(bearing_idx, range_idx);
+                                 const AzimuthRangeIndices &loc) const {
+        return ping.intensity_float(loc);
     }
 
     virtual cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
-                                    int bearing_idx, int range_idx) const {
-        const auto f = lookup_cv32fc1(ping, bearing_idx, range_idx);
+                                    const AzimuthRangeIndices &loc) const {
+        const auto f = lookup_cv32fc1(ping, loc);
         return cv::Vec3b(f*255, f*255, f*255);
     }
 
     virtual cv::Vec3f lookup_cv32fc3(const AbstractSonarInterface &ping,
-                                    int bearing_idx, int range_idx) const {
-        const auto f = lookup_cv32fc1(ping, bearing_idx, range_idx);
+                                     const AzimuthRangeIndices &loc) const {
+        const auto f = lookup_cv32fc1(ping, loc);
         return cv::Vec3f(f, f, f);
     }
 };
@@ -50,8 +50,8 @@ struct SonarColorMap {
 //=== Implementations of specific color maps ===
 struct MitchellColorMap : public SonarColorMap {
     cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
-                            int bearing_idx, int range_idx) const override {
-        const auto i = ping.intensity_float(bearing_idx, range_idx);
+                            const AzimuthRangeIndices &loc) const override {
+        const auto i = ping.intensity_float(loc);
         return cv::Vec3b( 1-i, i, i );
     }
 };
@@ -67,16 +67,16 @@ struct InfernoColorMap : public SonarColorMap {
 
     // Minor optimization ... don't go through the intermediate Scalar
     cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
-                           int bearing_idx, int range_idx) const override {
-        const auto i = ping.intensity_uint8(bearing_idx, range_idx);
+                            const AzimuthRangeIndices &loc) const override {
+        const auto i = ping.intensity_uint8(loc);
         return cv::Vec3b(_inferno_data_uint8[i][0],
                             _inferno_data_uint8[i][1],
                             _inferno_data_uint8[i][2]);
     }
 
     cv::Vec3f lookup_cv32fc3(const AbstractSonarInterface &ping,
-                           int bearing_idx, int range_idx) const override {
-        const auto i = ping.intensity_uint8(bearing_idx, range_idx);
+                             const AzimuthRangeIndices &loc) const override {
+        const auto i = ping.intensity_uint8(loc);
         return cv::Vec3f(_inferno_data_float[i][0],
                             _inferno_data_float[i][1],
                             _inferno_data_float[i][2]);
@@ -88,8 +88,8 @@ struct InfernoSaturationColorMap : public InfernoColorMap {
 
     // Minor optimization ... don't go through the intermediate Scalar
     cv::Vec3b lookup_cv8uc3(const AbstractSonarInterface &ping,
-                           int bearing_idx, int range_idx) const override {
-        const auto i = ping.intensity_uint8(bearing_idx, range_idx);
+                            const AzimuthRangeIndices &loc) const override {
+        const auto i = ping.intensity_uint8(loc);
         if (i == 255) {
             return cv::Vec3b(0, 255, 0);
         } else {
@@ -100,8 +100,8 @@ struct InfernoSaturationColorMap : public InfernoColorMap {
     }
 
     cv::Vec3f lookup_cv32fc3(const AbstractSonarInterface &ping,
-                           int bearing_idx, int range_idx) const override {
-        const auto i = ping.intensity_uint8(bearing_idx, range_idx);
+                             const AzimuthRangeIndices &loc) const override {
+        const auto i = ping.intensity_uint8(loc);
         if (i == 255) {
             return cv::Vec3f(0.0, 1.0, 0.0);
         } else {

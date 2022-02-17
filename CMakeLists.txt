@@ -90,12 +90,14 @@ else()
   target_link_libraries(sonar_image_proc ${catkin_LIBRARIES})
   set_property(TARGET sonar_image_proc PROPERTY CXX_STANDARD 14)
 
-  # Dynamically loadable library containing nodelets
-  add_library(draw_sonar_nodelet ros/src/draw_sonar_nodelet.cpp )
-  target_link_libraries(draw_sonar_nodelet ${catkin_LIBRARIES} sonar_image_proc )
-  class_loader_hide_library_symbols(draw_sonar_nodelet)
-  set_property(TARGET draw_sonar_nodelet PROPERTY CXX_STANDARD 14)
+  # Dynamically loadable libraries containing nodelets
+  add_library(sonar_image_proc_nodelets 
+                ros/src/draw_sonar_nodelet.cpp
+                ros/src/sonar_postprocessor_nodelet.cpp)
+  target_link_libraries(sonar_image_proc_nodelets ${catkin_LIBRARIES} sonar_image_proc )
+  set_property(TARGET sonar_image_proc_nodelets PROPERTY CXX_STANDARD 14)
 
+  ## Standalone nodes
   add_executable(draw_sonar_node ros/src/draw_sonar_node.cpp)
   target_link_libraries(draw_sonar_node
      sonar_image_proc
@@ -103,9 +105,20 @@ else()
   add_dependencies(draw_sonar_node ${catkin_EXPORTED_TARGETS})
   set_property(TARGET draw_sonar_node PROPERTY CXX_STANDARD 14)
 
+  add_executable(sonar_postprocessor_node ros/src/sonar_postprocessor_node.cpp)
+  target_link_libraries(sonar_postprocessor_node
+     sonar_image_proc
+     ${catkin_LIBRARIES})
+  add_dependencies(sonar_postprocessor_node ${catkin_EXPORTED_TARGETS})
+  set_property(TARGET sonar_postprocessor_node PROPERTY CXX_STANDARD 14)
 
-  install(TARGETS draw_sonar_node sonar_image_proc
-         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  install(TARGETS draw_sonar_node
+              sonar_postprocessor_node
+         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+  install(TARGETS
+              sonar_image_proc_nodelets
+              sonar_image_proc
          LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
 #	install( DIRECTORY launch/
@@ -113,7 +126,7 @@ else()
 #	install( DIRECTORY rqt_config/
 #	        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/rqt_config )
 
-  install( FILES nodelet_plugins.xml
+  install(FILES nodelet_plugins.xml
    		   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
   ## Install headers
