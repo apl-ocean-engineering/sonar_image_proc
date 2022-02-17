@@ -34,6 +34,7 @@ struct AbstractSonarInterface {
   enum DataType_t {
         TYPE_UINT8,
         TYPE_UINT16,
+        TYPE_UINT32,
         TYPE_FLOAT32
   };
 
