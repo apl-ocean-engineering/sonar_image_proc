@@ -28,6 +28,8 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
             return AbstractSonarInterface::TYPE_UINT8;
         else if (_ping->data_size == 2)
             return AbstractSonarInterface::TYPE_UINT16;
+        else if (_ping->data_size == 4)
+            return AbstractSonarInterface::TYPE_UINT32;
     }
 
   const std::vector<float> &ranges() const override {
@@ -88,7 +90,7 @@ struct SonarImageMsgInterface : public sonar_image_proc::AbstractSonarInterface 
   float _verticalTanSquared;
 
   size_t index(const AzimuthRangeIndices &idx) const {
-    assert( (_ping->data_size == 1) || (_ping->data_size == 2));
+    assert( (_ping->data_size == 1) || (_ping->data_size == 2) || (_ping->data_size == 4));
     return _ping->data_size*((idx.range() * nBearings()) + idx.azimuth());
   }
 };
