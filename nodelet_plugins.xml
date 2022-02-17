@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-<library path="lib/libdraw_sonar_nodelet">
-=======
 <library path="lib/libsonar_image_proc_nodelets">
->>>>>>> origin/feature/add_sonar_postprocessor
   <class name="sonar_image_proc/draw_sonar" type="draw_sonar::DrawSonarNodelet" base_class_type="nodelet::Nodelet">
     <description>
       A nodelet version of the DrawSonar

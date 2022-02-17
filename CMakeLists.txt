@@ -91,7 +91,7 @@ else()
   set_property(TARGET sonar_image_proc PROPERTY CXX_STANDARD 14)
 
   # Dynamically loadable libraries containing nodelets
-  add_library(sonar_image_proc_nodelets 
+  add_library(sonar_image_proc_nodelets
                 ros/src/draw_sonar_nodelet.cpp
                 ros/src/sonar_postprocessor_nodelet.cpp)
   target_link_libraries(sonar_image_proc_nodelets ${catkin_LIBRARIES} sonar_image_proc )
