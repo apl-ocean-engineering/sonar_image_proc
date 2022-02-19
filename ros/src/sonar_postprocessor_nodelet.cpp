@@ -1,118 +1,112 @@
-// Copyright 2021 University of Washington Applied Physics Laboratory
-//
+// Copyright 2021-2022 University of Washington Applied Physics Laboratory
+// Author: Aaron Marburg
 
 #include <sstream>
 
-#include "ros/ros.h"
-#include "nodelet/nodelet.h"
-
 #include "acoustic_msgs/SonarImage.h"
+#include "nodelet/nodelet.h"
+#include "ros/ros.h"
 #include "sonar_image_proc/sonar_image_msg_interface.h"
-
-
 
 namespace sonar_postprocessor {
 
-using sonar_image_proc::SonarImageMsgInterface;
 using acoustic_msgs::SonarImage;
+using sonar_image_proc::SonarImageMsgInterface;
 
 class SonarPostprocessorNodelet : public nodelet::Nodelet {
  public:
-    SonarPostprocessorNodelet()
-      : Nodelet()
-    {;}
+  SonarPostprocessorNodelet() : Nodelet() { ; }
 
-    virtual ~SonarPostprocessorNodelet()
-    {;}
+  virtual ~SonarPostprocessorNodelet() { ; }
 
  private:
-    virtual void onInit() {
-      ros::NodeHandle nh = getMTNodeHandle();
-      ros::NodeHandle pnh = getMTPrivateNodeHandle();
+  virtual void onInit() {
+    ros::NodeHandle nh = getMTNodeHandle();
+    ros::NodeHandle pnh = getMTPrivateNodeHandle();
 
-      pnh.param<float>("gain", gain_, 1.0);
-      pnh.param<float>("gamma", gamma_, 0.0);
+    pnh.param<float>("gain", gain_, 1.0);
+    pnh.param<float>("gamma", gamma_, 0.0);
 
+    subSonarImage_ = nh.subscribe<SonarImage>(
+        "sonar_image", 10, &SonarPostprocessorNodelet::sonarImageCallback,
+        this);
 
-      subSonarImage_ = nh.subscribe<SonarImage>("sonar_image",
-                            10, &SonarPostprocessorNodelet::sonarImageCallback, this);
+    pubSonarImage_ = nh.advertise<SonarImage>("sonar_image_postproc", 10);
 
-      pubSonarImage_ = nh.advertise<SonarImage>("sonar_image_postproc", 10);
+    ROS_DEBUG("sonar_processor ready to run...");
+  }
 
-      ROS_DEBUG("sonar_processor ready to run...");
+  void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
+    SonarImageMsgInterface interface(msg);
+
+    // For now, only postprocess 32bit images
+    if (msg->data_size != 4) {
+      pubSonarImage_.publish(msg);
+      return;
     }
 
-    void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
-      SonarImageMsgInterface interface(msg);
+    // Expect this will copy
+    acoustic_msgs::SonarImage out = *msg;
 
-      // For now, only postprocess 32bit images
-      if (msg->data_size != 4) {
-        pubSonarImage_.publish(msg);
-        return;
-      }
+    // For now, only 8-bit output is supported
+    out.data_size = 1;
+    out.intensities.clear();
+    out.intensities.reserve(interface.ranges().size() *
+                            interface.azimuths().size());
 
-      // Expect this will copy
-      acoustic_msgs::SonarImage out = *msg;
+    double logmin, logmax;
 
-      // For now, only 8-bit output is supported
-      out.data_size = 1;
-      out.intensities.clear();
-      out.intensities.reserve(interface.ranges().size() * interface.azimuths().size());
+    for (unsigned int r_idx = 0; r_idx < interface.nRanges(); ++r_idx) {
+      for (unsigned int a_idx = 0; a_idx < interface.nAzimuth(); ++a_idx) {
+        sonar_image_proc::AzimuthRangeIndices idx(a_idx, r_idx);
 
-      double logmin, logmax;
+        // const uint32_t pix = interface.intensity_uint32(idx);
+        // const auto range = interface.range(r_idx);
 
-      for (unsigned int r_idx = 0; r_idx < interface.nRanges(); ++r_idx) {
-        for (unsigned int a_idx = 0; a_idx < interface.nAzimuth(); ++a_idx) {
-          sonar_image_proc::AzimuthRangeIndices idx(a_idx,r_idx);
+        auto v = log(interface.intensity_uint32(idx)) / log(UINT32_MAX);
 
-          //const uint32_t pix = interface.intensity_uint32(idx);
-          //const auto range = interface.range(r_idx);
-
-          auto v = log(interface.intensity_uint32(idx))/log(UINT32_MAX) ;
-
-          if ((r_idx==0) && (a_idx==0)) {
-            logmin = v;
-            logmax = v;
-          } else {
-            logmin = std::min(v,logmin);
-            logmax = std::max(v,logmax);
-          }
-
-          const float vmax = 1.0, threshold = 0.74;
-
-          v = (v-threshold)/(vmax-threshold);
-          
-          v = std::min(1.0,std::max(0.0,v));
-
-          out.intensities.push_back(UINT8_MAX*v);
-
-          // Just do the math in float for now
-          // float i = static_cast<float>(pix)/UINT32_MAX;
-
-          // //ROS_INFO_STREAM(a_idx << "," << r_idx << " : " << pix << " => " << i);
-
-          // i *= gain_;
-
-          // UINT8_MAX * i);
+        if ((r_idx == 0) && (a_idx == 0)) {
+          logmin = v;
+          logmax = v;
+        } else {
+          logmin = std::min(v, logmin);
+          logmax = std::max(v, logmax);
         }
+
+        const float vmax = 1.0, threshold = 0.74;
+
+        v = (v - threshold) / (vmax - threshold);
+
+        v = std::min(1.0, std::max(0.0, v));
+
+        out.intensities.push_back(UINT8_MAX * v);
+
+        // Just do the math in float for now
+        // float i = static_cast<float>(pix)/UINT32_MAX;
+
+        // //ROS_INFO_STREAM(a_idx << "," << r_idx << " : " << pix << " => " <<
+        // i);
+
+        // i *= gain_;
+
+        // UINT8_MAX * i);
       }
-
-      // 
-      float dr = exp(logmax-logmin);
-      ROS_INFO_STREAM("Dynamic range " << dr);
-
-      pubSonarImage_.publish(out);
     }
+
+    //
+    float dr = exp(logmax - logmin);
+    pubSonarImage_.publish(out);
+  }
 
  protected:
+  ros::Subscriber subSonarImage_;
+  ros::Publisher pubSonarImage_;
 
-    ros::Subscriber subSonarImage_;
-    ros::Publisher pubSonarImage_;
-
-    float gain_, gamma_;
+  float gain_, gamma_;
 };
 
-}  // namespace draw_sonar
+}  // namespace sonar_postprocessor
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(sonar_postprocessor::SonarPostprocessorNodelet, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(sonar_postprocessor::SonarPostprocessorNodelet,
+                       nodelet::Nodelet);
