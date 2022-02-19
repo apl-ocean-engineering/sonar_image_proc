@@ -63,7 +63,9 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
         // const uint32_t pix = interface.intensity_uint32(idx);
         // const auto range = interface.range(r_idx);
 
-        auto v = log(interface.intensity_uint32(idx)) / log(UINT32_MAX);
+        // Avoid log(0)
+        auto intensity = interface.intensity_uint32(idx);
+        auto v = log(std::max((uint)1, intensity)) / log(UINT32_MAX);
 
         if ((r_idx == 0) && (a_idx == 0)) {
           logmin = v;
