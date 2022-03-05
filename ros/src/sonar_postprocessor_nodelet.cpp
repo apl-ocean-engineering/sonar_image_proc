@@ -81,7 +81,7 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
           const float vmax = 1.0, threshold = 0.74;
 
           v = (v-threshold)/(vmax-threshold);
-          
+
           v = std::min(1.0,std::max(0.0,v));
 
           out.intensities.push_back(UINT8_MAX*v);
@@ -97,9 +97,9 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
         }
       }
 
-      // 
+      //
       float dr = exp(logmax-logmin);
-      ROS_INFO_STREAM("Dynamic range " << dr);
+      // ROS_INFO_STREAM("Dynamic range " << dr);
 
       pubSonarImage_.publish(out);
     }
