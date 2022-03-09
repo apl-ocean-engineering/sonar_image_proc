@@ -78,9 +78,7 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
         const float vmax = 1.0, threshold = 0.74;
 
         v = (v - threshold) / (vmax - threshold);
-
         v = std::min(1.0, std::max(0.0, v));
-
         out.intensities.push_back(UINT8_MAX * v);
 
         // Just do the math in float for now
