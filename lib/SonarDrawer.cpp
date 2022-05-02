@@ -1,8 +1,6 @@
 // Copyright 2021 University of Washington Applied Physics Laboratory
 //
 
-#include "ros/console.h"
-
 #include "sonar_image_proc/DrawSonar.h"
 #include "sonar_image_proc/OverlayImage.h"
 
