@@ -59,7 +59,12 @@ else()
     nodelet
     nodelet_topic_tools
     OpenCV
-    pybind11_catkin
+    # pybind11_catkin
+    dynamic_reconfigure
+  )
+
+  generate_dynamic_reconfigure_options(
+    ros/cfg/DrawSonar.cfg
   )
 
   catkin_package(
@@ -89,6 +94,7 @@ else()
   add_library(sonar_image_proc ${sonar_image_proc_SRCS})
   target_link_libraries(sonar_image_proc ${catkin_LIBRARIES})
   set_property(TARGET sonar_image_proc PROPERTY CXX_STANDARD 14)
+  add_dependencies(sonar_image_proc ${PROJECT_NAME}_gencfg)
 
   # Dynamically loadable libraries containing nodelets
   add_library(sonar_image_proc_nodelets

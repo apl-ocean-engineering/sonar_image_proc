@@ -36,8 +36,8 @@ public:
     int DEFAULT_LINE_THICKNESS = 1;
     float DEFAULT_LINE_ALPHA = 0.5;
 
-    // arc spacing of 0 means "calculate automatically"
-    float DEFAULT_ARC_SPACING = 0;
+    // range spacing of 0 means "calculate automatically"
+    float DEFAULT_RANGE_SPACING = 0;
 
     float DEFAULT_RADIAL_SPACING = 20; // degrees
     bool DEFAULT_RADIAL_AT_ZERO = false;
@@ -46,14 +46,15 @@ public:
 
     OverlayConfig()
         : line_thickness_(DEFAULT_LINE_THICKNESS),
-          line_alpha_(DEFAULT_LINE_ALPHA), arc_spacing_m_(DEFAULT_ARC_SPACING),
+          line_alpha_(DEFAULT_LINE_ALPHA),
+          range_spacing_m_(DEFAULT_RANGE_SPACING),
           radial_spacing_deg_(DEFAULT_RADIAL_SPACING),
           radial_at_zero_(DEFAULT_RADIAL_AT_ZERO),
           font_scale_(DEFAULT_FONT_SCALE), line_color_(255, 255, 255) {}
 
     OVERLAY_RW(line_alpha_, float, setLineAlpha, lineAlpha)
     OVERLAY_RW(line_thickness_, int, setLineThickness, lineThickness)
-    OVERLAY_RW(arc_spacing_m_, float, setArcSpacing, arcSpacing)
+    OVERLAY_RW(range_spacing_m_, float, setRangeSpacing, rangeSpacing)
 
     OVERLAY_RW(radial_spacing_deg_, float, setRadialSpacing, radialSpacing)
     OVERLAY_RW(radial_at_zero_, bool, setRadialAtZero, radialAtZero)
@@ -68,7 +69,7 @@ public:
     bool operator!=(const OverlayConfig &other) const {
       return (lineThickness() != other.lineThickness()) ||
              (lineAlpha() != other.lineAlpha()) ||
-             (arcSpacing() != other.arcSpacing()) ||
+             (rangeSpacing() != other.rangeSpacing()) ||
              (radialSpacing() != other.radialSpacing()) ||
              (radialAtZero() != other.radialAtZero()) ||
              (fontScale() != other.fontScale()) ||
@@ -78,7 +79,7 @@ public:
   private:
     int line_thickness_;
     float line_alpha_;
-    float arc_spacing_m_;
+    float range_spacing_m_;
     float radial_spacing_deg_;
     bool radial_at_zero_;
     float font_scale_;

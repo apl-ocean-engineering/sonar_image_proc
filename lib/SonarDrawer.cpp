@@ -227,7 +227,7 @@ void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
   const float maxRange = ping.maxRange();
 
   //== Draw arcs ==
-  float arcSpacing = config.arcSpacing();
+  float arcSpacing = config.rangeSpacing();
 
   if (arcSpacing <= 0) {
     // Calculate automatically .. just a lame heuristic for now
@@ -285,16 +285,19 @@ void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
   radials.push_back(minAzimuth);
   radials.push_back(maxAzimuth);
 
-  if (config.radialAtZero()) {
-    // \todo(@amarburg) to implement
-  } else {
-    for (float d = radialSpacing / 2; d > minAzimuth && d < maxAzimuth;
-         d += radialSpacing) {
-      radials.push_back(d);
-    }
-    for (float d = -radialSpacing / 2; d > minAzimuth && d < maxAzimuth;
-         d -= radialSpacing) {
-      radials.push_back(d);
+  // If radialSpacing == 0. draw only the outline radial lines
+  if (radialSpacing > 0) {
+    if (config.radialAtZero()) {
+      // \todo(@amarburg) to implement
+    } else {
+      for (float d = radialSpacing / 2; d > minAzimuth && d < maxAzimuth;
+           d += radialSpacing) {
+        radials.push_back(d);
+      }
+      for (float d = -radialSpacing / 2; d > minAzimuth && d < maxAzimuth;
+           d -= radialSpacing) {
+        radials.push_back(d);
+      }
     }
   }
 
@@ -306,15 +309,17 @@ void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
   // And draw
   const float minRangePix = (minRange / maxRange) * sz.height;
 
-  for (const auto b : radials) {
-    const float theta = bearingToImage(b);
+  if (minRange < maxRange) {
+    for (const auto b : radials) {
+      const float theta = bearingToImage(b);
 
-    const cv::Point2f begin(minRangePix * cos(theta) + origin.x,
-                            minRangePix * sin(theta) + origin.y);
-    const cv::Point2f end(sz.height * cos(theta) + origin.x,
-                          sz.height * sin(theta) + origin.y);
+      const cv::Point2f begin(minRangePix * cos(theta) + origin.x,
+                              minRangePix * sin(theta) + origin.y);
+      const cv::Point2f end(sz.height * cos(theta) + origin.x,
+                            sz.height * sin(theta) + origin.y);
 
-    cv::line(_overlay, begin, end, lineColor, config.lineThickness());
+      cv::line(_overlay, begin, end, lineColor, config.lineThickness());
+    }
   }
 
   _config_used = config;
