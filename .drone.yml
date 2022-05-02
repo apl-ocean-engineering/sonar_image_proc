@@ -15,13 +15,13 @@ steps:
     - ./fips build
 
   ## Build in ros melodic
-- name: build-ros-melodic
-  image: amarburg/drone-ci-ros-melodic:latest
-  commands:
-    - wget -O- https://gitlab.com/amarburg/ros_drone_ci/-/raw/master/bootstrap.sh | /bin/bash
-  environment:
-    WSTOOL_RECURSIVE: true
-    ROS_PACKAGES_TO_INSTALL: cv-bridge image-transport
+# - name: build-ros-melodic
+#   image: amarburg/drone-ci-ros-melodic:latest
+#   commands:
+#     - wget -O- https://gitlab.com/amarburg/ros_drone_ci/-/raw/master/bootstrap.sh | /bin/bash
+#   environment:
+#     WSTOOL_RECURSIVE: true
+#     ROS_PACKAGES_TO_INSTALL: cv-bridge image-transport
 
   ## Build in ros noetic
 - name: build-ros-noetic
