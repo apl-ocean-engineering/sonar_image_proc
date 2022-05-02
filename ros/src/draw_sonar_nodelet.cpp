@@ -22,7 +22,11 @@
 #include "sonar_image_proc/SonarDrawer.h"
 #include "sonar_image_proc/sonar_image_msg_interface.h"
 
-// Subscribes to sonar message topic, draws using opencv then publishes result
+#include <dynamic_reconfigure/server.h>
+#include <sonar_image_proc/DrawSonarConfig.h>
+
+// Subscribes to sonar message topic, draws using opencv then publishes
+// result
 
 namespace draw_sonar {
 
@@ -39,18 +43,17 @@ using sonar_image_proc::InfernoSaturationColorMap;
 using sonar_image_proc::SonarColorMap;
 
 class DrawSonarNodelet : public nodelet::Nodelet {
- public:
+public:
   DrawSonarNodelet()
-      : Nodelet(),
-        _maxRange(0.0),
-        _colorMap(new InfernoColorMap)  // Set a reasonable default
+      : Nodelet(), _maxRange(0.0),
+        _colorMap(new InfernoColorMap) // Set a reasonable default
   {
     ;
   }
 
   virtual ~DrawSonarNodelet() { ; }
 
- private:
+private:
   virtual void onInit() {
     ros::NodeHandle nh = getMTNodeHandle();
     ros::NodeHandle pnh = getMTPrivateNodeHandle();
@@ -76,6 +79,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
         "sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this);
 
     pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
+    osdPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_osd", 10);
     rectPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_rect", 10);
 
     if (_publishOldApi)
@@ -87,6 +91,11 @@ class DrawSonarNodelet : public nodelet::Nodelet {
 
     if (_publishHistogram)
       histogramPub_ = nh.advertise<std_msgs::UInt32MultiArray>("histogram", 10);
+
+    dyn_cfg_server_.reset(new DynamicReconfigureServer(pnh));
+    dyn_cfg_server_->setCallback(std::bind(&DrawSonarNodelet::dynCfgCallback,
+                                           this, std::placeholders::_1,
+                                           std::placeholders::_2));
 
     ROS_DEBUG("draw_sonar ready to run...");
   }
@@ -155,6 +164,11 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       cv::Mat sonarMat = _sonarDrawer.remapRectSonarImage(interface, rectMat);
       cvBridgeAndPublish(msg, sonarMat, pub_);
 
+      if (osdPub_.getNumSubscribers() > 0) {
+        cv::Mat osdMat = _sonarDrawer.drawOverlay(interface, sonarMat);
+        cvBridgeAndPublish(msg, osdMat, osdPub_);
+      }
+
       mapElapsed = ros::WallTime::now() - begin;
     }
 
@@ -166,7 +180,8 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       output << ", \"rect\" : " << rectElapsed.toSec();
       output << ", \"map\" : " << mapElapsed.toSec();
 
-      if (_publishOldApi) output << ", \"old_api\" : " << oldApiElapsed.toSec();
+      if (_publishOldApi)
+        output << ", \"old_api\" : " << oldApiElapsed.toSec();
       if (_publishHistogram)
         output << ", \"histogram\" : " << histogramElapsed.toSec();
 
@@ -179,13 +194,27 @@ class DrawSonarNodelet : public nodelet::Nodelet {
     }
   }
 
+  void dynCfgCallback(sonar_image_proc::DrawSonarConfig &config,
+                      uint32_t level) {
+
+    _sonarDrawer.overlayConfig()
+        .setRangeSpacing(config.range_spacing)
+        .setRadialSpacing(config.bearing_spacing)
+        .setLineAlpha(config.line_alpha)
+        .setLineThickness(config.line_thickness);
+  }
+
   void setColorMap(const std::string &colorMapName) {
     // TBD actually implement the parameter processing here...
     _colorMap.reset(new InfernoSaturationColorMap());
   }
 
   ros::Subscriber subSonarImage_;
-  ros::Publisher pub_, rectPub_, oldPub_, timingPub_, histogramPub_;
+  ros::Publisher pub_, rectPub_, osdPub_, oldPub_, timingPub_, histogramPub_;
+
+  typedef dynamic_reconfigure::Server<sonar_image_proc::DrawSonarConfig>
+      DynamicReconfigureServer;
+  std::shared_ptr<DynamicReconfigureServer> dyn_cfg_server_;
 
   sonar_image_proc::SonarDrawer _sonarDrawer;
 
@@ -195,7 +224,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
   std::unique_ptr<SonarColorMap> _colorMap;
 };
 
-}  // namespace draw_sonar
+} // namespace draw_sonar
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(draw_sonar::DrawSonarNodelet, nodelet::Nodelet);
