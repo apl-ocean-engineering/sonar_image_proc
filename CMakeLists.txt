@@ -83,6 +83,7 @@ else()
       lib/SonarDrawer.cpp
       lib/OldDrawSonar.cpp
       lib/HistogramGenerator.cpp
+      lib/OverlayImage.cpp
   )
 
   # "true" library containing core functionality

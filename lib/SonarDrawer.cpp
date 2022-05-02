@@ -13,6 +13,9 @@ namespace sonar_image_proc {
 
 using sonar_image_proc::AbstractSonarInterface;
 
+static float deg2radf(float deg) { return deg * M_PI / 180.0; }
+static float rad2degf(float rad) { return rad * 180.0 / M_PI; }
+
 SonarDrawer::SonarDrawer() { ; }
 
 cv::Mat SonarDrawer::drawRectSonarImage(const AbstractSonarInterface &ping,
@@ -61,89 +64,11 @@ cv::Mat SonarDrawer::remapRectSonarImage(const AbstractSonarInterface &ping,
 
 cv::Mat SonarDrawer::drawOverlay(const AbstractSonarInterface &ping,
                                  const cv::Mat &sonarImage) {
-  cv::Mat out(sonarImage);
+  // Alpha blend overlay onto sonarImage
+  cv::Mat output;
+  overlayImage(sonarImage, _overlay(ping, sonarImage, overlayConfig()), output);
 
-  const cv::Vec3b lineColor(255, 255, 255);
-  const int lineThickness = 2;
-
-  const float minAzimuth = ping.minAzimuth();
-  const float maxAzimuth = ping.maxAzimuth();
-
-  const float maxRange = ping.maxRange();
-
-  const cv::Point2f origin(sonarImage.size().width / 2,
-                           sonarImage.size().height);
-
-  //== Draw arcs ==
-  const float arcSpacing = 1; // meters ... this should be automatic
-  const float minRange = 1;   // meters
-
-  const float minRangePix = (minRange / maxRange) * sonarImage.size().height;
-
-  for (float r = minRange; r < ping.maxRange(); r += arcSpacing) {
-    const float radiusPix = (r / maxRange) * sonarImage.size().height;
-
-    ROS_INFO_STREAM("Range " << r << " at " << radiusPix << "pix");
-
-    cv::ellipse(out, origin, cv::Size(radiusPix, radiusPix), 0,
-                180 / M_PI * (-M_PI / 2 + minAzimuth),
-                180 / M_PI * (-M_PI / 2 + maxAzimuth), lineColor,
-                lineThickness);
-  }
-
-  cv::ellipse(out, origin,
-              cv::Size(sonarImage.size().height, sonarImage.size().height), 0,
-              0, 360, lineColor, lineThickness);
-
-  //== Draw radials ==
-  std::vector<float> radials;
-
-  // Configuration ... move later
-  const float radialsSpacing = 10 * M_PI / 180.0; // degrees
-  const bool centered = false;
-
-  radials.push_back(minAzimuth);
-  radials.push_back(maxAzimuth);
-
-  // I kindof assume minAzimuth is < 0
-
-  if (centered) {
-    //
-  } else {
-    for (float d = radialsSpacing / 2; d > minAzimuth && d < maxAzimuth;
-         d += radialsSpacing) {
-      radials.push_back(d);
-    }
-    for (float d = -radialsSpacing / 2; d > minAzimuth && d < maxAzimuth;
-         d -= radialsSpacing) {
-      radials.push_back(d);
-    }
-  }
-
-  // Sort
-  std::sort(radials.begin(), radials.end());
-  auto last = std::unique(radials.begin(), radials.end());
-  radials.erase(last, radials.end());
-
-  // And draw
-  ROS_INFO_STREAM("Drawing " << radials.size() << " radials");
-  for (const auto b : radials) {
-
-    const float angle = -M_PI / 2 + b;
-
-    ROS_INFO_STREAM("  : " << b << "  -->  " << angle);
-
-    const cv::Point2f begin(minRangePix * cos(angle) + origin.x,
-                            minRangePix * sin(angle) + origin.y);
-    const cv::Point2f end(sonarImage.size().height * cos(angle) + origin.x,
-                          sonarImage.size().height * sin(angle) + origin.y);
-
-    ROS_INFO_STREAM("     : from " << begin.x << ", " << begin.y << "  to  "
-                                   << end.x << ", " << end.y);
-    cv::line(out, origin, end, lineColor, lineThickness);
-  }
-
-  return out;
+  return output;
 }
 
 cv::Mat SonarDrawer::drawSonar(const AbstractSonarInterface &ping,
@@ -156,6 +81,18 @@ cv::Mat SonarDrawer::drawSonar(const AbstractSonarInterface &ping,
   } else {
     return sonar;
   }
+}
+
+// ==== SonarDrawer::Cached ====
+
+bool SonarDrawer::Cached::isValid(const AbstractSonarInterface &ping) const {
+  // Check for cache invalidation...
+  if ((_numAzimuth != ping.nAzimuth()) || (_numRanges != ping.nRanges()) ||
+      (_rangeBounds != ping.rangeBounds() ||
+       (_azimuthBounds != ping.azimuthBounds())))
+    return false;
+
+  return true;
 }
 
 // ==== SonarDrawer::CachedMap ====
@@ -239,13 +176,128 @@ bool SonarDrawer::CachedMap::isValid(const AbstractSonarInterface &ping) const {
   if (_scMap1.empty() || _scMap2.empty())
     return false;
 
-  // Check for cache invalidation...
-  if ((_numAzimuth != ping.nAzimuth()) || (_numRanges != ping.nRanges()) ||
-      (_rangeBounds != ping.rangeBounds() ||
-       (_azimuthBounds != ping.azimuthBounds())))
+  return Cached::isValid(ping);
+}
+
+// === SonarDrawer::CachedOverlay ===
+
+bool SonarDrawer::CachedOverlay::isValid(const AbstractSonarInterface &ping,
+                                         const cv::Mat &sonarImage,
+                                         const OverlayConfig &config) const {
+  if (sonarImage.size() != _overlay.size())
     return false;
 
-  return true;
+  if (_config_used != config)
+    return false;
+
+  return Cached::isValid(ping);
+}
+
+const cv::Mat &SonarDrawer::CachedOverlay::
+operator()(const AbstractSonarInterface &ping, const cv::Mat &sonarImage,
+           const OverlayConfig &config) {
+  if (!isValid(ping, sonarImage, config))
+    create(ping, sonarImage, config);
+
+  return _overlay;
+}
+
+// Converts sonar bearing (with sonar "forward" at bearing 0) to image
+// orientation with sonar "forward" point upward in the image, which is the -Y
+// direction in image coordinates.
+static float bearingToImage(float d) { return (-M_PI / 2) + d; }
+
+void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
+                                        const cv::Mat &sonarImage,
+                                        const OverlayConfig &config) {
+
+  const cv::Size sz(sonarImage.size());
+  const cv::Point2f origin(sz.width / 2, sz.height);
+
+  // Reset overlay
+  _overlay = cv::Mat::zeros(sz, CV_8UC4);
+  const cv::Vec4b lineColor(255, 255, 255, 255 * config.lineAlpha());
+
+  const float minAzimuth = ping.minAzimuth();
+  const float maxAzimuth = ping.maxAzimuth();
+
+  const float maxRange = ping.maxRange();
+
+  //== Draw arcs ==
+  float arcSpacing = config.arcSpacing();
+
+  if (arcSpacing <= 0) {
+    // Calculate automatically .. just heuristics
+    if (maxRange < 2)
+      arcSpacing = 0.5;
+    else if (maxRange < 5)
+      arcSpacing = 1.0;
+    else if (maxRange < 10)
+      arcSpacing = 2.0;
+    else if (maxRange < 50)
+      arcSpacing = 10.0;
+    else
+      arcSpacing = 20.0;
+  }
+
+  const float minRange = arcSpacing;
+
+  for (float r = minRange; r < ping.maxRange(); r += arcSpacing) {
+    const float radiusPix = (r / maxRange) * sonarImage.size().height;
+
+    cv::ellipse(_overlay, origin, cv::Size(radiusPix, radiusPix), 0,
+                rad2degf(bearingToImage(minAzimuth)),
+                rad2degf(bearingToImage(maxAzimuth)), lineColor,
+                config.lineThickness());
+  }
+
+  // And one arc at max range
+  cv::ellipse(_overlay, origin, sz, 0, rad2degf(bearingToImage(minAzimuth)),
+              rad2degf(bearingToImage(maxAzimuth)), lineColor,
+              config.lineThickness());
+
+  //== Draw radials ==
+  std::vector<float> radials;
+
+  // Configuration ... move later
+  const float radialSpacing = deg2radf(config.radialSpacing());
+
+  radials.push_back(minAzimuth);
+  radials.push_back(maxAzimuth);
+
+  if (config.radialAtZero()) {
+    // \todo(@amarburg) to implement
+  } else {
+    for (float d = radialSpacing / 2; d > minAzimuth && d < maxAzimuth;
+         d += radialSpacing) {
+      radials.push_back(d);
+    }
+    for (float d = -radialSpacing / 2; d > minAzimuth && d < maxAzimuth;
+         d -= radialSpacing) {
+      radials.push_back(d);
+    }
+  }
+
+  // Sort and unique
+  std::sort(radials.begin(), radials.end());
+  auto last = std::unique(radials.begin(), radials.end());
+  radials.erase(last, radials.end());
+
+  // And draw
+  const float minRangePix = (minRange / maxRange) * sz.height;
+
+  for (const auto b : radials) {
+    const float theta = bearingToImage(b);
+
+    const cv::Point2f begin(minRangePix * cos(theta) + origin.x,
+                            minRangePix * sin(theta) + origin.y);
+    const cv::Point2f end(sz.height * cos(theta) + origin.x,
+                          sz.height * sin(theta) + origin.y);
+
+    cv::line(_overlay, begin, end, lineColor, config.lineThickness());
+  }
+
+  _config_used = config;
 }
 
 } // namespace sonar_image_proc
