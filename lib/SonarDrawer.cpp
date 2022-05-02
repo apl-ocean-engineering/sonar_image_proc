@@ -4,6 +4,7 @@
 #include "ros/console.h"
 
 #include "sonar_image_proc/DrawSonar.h"
+#include "sonar_image_proc/OverlayImage.h"
 
 #include <iostream>
 #include <limits>
@@ -66,7 +67,8 @@ cv::Mat SonarDrawer::drawOverlay(const AbstractSonarInterface &ping,
                                  const cv::Mat &sonarImage) {
   // Alpha blend overlay onto sonarImage
   cv::Mat output;
-  overlayImage(sonarImage, _overlay(ping, sonarImage, overlayConfig()), output);
+  overlayImage<unsigned char>(
+      sonarImage, _overlay(ping, sonarImage, overlayConfig()), output);
 
   return output;
 }
@@ -216,7 +218,10 @@ void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
 
   // Reset overlay
   _overlay = cv::Mat::zeros(sz, CV_8UC4);
-  const cv::Vec4b lineColor(255, 255, 255, 255 * config.lineAlpha());
+  const cv::Vec3b color(config.lineColor());
+  const cv::Vec4b textColor(color[0], color[1], color[2], 255);
+  const cv::Vec4b lineColor(color[0], color[1], color[2],
+                            config.lineAlpha() * 255);
 
   const float minAzimuth = ping.minAzimuth();
   const float maxAzimuth = ping.maxAzimuth();
@@ -227,7 +232,7 @@ void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
   float arcSpacing = config.arcSpacing();
 
   if (arcSpacing <= 0) {
-    // Calculate automatically .. just heuristics
+    // Calculate automatically .. just a lame heuristic for now
     if (maxRange < 2)
       arcSpacing = 0.5;
     else if (maxRange < 5)
@@ -249,6 +254,23 @@ void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
                 rad2degf(bearingToImage(minAzimuth)),
                 rad2degf(bearingToImage(maxAzimuth)), lineColor,
                 config.lineThickness());
+
+    {
+      std::stringstream rstr;
+      rstr << r;
+
+      // Calculate location of string
+      const float theta = bearingToImage(minAzimuth);
+
+      // \todo{??} Should calculate this automatically ... not sure
+      const cv::Point2f offset(-25, 20);
+
+      const cv::Point2f pt(radiusPix * cos(theta) + origin.x + offset.x,
+                           radiusPix * sin(theta) + origin.y + offset.y);
+
+      cv::putText(_overlay, rstr.str(), pt, cv::FONT_HERSHEY_PLAIN,
+                  config.fontScale(), textColor);
+    }
   }
 
   // And one arc at max range

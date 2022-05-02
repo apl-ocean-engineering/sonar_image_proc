@@ -34,19 +34,22 @@ public:
   struct OverlayConfig {
   public:
     int DEFAULT_LINE_THICKNESS = 1;
-    int DEFAULT_LINE_ALPHA = 1.0;
+    float DEFAULT_LINE_ALPHA = 0.5;
 
     // arc spacing of 0 means "calculate automatically"
     float DEFAULT_ARC_SPACING = 0;
 
-    float DEFAULT_RADIAL_SPACING = 10; // degrees
+    float DEFAULT_RADIAL_SPACING = 20; // degrees
     bool DEFAULT_RADIAL_AT_ZERO = false;
+
+    float DEFAULT_FONT_SCALE = 1.0;
 
     OverlayConfig()
         : line_thickness_(DEFAULT_LINE_THICKNESS),
           line_alpha_(DEFAULT_LINE_ALPHA), arc_spacing_m_(DEFAULT_ARC_SPACING),
           radial_spacing_deg_(DEFAULT_RADIAL_SPACING),
-          radial_at_zero_(DEFAULT_RADIAL_AT_ZERO) {}
+          radial_at_zero_(DEFAULT_RADIAL_AT_ZERO),
+          font_scale_(DEFAULT_FONT_SCALE), line_color_(255, 255, 255) {}
 
     OVERLAY_RW(line_alpha_, float, setLineAlpha, lineAlpha)
     OVERLAY_RW(line_thickness_, int, setLineThickness, lineThickness)
@@ -54,13 +57,22 @@ public:
 
     OVERLAY_RW(radial_spacing_deg_, float, setRadialSpacing, radialSpacing)
     OVERLAY_RW(radial_at_zero_, bool, setRadialAtZero, radialAtZero)
+    OVERLAY_RW(font_scale_, float, setFontScale, fontScale)
+
+    OverlayConfig &setLineColor(const cv::Vec3b &v) {
+      line_color_ = v;
+      return *this;
+    }
+    cv::Vec3b lineColor() const { return line_color_; }
 
     bool operator!=(const OverlayConfig &other) const {
       return (lineThickness() != other.lineThickness()) ||
              (lineAlpha() != other.lineAlpha()) ||
              (arcSpacing() != other.arcSpacing()) ||
              (radialSpacing() != other.radialSpacing()) ||
-             (radialAtZero() != other.radialAtZero());
+             (radialAtZero() != other.radialAtZero()) ||
+             (fontScale() != other.fontScale()) ||
+             (lineColor() != other.lineColor());
     }
 
   private:
@@ -69,6 +81,9 @@ public:
     float arc_spacing_m_;
     float radial_spacing_deg_;
     bool radial_at_zero_;
+    float font_scale_;
+
+    cv::Vec3b line_color_;
   };
 
   SonarDrawer();
