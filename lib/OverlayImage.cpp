@@ -5,18 +5,19 @@ namespace sonar_image_proc {
 // Code from:
 // https://jepsonsblog.blogspot.com/2012/10/overlay-transparent-image-in-opencv.html
 //
+// I've simplified the code by removing the "location" option.  The output will
+// be the size of "background".  If foreground is smaller than background, it
+// will only be mapped onto the upper-left corner of the output.
+//
 // \todo(@amarburg):  Optimize?  Loop unrolling?
 //
 void overlayImage(const cv::Mat &background, const cv::Mat &foreground,
                   cv::Mat &output) {
-  const cv::Point2i location(0, 0);
-
   background.copyTo(output);
 
   // start at the row indicated by location, or at row 0 if location.y is
   // negative.
-  for (int y = std::max(location.y, 0); y < background.rows; ++y) {
-    int fY = y - location.y; // because of the translation
+  for (int fY = 0; fY < background.rows; ++fY) {
 
     // we are done of we have processed all rows of the foreground image.
     if (fY >= foreground.rows)
@@ -25,8 +26,7 @@ void overlayImage(const cv::Mat &background, const cv::Mat &foreground,
     // start at the column indicated by location,
 
     // or at column 0 if location.x is negative.
-    for (int x = std::max(location.x, 0); x < background.cols; ++x) {
-      int fX = x - location.x; // because of the translation.
+    for (int fX = 0; fX < background.cols; ++fX) {
 
       // we are done with this row if the column is outside of the foreground
       // image.
@@ -50,8 +50,8 @@ void overlayImage(const cv::Mat &background, const cv::Mat &foreground,
                 .data[fY * foreground.step + fX * foreground.channels() + c];
         unsigned char backgroundPx =
             background
-                .data[y * background.step + x * background.channels() + c];
-        output.data[y * output.step + output.channels() * x + c] =
+                .data[fY * background.step + fX * background.channels() + c];
+        output.data[fY * output.step + output.channels() * fX + c] =
             backgroundPx * (1. - opacity) + foregroundPx * opacity;
       }
     }
