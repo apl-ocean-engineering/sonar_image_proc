@@ -26,7 +26,9 @@ class SonarDrawer {
     // use the two functions individually...
     cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                         const SonarColorMap &colorMap = InfernoColorMap(),
-                        const cv::Mat &image = cv::Mat(0,0,CV_8UC3));
+                        const cv::Mat &image = cv::Mat(0, 0, 
+                        CV_8UC3),
+                        bool addOverlay = false);
 
     // Maps the sonar ping to an RGB image.
     // rectImage is reshaped to be numRanges rows x numBearings columns
@@ -48,6 +50,9 @@ class SonarDrawer {
 
     cv::Mat remapRectSonarImage(const sonar_image_proc::AbstractSonarInterface &ping,
                                 const cv::Mat &rectImage);
+
+    cv::Mat drawOverlay(const sonar_image_proc::AbstractSonarInterface &ping,
+                                const cv::Mat &sonarImage);
 
 
  private:

@@ -76,6 +76,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
         "sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this);
 
     pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
+    osdPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_osd", 10);
     rectPub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar_rect", 10);
 
     if (_publishOldApi)
@@ -155,6 +156,11 @@ class DrawSonarNodelet : public nodelet::Nodelet {
       cv::Mat sonarMat = _sonarDrawer.remapRectSonarImage(interface, rectMat);
       cvBridgeAndPublish(msg, sonarMat, pub_);
 
+      if (osdPub_.getNumSubscribers() > 0) {
+        cv::Mat osdMat = _sonarDrawer.drawOverlay(interface, sonarMat);
+        cvBridgeAndPublish(msg, osdMat, osdPub_);
+      }
+
       mapElapsed = ros::WallTime::now() - begin;
     }
 
@@ -185,7 +191,7 @@ class DrawSonarNodelet : public nodelet::Nodelet {
   }
 
   ros::Subscriber subSonarImage_;
-  ros::Publisher pub_, rectPub_, oldPub_, timingPub_, histogramPub_;
+  ros::Publisher pub_, rectPub_, osdPub_, oldPub_, timingPub_, histogramPub_;
 
   sonar_image_proc::SonarDrawer _sonarDrawer;
 
