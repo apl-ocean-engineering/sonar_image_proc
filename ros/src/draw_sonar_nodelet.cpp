@@ -20,6 +20,7 @@
 #include "sonar_image_proc/DrawSonar.h"
 #include "sonar_image_proc/HistogramGenerator.h"
 #include "sonar_image_proc/SonarDrawer.h"
+#include "sonar_image_proc/log_sonar_image_msg_interface.h"
 #include "sonar_image_proc/sonar_image_msg_interface.h"
 
 #include <dynamic_reconfigure/server.h>
@@ -33,6 +34,7 @@ namespace draw_sonar {
 using namespace std;
 using namespace cv;
 
+using sonar_image_proc::LogScaleSonarImageMsgInterface;
 using sonar_image_proc::SonarImageMsgInterface;
 using std_msgs::UInt32MultiArray;
 
@@ -63,7 +65,7 @@ private:
     pnh.param<bool>("publish_old", _publishOldApi, false);
     pnh.param<bool>("publish_timing", _publishTiming, true);
 
-    pnh.param<bool>("publish_histogram", _publishHistogram, false);
+    pnh.param<bool>("publish_histogram", _publishHistogram, true);
 
     std::string colorMapName;
     pnh.param<string>("color_map", colorMapName, "inferno");
@@ -113,7 +115,13 @@ private:
   void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
     ROS_FATAL_COND(!_colorMap, "Colormap is undefined, this shouldn't happen");
 
-    SonarImageMsgInterface interface(msg);
+    std::shared_ptr<SonarImageMsgInterface> interface;
+    if (log_scale_) {
+      interface = std::make_shared<LogScaleSonarImageMsgInterface>(msg, min_db_,
+                                                                   max_db_);
+    } else {
+      interface = std::make_shared<SonarImageMsgInterface>(msg);
+    }
 
     ros::WallDuration oldApiElapsed, rectElapsed, mapElapsed, histogramElapsed;
 
@@ -125,9 +133,9 @@ private:
       const int pixPerRangeBin = 2;
 
       cv::Size sz = sonar_image_proc::old_api::calculateImageSize(
-          interface, cv::Size(0, 0), pixPerRangeBin, _maxRange);
+          *interface, cv::Size(0, 0), pixPerRangeBin, _maxRange);
       cv::Mat mat(sz, CV_8UC3);
-      mat = sonar_image_proc::old_api::drawSonar(interface, mat, *_colorMap,
+      mat = sonar_image_proc::old_api::drawSonar(*interface, mat, *_colorMap,
                                                  _maxRange);
 
       cvBridgeAndPublish(msg, mat, oldPub_);
@@ -139,7 +147,7 @@ private:
       ros::WallTime begin = ros::WallTime::now();
 
       auto histogramOut = UInt32MultiArray();
-      histogramOut.data = HistogramGenerator::Generate(interface);
+      histogramOut.data = HistogramGenerator::Generate(*interface);
 
       histogramPub_.publish(histogramOut);
 
@@ -149,7 +157,7 @@ private:
     {
       ros::WallTime begin = ros::WallTime::now();
 
-      cv::Mat rectMat = _sonarDrawer.drawRectSonarImage(interface, *_colorMap);
+      cv::Mat rectMat = _sonarDrawer.drawRectSonarImage(*interface, *_colorMap);
 
       // Rotate rectangular image to the more expected format where zero range
       // is at the bottom of the image, with negative azimuth to the right
@@ -161,11 +169,11 @@ private:
       rectElapsed = ros::WallTime::now() - begin;
       begin = ros::WallTime::now();
 
-      cv::Mat sonarMat = _sonarDrawer.remapRectSonarImage(interface, rectMat);
+      cv::Mat sonarMat = _sonarDrawer.remapRectSonarImage(*interface, rectMat);
       cvBridgeAndPublish(msg, sonarMat, pub_);
 
       if (osdPub_.getNumSubscribers() > 0) {
-        cv::Mat osdMat = _sonarDrawer.drawOverlay(interface, sonarMat);
+        cv::Mat osdMat = _sonarDrawer.drawOverlay(*interface, sonarMat);
         cvBridgeAndPublish(msg, osdMat, osdPub_);
       }
 
@@ -202,6 +210,10 @@ private:
         .setRadialSpacing(config.bearing_spacing)
         .setLineAlpha(config.line_alpha)
         .setLineThickness(config.line_thickness);
+
+    log_scale_ = config.log_scale;
+    min_db_ = config.min_db;
+    max_db_ = config.max_db;
   }
 
   void setColorMap(const std::string &colorMapName) {
@@ -220,6 +232,9 @@ private:
 
   float _maxRange;
   bool _publishOldApi, _publishTiming, _publishHistogram;
+
+  float min_db_, max_db_;
+  bool log_scale_;
 
   std::unique_ptr<SonarColorMap> _colorMap;
 };

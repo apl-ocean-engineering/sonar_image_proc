@@ -4,6 +4,8 @@
 // wraps a ROS acoustic_msgs::SonarImage
 //
 
+#pragma once
+
 #include "sonar_image_proc/AbstractSonarInterface.h"
 #include <vector>
 
@@ -48,7 +50,7 @@ struct SonarImageMsgInterface
   // returns that exact value.
   //
   // If the underlying data is 16-bit, it returns a scaled value.
-  uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
+  virtual uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const {
     const auto i = index(idx);
 
     if (_ping->data_size == 1) {
@@ -62,7 +64,7 @@ struct SonarImageMsgInterface
     return 0;
   }
 
-  uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const override {
+  virtual uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const {
     const auto i = index(idx);
 
     if (_ping->data_size == 1) {
@@ -76,7 +78,7 @@ struct SonarImageMsgInterface
     return 0;
   }
 
-  uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const override {
+  virtual uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const {
     const auto i = index(idx);
 
     if (_ping->data_size == 1) {
@@ -94,7 +96,7 @@ struct SonarImageMsgInterface
     return 0;
   }
 
-  float intensity_float(const AzimuthRangeIndices &idx) const override {
+  virtual float intensity_float(const AzimuthRangeIndices &idx) const {
     const auto i = index(idx);
 
     // !! n.b.  Need to ensure these calls aren't circular!!
