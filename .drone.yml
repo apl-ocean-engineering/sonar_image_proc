@@ -33,19 +33,19 @@ steps:
     ROS_PACKAGES_TO_INSTALL: cv-bridge image-transport
 
   ## Trigger downstream builds on Github
-- name: trigger-github-downstream
-  image: plugins/downstream
-  settings:
-    server: https://github.drone.camhd.science
-    fork: true
-    token:
-      from_secret: github_drone_token
-    repositories:
-      - apl-ocean-engineering/serdp_common
-  when:
-    event:
-      exclude:
-        - pull_request
+# - name: trigger-github-downstream
+#   image: plugins/downstream
+#   settings:
+#     server: https://github.drone.camhd.science
+#     fork: true
+#     token:
+#       from_secret: github_drone_token
+#     repositories:
+#       - apl-ocean-engineering/serdp_common
+#   when:
+#     event:
+#       exclude:
+#         - pull_request
 
 - name: slack
   image: plugins/slack
