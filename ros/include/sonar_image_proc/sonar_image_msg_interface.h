@@ -19,11 +19,18 @@ struct SonarImageMsgInterface
     : public sonar_image_proc::AbstractSonarInterface {
   explicit SonarImageMsgInterface(
       const acoustic_msgs::SonarImage::ConstPtr &ping)
-      : _ping(ping) {
+      : _ping(ping), do_log_scale_(false) {
     // Vertical field of view is determined by comparing
     // z / sqrt(x^2 + y^2) to tan(elevation_beamwidth/2)
     _verticalTanSquared =
         std::pow(std::tan(ping->elevation_beamwidth / 2.0), 2);
+  }
+
+  void do_log_scale(float min_db, float max_db) {
+    do_log_scale_ = true;
+    min_db_ = min_db;
+    max_db_ = max_db;
+    range_db_ = max_db - min_db;
   }
 
   AbstractSonarInterface::DataType_t data_type() const override {
@@ -50,7 +57,7 @@ struct SonarImageMsgInterface
   // returns that exact value.
   //
   // If the underlying data is 16-bit, it returns a scaled value.
-  virtual uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const {
+  uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
     const auto i = index(idx);
 
     if (_ping->data_size == 1) {
@@ -58,13 +65,17 @@ struct SonarImageMsgInterface
     } else if (_ping->data_size == 2) {
       return intensity_uint16(idx) >> 8;
     } else if (_ping->data_size == 4) {
-      return intensity_uint32(idx) >> 24;
+      if (do_log_scale_) {
+        return intensity_float(idx) * UINT8_MAX;
+      } else {
+        return intensity_uint32(idx) >> 24;
+      }
     }
 
     return 0;
   }
 
-  virtual uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const {
+  uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const override {
     const auto i = index(idx);
 
     if (_ping->data_size == 1) {
@@ -73,12 +84,16 @@ struct SonarImageMsgInterface
       return (static_cast<uint16_t>(_ping->intensities[i]) |
               (static_cast<uint16_t>(_ping->intensities[i + 1]) << 8));
     } else if (_ping->data_size == 4) {
-      return intensity_uint32(idx) >> 16;
+      if (do_log_scale_) {
+        return intensity_float(idx) * UINT16_MAX;
+      } else {
+        return intensity_uint32(idx) >> 16;
+      }
     }
     return 0;
   }
 
-  virtual uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const {
+  uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const override {
     const auto i = index(idx);
 
     if (_ping->data_size == 1) {
@@ -86,6 +101,17 @@ struct SonarImageMsgInterface
     } else if (_ping->data_size == 2) {
       return intensity_uint16(idx);
     } else if (_ping->data_size == 4) {
+      if (do_log_scale_) {
+        return intensity_float(idx) * UINT32_MAX;
+      } else {
+        return intensity_uint32_nonlog(i);
+      }
+    }
+    return 0;
+  }
+
+  uint32_t intensity_uint32_nonlog(const size_t i) const {
+    if (_ping->data_size == 4) {
       const uint32_t v =
           (static_cast<uint32_t>(_ping->intensities[i]) |
            (static_cast<uint32_t>(_ping->intensities[i + 1]) << 8) |
@@ -96,7 +122,7 @@ struct SonarImageMsgInterface
     return 0;
   }
 
-  virtual float intensity_float(const AzimuthRangeIndices &idx) const {
+  float intensity_float(const AzimuthRangeIndices &idx) const override {
     const auto i = index(idx);
 
     // !! n.b.  Need to ensure these calls aren't circular!!
@@ -106,7 +132,19 @@ struct SonarImageMsgInterface
       // Data is stored LSB
       return static_cast<float>(intensity_uint16(idx)) / UINT16_MAX;
     } else if (_ping->data_size == 4) {
-      return static_cast<float>(intensity_uint32(idx)) / UINT32_MAX;
+      if (do_log_scale_) {
+        const auto intensity = intensity_uint32_nonlog(i);
+        const auto v =
+            log(static_cast<float>(std::max((uint)1, intensity)) / UINT32_MAX) *
+            10; // dbm
+
+        const auto min_db =
+            (min_db_ == 0 ? log(1.0 / UINT32_MAX) * 10 : min_db_);
+
+        return std::min(1.0, std::max(0.0, (v - min_db) / range_db_));
+      } else {
+        return static_cast<float>(intensity_uint32(idx)) / UINT32_MAX;
+      }
     }
     return 0.0;
   }
@@ -121,6 +159,9 @@ protected:
            (_ping->data_size == 4));
     return _ping->data_size * ((idx.range() * nBearings()) + idx.azimuth());
   }
+
+  bool do_log_scale_;
+  float min_db_, max_db_, range_db_;
 };
 
 } // namespace sonar_image_proc
