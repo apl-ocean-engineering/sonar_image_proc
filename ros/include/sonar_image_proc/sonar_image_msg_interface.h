@@ -26,6 +26,12 @@ struct SonarImageMsgInterface
         std::pow(std::tan(ping->elevation_beamwidth / 2.0), 2);
   }
 
+  // n.b. log_scale *does not* cause the intensity_* functions to return
+  // 10*log(sonar value)
+  //
+  // Instead, the 10*log(sonar value) value is (linearly) mapped onto the
+  // interval [min_db, max_db] and scaled into the range of the return value
+  // e.g. [0,255] for uint8, [0,1] for float, etc.
   void do_log_scale(float min_db, float max_db) {
     do_log_scale_ = true;
     min_db_ = min_db;
