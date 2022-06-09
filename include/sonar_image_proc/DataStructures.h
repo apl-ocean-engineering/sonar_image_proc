@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <math.h>
+#include <stdint.h>
 #include <vector>
 
 namespace sonar_image_proc {
@@ -18,4 +18,4 @@ struct SonarPoint {
 
 SonarPoint bearingRange2Cartesian(float bearing, float range);
 
-}  // namespace sonar_image_proc
+} // namespace sonar_image_proc
