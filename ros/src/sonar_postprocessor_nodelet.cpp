@@ -14,12 +14,12 @@ using acoustic_msgs::SonarImage;
 using sonar_image_proc::SonarImageMsgInterface;
 
 class SonarPostprocessorNodelet : public nodelet::Nodelet {
- public:
+public:
   SonarPostprocessorNodelet() : Nodelet() { ; }
 
   virtual ~SonarPostprocessorNodelet() { ; }
 
- private:
+private:
   virtual void onInit() {
     ros::NodeHandle nh = getMTNodeHandle();
     ros::NodeHandle pnh = getMTPrivateNodeHandle();
@@ -98,14 +98,14 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
     pubSonarImage_.publish(out);
   }
 
- protected:
+protected:
   ros::Subscriber subSonarImage_;
   ros::Publisher pubSonarImage_;
 
   float gain_, gamma_;
 };
 
-}  // namespace sonar_postprocessor
+} // namespace sonar_postprocessor
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(sonar_postprocessor::SonarPostprocessorNodelet,

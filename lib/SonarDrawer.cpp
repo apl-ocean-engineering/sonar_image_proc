@@ -97,8 +97,8 @@ bool SonarDrawer::Cached::isValid(const AbstractSonarInterface &ping) const {
 
 // ==== SonarDrawer::CachedMap ====
 
-SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::
-operator()(const AbstractSonarInterface &ping) {
+SonarDrawer::CachedMap::MapPair
+SonarDrawer::CachedMap::operator()(const AbstractSonarInterface &ping) {
   // _scMap[12] are mutable to break out of const
   if (!isValid(ping))
     create(ping);
@@ -193,9 +193,10 @@ bool SonarDrawer::CachedOverlay::isValid(const AbstractSonarInterface &ping,
   return Cached::isValid(ping);
 }
 
-const cv::Mat &SonarDrawer::CachedOverlay::
-operator()(const AbstractSonarInterface &ping, const cv::Mat &sonarImage,
-           const OverlayConfig &config) {
+const cv::Mat &
+SonarDrawer::CachedOverlay::operator()(const AbstractSonarInterface &ping,
+                                       const cv::Mat &sonarImage,
+                                       const OverlayConfig &config) {
   if (!isValid(ping, sonarImage, config))
     create(ping, sonarImage, config);
 
