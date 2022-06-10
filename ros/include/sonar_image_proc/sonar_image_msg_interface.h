@@ -149,7 +149,7 @@ struct SonarImageMsgInterface
 
         return std::min(1.0, std::max(0.0, (v - min_db) / range_db_));
       } else {
-        return static_cast<float>(intensity_uint32_nonlog(idx)) / UINT32_MAX;
+        return static_cast<float>(intensity_uint32_nonlog(i)) / UINT32_MAX;
       }
     }
     return 0.0;
