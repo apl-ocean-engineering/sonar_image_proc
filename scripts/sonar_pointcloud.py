@@ -53,8 +53,6 @@ class SonarTranslator(object):
         self.intensity_lookup = None
         self.intensity_lookup_np = None
         self.color_lookup = None
-        self.rgba_zero = struct.unpack('I', struct.pack('BBBB', 0, 0, 0,
-                                                        255))[0]
 
     # TODO: This assumes that the intensity data is single byte
     def make_intensity_lookup(self):
@@ -213,9 +211,10 @@ class SonarTranslator(object):
 
         if self.geometry is None:
             self.make_geometry(image_msg)
+            print(self.geometry_np[0, :, :].shape, len(image_msg.ranges),
+                  len(image_msg.azimuth_angles))
 
         if self.intensity_lookup is None:
-            self.make_intensity_lookup()
             self.make_color_lookup()
 
         # Construction of PointCloud2 from: https://gist.github.com/pgorczak/5c717baa44479fa064eb8d33ea4587e0
@@ -238,7 +237,7 @@ class SonarTranslator(object):
                 intensities = (intensities / 256).astype(np.uint8)
 
         t0 = time.time()
-        output_points = np.empty((len(self.elevations) * nranges * nangles, 6),
+        output_points = np.zeros((len(self.elevations) * nranges * nangles, 6),
                                  dtype=np.float32)
         expanded_intensities = np.repeat(intensities[..., np.newaxis],
                                          3,
@@ -247,11 +246,11 @@ class SonarTranslator(object):
         for i in range(len(self.elevations)):
             points = np.empty((nranges * nangles, 6))
             if points[:, 0:3].shape != self.geometry_np[i, :, :].shape:
+                print('Change in image size! Remaking geometry...')
+                self.make_geometry(image_msg)
                 break
+
             points[:, 0:3] = self.geometry_np[i, :, :]
-            temp = np.where(expanded_intensities > self.intensity_threshold,
-                            self.color_lookup[expanded_intensities[:, 0]],
-                            np.zeros((nranges * nangles, 3)))
             points[:, 3:] = np.where(
                 expanded_intensities > self.intensity_threshold,
                 self.color_lookup[expanded_intensities[:, 0]],
@@ -273,8 +272,8 @@ class SonarTranslator(object):
                                 row_step=24 * N,
                                 data=output_points.tostring())
 
-        dt0 = t1 - t0
         dt1 = time.time() - t1
+        dt0 = t1 - t0
         total_time = time.time()
         self.pub.publish(cloud_msg)
 
