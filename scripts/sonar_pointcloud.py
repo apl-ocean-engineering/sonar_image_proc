@@ -64,6 +64,8 @@ class SonarTranslator(object):
             data_type = np.uint8
         elif data_size == 4:
             data_type = np.uint32
+        else:
+            raise Exception("Only 8 bit and 32 bit data is supported!")
 
         intensities = np.frombuffer(intensity_array, dtype=data_type)
         # Log scaling modified from sonar_postprocessor_nodelet.cpp
