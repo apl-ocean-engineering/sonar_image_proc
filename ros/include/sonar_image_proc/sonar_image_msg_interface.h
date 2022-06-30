@@ -26,12 +26,43 @@ struct SonarImageMsgInterface
         std::pow(std::tan(ping->elevation_beamwidth / 2.0), 2);
   }
 
-  // n.b. log_scale *does not* cause the intensity_* functions to return
-  // 10*log(sonar value)
+  // n.b. do_log_scale is a mode switch which causes the intensity_*
+  // functions in this SonarImageMsgInterface use a log (db) scale
+  // **ONLY** for 32-bit data (functionality is unchanged for 8-
+  // and 16-bit data)
   //
-  // Instead, the 10*log(sonar value) value is (linearly) mapped onto the
-  // interval [min_db, max_db] and scaled into the range of the return value
-  // e.g. [0,255] for uint8, [0,1] for float, etc.
+  // It maps a given 32-bit intensity value i to a fraction of the
+  // full scale of a 32-bit uint in the interval [0.0, 1.0]
+  // It then takes the db value of that:
+  //
+  //     l = 10 * log( i / (2^32-1) )
+  //
+  // Such that l is between 10*log(1/(2^32-1)) (approx -96) and 0.0
+  //
+  // The intensity_* functions create a linear map m() from [min_db, max_db]
+  // to the full range of the returned type (e.g. uint8, uint16, etc),
+  // and returns m(l)
+  //
+  // If min_db is 0.0, then the full range value
+  //                       min_db = (10*log(1/(2^32-1))) is used
+  // If max_db is 0.0, then the full range value
+  //                       max_db = 0.0 is used
+  //
+  // So for example if i = 2^31 (half the full range of a uint32), l = -3 db
+  //  This is approx 0.97 of the full scale in logspace
+  //
+  // With min_db = 0, max_db = 0 (full range)
+  //      intensity_uint8(i) will return approx 247  (0.97 * 255)
+  //
+  // With min_db = -10, max_db = 0
+  //      intensity_uint8(i) will return approx 178  (0.7 * 255)
+  //
+  // With min_db = -1, max_db = 0
+  //      l(i) is less than min_db and intensity_uint8(i) will return 0
+  //
+  // With min_db = 0, max_db = -10
+  //      l(i) is greater than max_db and intensity_uint8(i) will return 255
+  //
   void do_log_scale(float min_db, float max_db) {
     do_log_scale_ = true;
     min_db_ = min_db;
