@@ -114,6 +114,9 @@ private:
     ROS_FATAL_COND(!_colorMap, "Colormap is undefined, this shouldn't happen");
 
     SonarImageMsgInterface interface(msg);
+    if (log_scale_) {
+      interface.do_log_scale(min_db_, max_db_);
+    }
 
     ros::WallDuration oldApiElapsed, rectElapsed, mapElapsed, histogramElapsed;
 
@@ -196,12 +199,15 @@ private:
 
   void dynCfgCallback(sonar_image_proc::DrawSonarConfig &config,
                       uint32_t level) {
-
     _sonarDrawer.overlayConfig()
         .setRangeSpacing(config.range_spacing)
         .setRadialSpacing(config.bearing_spacing)
         .setLineAlpha(config.line_alpha)
         .setLineThickness(config.line_thickness);
+
+    log_scale_ = config.log_scale;
+    min_db_ = config.min_db;
+    max_db_ = config.max_db;
   }
 
   void setColorMap(const std::string &colorMapName) {
@@ -220,6 +226,9 @@ private:
 
   float _maxRange;
   bool _publishOldApi, _publishTiming, _publishHistogram;
+
+  float min_db_, max_db_;
+  bool log_scale_;
 
   std::unique_ptr<SonarColorMap> _colorMap;
 };
