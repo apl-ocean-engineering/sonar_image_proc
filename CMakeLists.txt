@@ -15,7 +15,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # find_package(Eigen3 REQUIRED )
-find_package(Boost COMPONENTS filesystem system REQUIRED )  #n.b. program_options is only required for my version of Stereolabs "Recorder"
+find_package(Boost COMPONENTS filesystem system program_options REQUIRED )
 
 ## Default OpenCV version
 list(APPEND OPENCV_COMPONENTS core highgui imgproc )
@@ -59,7 +59,7 @@ else()
     nodelet
     nodelet_topic_tools
     OpenCV
-    # pybind11_catkin
+    rosbag_storage
     dynamic_reconfigure
   )
 
@@ -71,7 +71,7 @@ else()
       INCLUDE_DIRS include/ ros/include/
       LIBRARIES sonar_image_proc
       DEPENDS OpenCV
-      CATKIN_DEPENDS pybind11_catkin
+      #CATKIN_DEPENDS 
   )
 
 
@@ -118,8 +118,18 @@ else()
   add_dependencies(sonar_postprocessor_node ${catkin_EXPORTED_TARGETS})
   set_property(TARGET sonar_postprocessor_node PROPERTY CXX_STANDARD 14)
 
+  # bag2sonar is **not** a conventional ROS node, but a standalone
+  # executable which uses ros_storage to read ros bags
+  add_executable(bag2sonar ros/tools/bag2sonar.cpp)
+  target_link_libraries(bag2sonar
+     sonar_image_proc
+     ${catkin_LIBRARIES})
+  add_dependencies(bag2sonar ${catkin_EXPORTED_TARGETS})
+  set_property(TARGET bag2sonar PROPERTY CXX_STANDARD 14)
+
   install(TARGETS draw_sonar_node
               sonar_postprocessor_node
+              bag2sonar
          RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
   install(TARGETS
