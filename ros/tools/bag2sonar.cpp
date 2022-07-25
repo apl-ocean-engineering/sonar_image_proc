@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 
         count++;
 
-        if (count % 100) {
+        if ((count % 100) == 0) {
           std::cout << "Processed " << count << " sonar frames" << std::endl;
         }
       }
