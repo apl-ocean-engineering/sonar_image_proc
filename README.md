@@ -68,6 +68,31 @@ algorithm to the topic `old_drawn_sonar`.   Defaults to `false`
 
 If `publish_histogram` is `true` the node will publish a "raw" histogram information as a `UInt32MultiArray` to the topic `histogram`.   It contains a vector of unsigned ints giving the count for each intensity value -- so for 8 bit data the vector will be 256 elements in length, and for 16-bit data it will be 65536 elements in length.
 
+# bag2sonar
+
+The program `bag2sonar` reads in a bagfile containing a `SonarImage` topic, draws the sonar image and writes those images to *new* bagfile in a `Image` topic.  
+
+Usage:
+
+```
+$ rosrun sonar_image_proc bag2sonar
+Usage:
+
+   bag2sonar [options]  <input file(s)>
+
+Draw sonar from a bagfile:
+  -h [ --help ]                         Display this help message
+  -l [ --logscale ]                     Do logscale
+  --min-db arg (=0)                     Min db
+  --max-db arg (=0)                     Max db
+  --osd                                 If set, include the on-screen display 
+                                        in output
+  -o [ --output-bag ] arg               Name of output bagfile
+  -t [ --output-topic ] arg (=/drawn_sonar)
+                                        Topic for images in output bagfile
+```
+
+Note that `bag2sonar` is not a conventional ROS node, it is intended to run as a standalone commandline program.  It uses `ros_storage` to read the input bagfile sequentially, rather than subscribing to a topic.
 
 # histogram_drawer
 
