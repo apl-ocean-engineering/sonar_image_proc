@@ -23,10 +23,9 @@
   <depend>std_msgs</depend>
 
   <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>pybind11_catkin</build_depend>
   <build_depend>nodelet</build_depend>
+  <build_depend>rosbag_storage</build_depend>
 
-  <exec_depend>pybind11_catkin</exec_depend>
   <exec_depend>dynamic_reconfigure</exec_depend>
   <exec_depend>nodelet</exec_depend>
 
