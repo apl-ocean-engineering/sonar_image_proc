@@ -5,7 +5,7 @@ import time
 from matplotlib import cm
 import numpy as np
 
-from acoustic_msgs.msg import SonarImage
+from acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 
@@ -18,7 +18,7 @@ class SonarTranslator(object):
         # https://stackoverflow.com/questions/26415699/ros-subscriber-not-up-to-date
         # (200k didn't work, and sys.getsizeof doesn't return an accurate size of the whole object)
         self.sub = rospy.Subscriber("sonar_image",
-                                    SonarImage,
+                                    ProjectedSonarImage,
                                     self.callback,
                                     queue_size=1,
                                     buff_size=1000000)
@@ -55,19 +55,19 @@ class SonarTranslator(object):
 
             self.color_lookup[aa, :] = [r, g, b, alpha]
 
-    def process_intensity_array(self, intensity_array, data_size):
+    def process_intensity_array(self, image: SonarImageData):
         '''
         process an intensity array into a parseable format for pointcloud generation
         Can handle 8bit or 32bit input data, will log scale output data
         '''
-        if data_size == 1:
+        if image.dtype == image.DTYPE_UINT8:
             data_type = np.uint8
-        elif data_size == 4:
+        elif image.dtype == image.DTYPE_UINT32:
             data_type = np.uint32
         else:
             raise Exception("Only 8 bit and 32 bit data is supported!")
 
-        intensities = np.frombuffer(intensity_array, dtype=data_type)
+        intensities = np.frombuffer(image.data, dtype=data_type)
         # Log scaling modified from sonar_postprocessor_nodelet.cpp
         # Avoid log(0)
         new_intensites = intensities.astype(np.float32) + 1e-6
@@ -80,25 +80,26 @@ class SonarTranslator(object):
 
         return intensities
 
-    def make_geometry(self, image_msg):
+    def make_geometry(self, image_msg: ProjectedSonarImage):
         rospy.loginfo("make_geometry")
         nranges = len(image_msg.ranges)
-        nangles = len(image_msg.azimuth_angles)
+        nangles = len(image_msg.beam_directions)
         points = [[[0, 0, 0] for _ in range(nranges * nangles)]
                   for _ in range(len(self.elevations))]
 
         for kk, elevation in enumerate(self.elevations):
             ce = np.cos(elevation)
             se = np.sin(elevation)
-            for ii, azimuth in enumerate(image_msg.azimuth_angles):
+            for ii, beam_dir in enumerate(image_msg.beam_directions):
                 # Pre-compute these values to speed up the loop
+                azimuth = np.arctan2(-1*beam_dir.y, beam_dir.z)
                 ca = np.cos(azimuth)
                 sa = np.sin(azimuth)
                 for jj, distance in enumerate(image_msg.ranges):
                     idx = ii + jj * nangles
-                    xx = distance * ce * ca
-                    yy = distance * ce * sa
-                    zz = distance * se
+                    zz = distance * ce * ca
+                    yy = -1*distance * ce * sa
+                    xx = distance * se
                     points[kk][idx] = [xx, yy, zz]
 
         self.geometry = np.array(points)
@@ -106,7 +107,7 @@ class SonarTranslator(object):
         self.output_points = np.zeros(
             (len(self.elevations) * nranges * nangles, 7), dtype=np.float32)
 
-    def callback(self, image_msg):
+    def callback(self, image_msg: ProjectedSonarImage):
         """
         Convert img_msg into point cloud with color mappings via numpy.
         """
@@ -131,7 +132,7 @@ class SonarTranslator(object):
         ]
 
         nranges = len(image_msg.ranges)
-        nangles = len(image_msg.azimuth_angles)
+        nangles = len(image_msg.beam_directions)
         npts = nranges * nangles
 
         if self.geometry is None:
@@ -140,8 +141,9 @@ class SonarTranslator(object):
         if self.color_lookup is None:
             self.make_color_lookup()
         t0 = time.time()
-        intensities = self.process_intensity_array(image_msg.intensities,
-                                                   image_msg.data_size)
+
+
+        intensities = self.process_intensity_array(image_msg.image)
 
         # Expand out intensity array (for fast comparison)
         expanded_intensities = np.repeat(intensities[..., np.newaxis],

@@ -106,6 +106,12 @@ Note that `bag2sonar` is not a conventional ROS node, it is intended to run as a
 Long term, I'd like to be able to call this drawing function from Python,
 however we're not there yet.
 
+There IS a totally separate python node that publishes a pointcloud
+for visualization in rviz:
+
+`rosrun sonar_image_proc sonar_pointcloud.py`
+
+
 # API
 
 Sonar drawing is implemented in the [SonarDrawer](include/sonar_image_proc/SonarDrawer.h) class, which takes an instance of an [AbstractSonarInterface](include/sonar_image_proc/AbstractSonarInterface.h) and returns a cv::Mat.   SonarDrawer computes and stores pre-calculated matrices to accelerate the drawing.
