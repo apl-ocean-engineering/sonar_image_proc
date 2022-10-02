@@ -1,5 +1,5 @@
 #include "sonar_image_proc/SonarDrawer.h"
-#include <acoustic_msgs/SonarImage.h>
+#include <acoustic_msgs/ProjectedSonarImage.h>
 #include <boost/program_options.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core.hpp>
@@ -16,7 +16,7 @@ using std::vector;
 
 class OutputWrapper {
 public:
-  virtual void write(const acoustic_msgs::SonarImage::ConstPtr &msg,
+  virtual void write(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
                      const cv::Mat &mat) = 0;
 };
 
@@ -25,7 +25,7 @@ public:
   BagOutput(const std::string &bagfile, const std::string topic)
       : _bag(bagfile, rosbag::bagmode::Write), _topic(topic) {}
 
-  void write(const acoustic_msgs::SonarImage::ConstPtr &msg,
+  void write(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
              const cv::Mat &mat) override {
 
     cv_bridge::CvImage img_bridge(msg->header,
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
   // The following code with three differente po::option_descriptions in a
   // slight-of-hand to hide the positional argment "input-files"
   // otherwise it shows up in print_help() which is ugly
-  // 
+  //
   // clang-format off
   public_description.add_options()
     ("help,h", "Display this help message")
@@ -129,13 +129,13 @@ int main(int argc, char **argv) {
       std::cout << "Bagfile " << file << " is " << bag.getSize() << " bytes"
                 << std::endl;
 
-      rosbag::View view(bag, rosbag::TypeQuery("acoustic_msgs/SonarImage"));
+      rosbag::View view(bag, rosbag::TypeQuery("acoustic_msgs/ProjectedSonarImage"));
 
       int count = 0;
 
       BOOST_FOREACH (rosbag::MessageInstance const m, view) {
-        acoustic_msgs::SonarImage::ConstPtr msg =
-            m.instantiate<acoustic_msgs::SonarImage>();
+        acoustic_msgs::ProjectedSonarImage::ConstPtr msg =
+            m.instantiate<acoustic_msgs::ProjectedSonarImage>();
 
         sonar_image_proc::SonarImageMsgInterface interface(msg);
         if (vm["logscale"].as<bool>()) {

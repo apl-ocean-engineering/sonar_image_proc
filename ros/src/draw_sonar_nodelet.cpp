@@ -6,7 +6,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <sstream>
 
-#include "acoustic_msgs/SonarImage.h"
+#include "acoustic_msgs/ProjectedSonarImage.h"
 #include "nodelet/nodelet.h"
 #include "ros/ros.h"
 
@@ -75,7 +75,7 @@ private:
       NODELET_INFO_STREAM("Only drawing to max range " << _maxRange);
     }
 
-    subSonarImage_ = nh.subscribe<acoustic_msgs::SonarImage>(
+    subSonarImage_ = nh.subscribe<acoustic_msgs::ProjectedSonarImage>(
         "sonar_image", 10, &DrawSonarNodelet::sonarImageCallback, this);
 
     pub_ = nh.advertise<sensor_msgs::Image>("drawn_sonar", 10);
@@ -100,7 +100,7 @@ private:
     ROS_DEBUG("draw_sonar ready to run...");
   }
 
-  void cvBridgeAndPublish(const acoustic_msgs::SonarImage::ConstPtr &msg,
+  void cvBridgeAndPublish(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
                           const cv::Mat &mat, ros::Publisher &pub) {
     cv_bridge::CvImage img_bridge(msg->header,
                                   sensor_msgs::image_encodings::RGB8, mat);
@@ -110,7 +110,7 @@ private:
     pub.publish(output_msg);
   }
 
-  void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
+  void sonarImageCallback(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
     ROS_FATAL_COND(!_colorMap, "Colormap is undefined, this shouldn't happen");
 
     SonarImageMsgInterface interface(msg);
