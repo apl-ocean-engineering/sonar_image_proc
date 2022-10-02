@@ -27,7 +27,7 @@ class SonarTranslator(object):
         min_elev_deg = rospy.get_param("~min_elev_deg", 0)
         max_elev_deg = rospy.get_param("~max_elev_deg", 0)
         assert (max_elev_deg >= min_elev_deg)
-        elev_step_deg = rospy.get_param("~elev_step_deg", 0)
+        elev_step_deg = rospy.get_param("~elev_step_deg", 5)
         self.min_elev = np.radians(min_elev_deg)
         self.max_elev = np.radians(max_elev_deg)
         self.elev_step = np.radians(elev_step_deg)
