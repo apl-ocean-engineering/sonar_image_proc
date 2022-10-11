@@ -3,14 +3,14 @@
 
 #include <sstream>
 
-#include "acoustic_msgs/SonarImage.h"
+#include "acoustic_msgs/ProjectedSonarImage.h"
 #include "nodelet/nodelet.h"
 #include "ros/ros.h"
 #include "sonar_image_proc/sonar_image_msg_interface.h"
 
 namespace sonar_postprocessor {
 
-using acoustic_msgs::SonarImage;
+using acoustic_msgs::ProjectedSonarImage;
 using sonar_image_proc::SonarImageMsgInterface;
 
 class SonarPostprocessorNodelet : public nodelet::Nodelet {
@@ -27,32 +27,32 @@ private:
     pnh.param<float>("gain", gain_, 1.0);
     pnh.param<float>("gamma", gamma_, 0.0);
 
-    subSonarImage_ = nh.subscribe<SonarImage>(
+    subSonarImage_ = nh.subscribe<ProjectedSonarImage>(
         "sonar_image", 10, &SonarPostprocessorNodelet::sonarImageCallback,
         this);
 
-    pubSonarImage_ = nh.advertise<SonarImage>("sonar_image_postproc", 10);
+    pubSonarImage_ = nh.advertise<ProjectedSonarImage>("sonar_image_postproc", 10);
 
     ROS_DEBUG("sonar_processor ready to run...");
   }
 
-  void sonarImageCallback(const acoustic_msgs::SonarImage::ConstPtr &msg) {
+  void sonarImageCallback(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
     SonarImageMsgInterface interface(msg);
 
     // For now, only postprocess 32bit images
-    if (msg->data_size != 4) {
+    if (msg->image.dtype != msg->image.DTYPE_UINT32) {
       pubSonarImage_.publish(msg);
       return;
     }
 
     // Expect this will copy
-    acoustic_msgs::SonarImage out = *msg;
+    acoustic_msgs::ProjectedSonarImage out = *msg;
 
     // For now, only 8-bit output is supported
-    out.data_size = 1;
-    out.intensities.clear();
-    out.intensities.reserve(interface.ranges().size() *
-                            interface.azimuths().size());
+    out.image.dtype = out.image.DTYPE_UINT8;
+    out.image.data.clear();
+    out.image.data.reserve(interface.ranges().size() *
+                           interface.azimuths().size());
 
     double logmin, logmax;
 
@@ -79,7 +79,7 @@ private:
 
         v = (v - threshold) / (vmax - threshold);
         v = std::min(1.0, std::max(0.0, v));
-        out.intensities.push_back(UINT8_MAX * v);
+        out.image.data.push_back(UINT8_MAX * v);
 
         // Just do the math in float for now
         // float i = static_cast<float>(pix)/UINT32_MAX;

@@ -11,19 +11,31 @@
 
 namespace sonar_image_proc {
 
-using acoustic_msgs::SonarImage;
+using acoustic_msgs::ProjectedSonarImage;
 using sonar_image_proc::AbstractSonarInterface;
 using std::vector;
 
 struct SonarImageMsgInterface
     : public sonar_image_proc::AbstractSonarInterface {
   explicit SonarImageMsgInterface(
-      const acoustic_msgs::SonarImage::ConstPtr &ping)
+      const acoustic_msgs::ProjectedSonarImage::ConstPtr &ping)
       : _ping(ping), do_log_scale_(false) {
     // Vertical field of view is determined by comparing
     // z / sqrt(x^2 + y^2) to tan(elevation_beamwidth/2)
     _verticalTanSquared =
-        std::pow(std::tan(ping->elevation_beamwidth / 2.0), 2);
+        // NOTE(lindzey): The old message assumed a constant elevation beamwidth;
+        //     the multibeam people insisted that it be per-beam. For now, this
+        //     assumes that they're all the same.
+        // TODO(lindzey): Look into whether averaging would be better, or if we
+        //     should create an array of verticalTanSquared.
+        // TODO(lindzey): Handle empty-array case.
+        std::pow(std::tan(ping->ping_info.tx_beamwidths[0] / 2.0), 2);
+
+    for (const auto pt: ping->beam_directions) {
+        auto az = atan2(-1*pt.y, pt.z);
+        _ping_azimuths.push_back(az);
+    }
+
   }
 
   // n.b. do_log_scale is a mode switch which causes the intensity_*
@@ -74,11 +86,11 @@ struct SonarImageMsgInterface
   }
 
   AbstractSonarInterface::DataType_t data_type() const override {
-    if (_ping->data_size == 1)
+    if (_ping->image.dtype == _ping->image.DTYPE_UINT8)
       return AbstractSonarInterface::TYPE_UINT8;
-    else if (_ping->data_size == 2)
+    else if (_ping->image.dtype == _ping->image.DTYPE_UINT16)
       return AbstractSonarInterface::TYPE_UINT16;
-    else if (_ping->data_size == 4)
+    else if (_ping->image.dtype == _ping->image.DTYPE_UINT32)
       return AbstractSonarInterface::TYPE_UINT32;
 
     //
@@ -88,7 +100,7 @@ struct SonarImageMsgInterface
   const std::vector<float> &ranges() const override { return _ping->ranges; }
 
   const std::vector<float> &azimuths() const override {
-    return _ping->azimuth_angles;
+    return _ping_azimuths;
   }
 
   float verticalTanSquared() const { return _verticalTanSquared; }
@@ -99,15 +111,15 @@ struct SonarImageMsgInterface
   // If the underlying data is 16-bit, it returns a scaled value.
   uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
 
-    if (do_log_scale_ && (_ping->data_size == 4)) {
+    if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx) * UINT8_MAX;
     }
 
-    if (_ping->data_size == 1) {
+    if (_ping->image.dtype == _ping->image.DTYPE_UINT8) {
       return read_uint8(idx);
-    } else if (_ping->data_size == 2) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT16) {
       return read_uint16(idx) >> 8;
-    } else if (_ping->data_size == 4) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT32) {
       return read_uint32(idx) >> 24;
     }
 
@@ -116,15 +128,16 @@ struct SonarImageMsgInterface
 
   uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const override {
 
-    if (do_log_scale_ && (_ping->data_size == 4)) {
+    // Truncate 32bit intensities
+    if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx) * UINT16_MAX;
     }
 
-    if (_ping->data_size == 1) {
+    if (_ping->image.dtype == _ping->image.DTYPE_UINT8) {
       return read_uint8(idx) << 8;
-    } else if (_ping->data_size == 2) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT16) {
       return read_uint16(idx);
-    } else if (_ping->data_size == 4) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT32) {
       return read_uint32(idx) >> 16;
     }
     return 0;
@@ -132,15 +145,15 @@ struct SonarImageMsgInterface
 
   uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const override {
 
-    if (do_log_scale_ && (_ping->data_size == 4)) {
+    if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx) * UINT32_MAX;
     }
 
-    if (_ping->data_size == 1) {
+    if (_ping->image.dtype == _ping->image.DTYPE_UINT8) {
       return read_uint8(idx) << 24;
-    } else if (_ping->data_size == 2) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT16) {
       return read_uint16(idx) << 16;
-    } else if (_ping->data_size == 4) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT32) {
       return read_uint32(idx);
     }
     return 0;
@@ -148,56 +161,66 @@ struct SonarImageMsgInterface
 
   float intensity_float(const AzimuthRangeIndices &idx) const override {
 
-    if (do_log_scale_ && (_ping->data_size == 4)) {
+    if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx);
     }
 
-    if (_ping->data_size == 1) {
+    if (_ping->image.dtype == _ping->image.DTYPE_UINT8) {
       return static_cast<float>(read_uint8(idx)) / UINT8_MAX;
-    } else if (_ping->data_size == 2) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT16) {
       return static_cast<float>(read_uint16(idx)) / UINT16_MAX;
-    } else if (_ping->data_size == 4) {
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT32) {
       return static_cast<float>(read_uint32(idx)) / UINT32_MAX;
     }
     return 0.0;
   }
 
 protected:
-  acoustic_msgs::SonarImage::ConstPtr _ping;
+  acoustic_msgs::ProjectedSonarImage::ConstPtr _ping;
 
   float _verticalTanSquared;
+  std::vector<float> _ping_azimuths;
 
   size_t index(const AzimuthRangeIndices &idx) const {
-    assert((_ping->data_size == 1) || (_ping->data_size == 2) ||
-           (_ping->data_size == 4));
-    return _ping->data_size * ((idx.range() * nBearings()) + idx.azimuth());
+    int data_size;
+    if(_ping->image.dtype == _ping->image.DTYPE_UINT8) {
+        data_size = 1;
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT16) {
+        data_size = 2;
+    } else if (_ping->image.dtype == _ping->image.DTYPE_UINT32) {
+        data_size = 4;
+    } else {
+        assert(false);
+    }
+
+    return data_size * ((idx.range() * nBearings()) + idx.azimuth());
   }
 
   // "raw" read functions.  Assumes the data type has already been checked
   uint32_t read_uint8(const AzimuthRangeIndices &idx) const {
-    assert(_ping->data_size == 1);
+    assert(_ping->image.dtype == _ping->image.DTYPE_UINT8);
     const auto i = index(idx);
 
-    return (_ping->intensities[i]);
+    return (_ping->image.data[i]);
   }
 
   uint32_t read_uint16(const AzimuthRangeIndices &idx) const {
-    assert(_ping->data_size == 2);
+    assert(_ping->image.dtype == _ping->image.DTYPE_UINT16);
     const auto i = index(idx);
 
-    return (static_cast<uint16_t>(_ping->intensities[i]) |
-            (static_cast<uint16_t>(_ping->intensities[i + 1]) << 8));
+    return (static_cast<uint16_t>(_ping->image.data[i]) |
+            (static_cast<uint16_t>(_ping->image.data[i + 1]) << 8));
   }
 
   uint32_t read_uint32(const AzimuthRangeIndices &idx) const {
-    assert(_ping->data_size == 4);
+    assert(_ping->image.dtype == _ping->image.DTYPE_UINT32);
     const auto i = index(idx);
 
     const uint32_t v =
-        (static_cast<uint32_t>(_ping->intensities[i]) |
-         (static_cast<uint32_t>(_ping->intensities[i + 1]) << 8) |
-         (static_cast<uint32_t>(_ping->intensities[i + 2]) << 16) |
-         (static_cast<uint32_t>(_ping->intensities[i + 3]) << 24));
+        (static_cast<uint32_t>(_ping->image.data[i]) |
+         (static_cast<uint32_t>(_ping->image.data[i + 1]) << 8) |
+         (static_cast<uint32_t>(_ping->image.data[i + 2]) << 16) |
+         (static_cast<uint32_t>(_ping->image.data[i + 3]) << 24));
     return v;
   }
 
