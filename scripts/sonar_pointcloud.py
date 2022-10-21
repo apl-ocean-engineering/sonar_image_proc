@@ -92,14 +92,14 @@ class SonarTranslator(object):
             se = np.sin(elevation)
             for ii, beam_dir in enumerate(image_msg.beam_directions):
                 # Pre-compute these values to speed up the loop
-                azimuth = np.arctan2(-1*beam_dir.y, beam_dir.z)
+                azimuth = np.arctan2(-1 * beam_dir.y, beam_dir.z)
                 ca = np.cos(azimuth)
                 sa = np.sin(azimuth)
                 for jj, distance in enumerate(image_msg.ranges):
                     idx = ii + jj * nangles
-                    zz = distance * ce * ca
-                    yy = -1*distance * ce * sa
-                    xx = distance * se
+                    xx = distance * ce * ca
+                    yy = -1 * distance * ce * sa
+                    zz = distance * se
                     points[kk][idx] = [xx, yy, zz]
 
         self.geometry = np.array(points)
@@ -141,7 +141,6 @@ class SonarTranslator(object):
         if self.color_lookup is None:
             self.make_color_lookup()
         t0 = time.time()
-
 
         intensities = self.process_intensity_array(image_msg.image)
 
@@ -186,7 +185,7 @@ class SonarTranslator(object):
         total_time = time.time()
         self.pub.publish(cloud_msg)
 
-        rospy.loginfo(
+        rospy.logdebug(
             f"published pointcloud: npts = {npts}, Find Pts = {dt0:0.5f} sec, Convert to Cloud = {dt1:0.5f} sec. Total Time = {(total_time - begin_time):0.3f} sec"
         )
 
