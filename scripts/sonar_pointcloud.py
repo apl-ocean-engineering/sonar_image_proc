@@ -24,16 +24,13 @@ class SonarTranslator(object):
                                     buff_size=1000000)
         self.pub = rospy.Publisher("sonar_cloud", PointCloud2, queue_size=1)
 
-        min_elev_deg = rospy.get_param("~min_elev_deg", 0)
-        max_elev_deg = rospy.get_param("~max_elev_deg", 0)
+        min_elev_deg = rospy.get_param("~min_elev_deg", -10)
+        max_elev_deg = rospy.get_param("~max_elev_deg", 10)
         assert (max_elev_deg >= min_elev_deg)
-        elev_step_deg = rospy.get_param("~elev_step_deg", 5)
+        self.elev_steps = rospy.get_param("~elev_steps", 2)
         self.min_elev = np.radians(min_elev_deg)
         self.max_elev = np.radians(max_elev_deg)
-        self.elev_step = np.radians(elev_step_deg)
-        self.elevations = np.arange(self.min_elev,
-                                    self.max_elev + self.elev_step,
-                                    self.elev_step)
+        self.elevations = np.linspace(self.min_elev, self.max_elev, self.elev_steps)
 
         # threshold range is a float, [0-1]
         self.intensity_threshold = rospy.get_param("~intensity_threshold",
