@@ -30,8 +30,8 @@ class SonarTranslator(object):
         self.elev_steps = rospy.get_param("~elev_steps", 2)
         self.min_elev = np.radians(min_elev_deg)
         self.max_elev = np.radians(max_elev_deg)
-        self.elevations = np.linspace(
-            self.min_elev, self.max_elev, self.elev_steps)
+        self.elevations = np.linspace(self.min_elev, self.max_elev,
+                                      self.elev_steps)
 
         # threshold range is a float, [0-1]
         self.intensity_threshold = rospy.get_param("~intensity_threshold",
