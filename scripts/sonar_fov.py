@@ -21,7 +21,7 @@ temp_mesh_file = os.path.join(path, "scripts", stl_name)
 
 def sonar_params(image_msg):
     """
-    Store ssonar message parameters in a dictionary to make comparison between messages easy.
+    Store sonar message parameters in a dictionary to make comparison between messages easy.
     """
 
     param_dict = {}
