@@ -33,3 +33,5 @@ build/
 *.app
 
 .fips-*
+.history/*
+.gitignore
