@@ -24,8 +24,11 @@ class SonarTranslator(object):
                                     buff_size=1000000)
         self.pub = rospy.Publisher("sonar_cloud", PointCloud2, queue_size=1)
 
-        min_elev_deg = rospy.get_param("~min_elev_deg", -10)
-        max_elev_deg = rospy.get_param("~max_elev_deg", 10)
+        # Flag to determine whether we publish ALL points or only non-zero points
+        self.publish_all_points = rospy.get_param("~publish_all_points", False)
+
+        min_elev_deg = rospy.get_param("~min_elev_deg", 0)
+        max_elev_deg = rospy.get_param("~max_elev_deg", 20)
         assert (max_elev_deg >= min_elev_deg)
         self.elev_steps = rospy.get_param("~elev_steps", 2)
         self.min_elev = np.radians(min_elev_deg)
@@ -101,9 +104,6 @@ class SonarTranslator(object):
                     points[kk][idx] = [xx, yy, zz]
 
         self.geometry = np.array(points)
-        # Pre-allocate our output points
-        self.output_points = np.zeros(
-            (len(self.elevations) * nranges * nangles, 7), dtype=np.float32)
 
     def callback(self, image_msg: ProjectedSonarImage):
         """
@@ -141,31 +141,47 @@ class SonarTranslator(object):
         t0 = time.time()
 
         intensities = self.process_intensity_array(image_msg.image)
+        # Make a copy of geometry, if not, indexing into positive values will
+        # change the array after one iteration
+        geometry = self.geometry.copy()
+
+        if not self.publish_all_points:
+            pos_intensity_idx = np.where(intensities > 0)
+            intensities = intensities[pos_intensity_idx]
+            geometry = self.geometry[:, pos_intensity_idx[0]]
+
+        # Calculate the number of points we need:
+        npts = len(intensities)
+
+        # Allocate our output points
+        self.output_points = np.zeros(
+            (len(self.elevations) * npts, 7), dtype=np.float32)\
 
         # Expand out intensity array (for fast comparison)
         expanded_intensities = np.repeat(intensities[..., np.newaxis],
                                          4,
                                          axis=1)
-
         # Fill the output array
         for i in range(len(self.elevations)):
-            points = np.empty((nranges * nangles, 7))
-            if points[:, 0:3].shape != self.geometry[i, :, :].shape:
+            points = np.empty((npts, 7))
+            if points[:, 0:3].shape != geometry[i, :, :].shape:
                 # Occassionally the sonar message has a changing geometry
                 # that really screws stuff up until it's resolved. Fix it here
-                rospy.logdebug('Change in image size! Remaking geometry...')
+                rospy.logdebug(
+                    'Change in image size! Remaking geometry...')
                 self.make_geometry(image_msg)
 
-            points[:, 0:3] = self.geometry[i, :, :]
+            points[:, 0:3] = geometry[i, :, :]
 
             points[:, 3:] = np.where(
                 expanded_intensities > self.intensity_threshold,
                 self.color_lookup[expanded_intensities[:, 0]],
-                np.zeros((nranges * nangles, 4)))
+                np.zeros((npts, 4)))
 
-            step = i * (nranges * nangles)
-            next_step = step + (nranges * nangles)
+            step = i * npts
+            next_step = step + npts
             self.output_points[step:next_step, :] = points
+
         t1 = time.time()
         N = len(self.output_points)
         cloud_msg = PointCloud2(header=header,
