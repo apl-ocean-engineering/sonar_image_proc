@@ -16,7 +16,7 @@ from geometry_msgs.msg import Point
 
 def sonar_params(image_msg):
     """
-    Store ssonar message parameters in a dictionary to make comparison between messages easy.
+    Store sonar message parameters in a dictionary to make comparison between messages easy.
     """
 
     param_dict = {}
