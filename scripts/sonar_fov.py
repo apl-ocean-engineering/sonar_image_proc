@@ -8,15 +8,10 @@ import rospy
 import rospkg
 import numpy as np
 
-from stl import mesh
 from std_msgs.msg import Header
 from acoustic_msgs.msg import ProjectedSonarImage
 from visualization_msgs.msg import Marker, MarkerArray
-
-r = rospkg.RosPack()
-path = r.get_path('sonar_image_proc')
-stl_name = "sonar_fov.stl"
-temp_mesh_file = os.path.join(path, "scripts", stl_name)
+from geometry_msgs.msg import Point
 
 
 def sonar_params(image_msg):
@@ -49,13 +44,10 @@ def sonar_params(image_msg):
     return param_dict
 
 
-def build_stl_mesh(params):
+def build_vector_list(params):
     """
-    From sonar parameters, build the wedge
-    Save it in a temp file that gets removed after each run (or if parameters change mid-run)
+    From sonar parameters, build the wedge as list of vectors
     """
-    global temp_mesh_file
-
     xx = []
     yy = []
     zz = []
@@ -88,52 +80,45 @@ def build_stl_mesh(params):
     vertices[:, 1] = yy_new
     vertices[:, 2] = zz_new
 
-    # STL format requires triangles, so we need to connect the origin to every pair of vertices:
-    # First, connect all the wedges on each face:
+    # Number of faces:
+    vertex_cnt = len(xx_new) + 1
+    face_cnt = (vertex_cnt // 2 - 2)
     split = (len(xx_new) - 1) // 2
-    first_pt = np.zeros(shape=(len(xx_new) - 2), dtype=np.uint)
-    second_pt = np.arange(1, len(xx_new) - 1, dtype=np.uint)
-    third_pt = np.arange(2, len(xx_new), dtype=np.uint)
-    first_faces = np.stack([first_pt, second_pt, third_pt]).T
 
-    # This results in one triangle between the faces that shouldn't be there:
-    first_faces = np.delete(first_faces, (split - 1), axis=0)
+    pt0 = np.zeros(shape=(face_cnt), dtype=np.uint)
+    pt1 = np.arange(1, face_cnt + 1, dtype=np.uint)
+    pt2 = pt1 + 1
+    pt3 = pt2 + face_cnt
+    pt4 = pt3 + 1
+    top_face = np.stack([pt0, pt1, pt2]).T
+    btm_face = np.stack([pt4, pt3, pt0]).T
 
-    # Next, connect vertices between elevations:
+    # Add triangles on sides:
+    left_face = np.array([[0, split + 1, 1]], dtype=np.uint)
+    right_face = np.array([[0, split, len(xx_new) - 1]], dtype=np.uint)
+
+    # Add triangles between elevations:
     first_pt = np.arange(1, split, dtype=np.uint)
     second_pt = first_pt + 1
     third_pt = second_pt + split - 1
     fourth_pt = third_pt + 1
 
-    first_connection = np.stack([first_pt, second_pt, third_pt]).T
-    second_connection = np.stack([second_pt, third_pt, fourth_pt]).T
-    second_faces = np.vstack([first_connection, second_connection])
+    first_connection = np.stack([first_pt, third_pt, fourth_pt]).T
+    second_connection = np.stack([first_pt, fourth_pt, second_pt]).T
+    elevation_faces = np.vstack([first_connection, second_connection])
 
-    faces = np.vstack([first_faces, second_faces])
+    faces = np.vstack(
+        [top_face, btm_face, left_face, right_face, elevation_faces])
 
-    # Connect triangles along the side:
-    side_faces = np.array([[0, 1, split + 1], [0, split, (len(xx_new) - 1)]],
-                          dtype=np.uint)
-
-    faces = np.vstack([faces, side_faces])
-
-    # Create the mesh
-    wedge = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
-    for i, f in enumerate(faces):
+    # Create array of vectors
+    vectors = []
+    for f in faces:
         for j in range(3):
-            wedge.vectors[i][j] = vertices[f[j], :]
+            x, y, z = vertices[f[j], :]
+            pt = Point(x, y, z)
+            vectors.append(pt)
 
-    # Write the mesh to file
-    wedge.save(temp_mesh_file)
-    print(f"Saving fov to {temp_mesh_file}")
-
-
-def clean_up_mesh():
-    """
-    Delete temporary mesh file when program closes
-    """
-    global temp_mesh_file
-    os.remove(temp_mesh_file)
+    return vectors
 
 
 class SonarFOV():
@@ -149,10 +134,11 @@ class SonarFOV():
                                        queue_size=10)
 
         # Alpha transparency for wedge
-        self.alpha = rospy.get_param("~alpha", 0.5)
+        self.alpha = rospy.get_param("~alpha", 1)
         # RGB color for wedge
-        self.color = rospy.get_param("~color", [1.0, 1.0, 1.0])
+        self.color = rospy.get_param("~color", [0.0, 1.0, 0.0])
 
+        self.vector_list = None
         self.generate_fov = False
         self.sonar_params = None
 
@@ -164,9 +150,9 @@ class SonarFOV():
         global stl_name
 
         obj = Marker()
-        obj.type = Marker.MESH_RESOURCE
+        obj.type = Marker.TRIANGLE_LIST
         obj.id = 1
-        obj.mesh_resource = f"package://sonar_image_proc/scripts/{stl_name}"
+        obj.points = self.vector_list
         obj.frame_locked = True
 
         obj.scale.x = 1.0
@@ -184,7 +170,7 @@ class SonarFOV():
     def callback(self, image_msg: ProjectedSonarImage):
         """
         Callback to publish the marker array containing the FOV wedge.
-        Only updates the STL mesh if parameters change
+        Only updates the vectors if parameters change
         """
         rospy.logdebug("Received new image, seq %d at %f" %
                        (image_msg.header.seq, image_msg.header.stamp.to_sec()))
@@ -212,7 +198,7 @@ class SonarFOV():
 
         if self.generate_fov_flag:
             rospy.logdebug("Generating FOV mesh...")
-            build_stl_mesh(self.sonar_params)
+            self.vector_list = build_vector_list(self.sonar_params)
 
         header = Header()
         header = image_msg.header
@@ -228,7 +214,5 @@ class SonarFOV():
 
 if __name__ == "__main__":
     rospy.init_node("sonar_pointcloud")
-    rospy.on_shutdown(clean_up_mesh)
-
     fov_publisher = SonarFOV()
     rospy.spin()
