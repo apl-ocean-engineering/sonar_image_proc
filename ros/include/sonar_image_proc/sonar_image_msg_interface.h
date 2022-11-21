@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include "sonar_image_proc/AbstractSonarInterface.h"
 #include <vector>
+
+#include "sonar_image_proc/AbstractSonarInterface.h"
 
 namespace sonar_image_proc {
 
@@ -23,7 +24,8 @@ struct SonarImageMsgInterface
     // Vertical field of view is determined by comparing
     // z / sqrt(x^2 + y^2) to tan(elevation_beamwidth/2)
     _verticalTanSquared =
-        // NOTE(lindzey): The old message assumed a constant elevation beamwidth;
+        // NOTE(lindzey): The old message assumed a constant elevation
+        // beamwidth;
         //     the multibeam people insisted that it be per-beam. For now, this
         //     assumes that they're all the same.
         // TODO(lindzey): Look into whether averaging would be better, or if we
@@ -31,11 +33,10 @@ struct SonarImageMsgInterface
         // TODO(lindzey): Handle empty-array case.
         std::pow(std::tan(ping->ping_info.tx_beamwidths[0] / 2.0), 2);
 
-    for (const auto pt: ping->beam_directions) {
-        auto az = atan2(-1*pt.y, pt.z);
-        _ping_azimuths.push_back(az);
+    for (const auto pt : ping->beam_directions) {
+      auto az = atan2(-1 * pt.y, pt.z);
+      _ping_azimuths.push_back(az);
     }
-
   }
 
   // n.b. do_log_scale is a mode switch which causes the intensity_*
@@ -99,9 +100,7 @@ struct SonarImageMsgInterface
 
   const std::vector<float> &ranges() const override { return _ping->ranges; }
 
-  const std::vector<float> &azimuths() const override {
-    return _ping_azimuths;
-  }
+  const std::vector<float> &azimuths() const override { return _ping_azimuths; }
 
   float verticalTanSquared() const { return _verticalTanSquared; }
 
@@ -110,7 +109,6 @@ struct SonarImageMsgInterface
   //
   // If the underlying data is 16-bit, it returns a scaled value.
   uint8_t intensity_uint8(const AzimuthRangeIndices &idx) const override {
-
     if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx) * UINT8_MAX;
     }
@@ -127,7 +125,6 @@ struct SonarImageMsgInterface
   }
 
   uint16_t intensity_uint16(const AzimuthRangeIndices &idx) const override {
-
     // Truncate 32bit intensities
     if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx) * UINT16_MAX;
@@ -144,7 +141,6 @@ struct SonarImageMsgInterface
   }
 
   uint32_t intensity_uint32(const AzimuthRangeIndices &idx) const override {
-
     if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx) * UINT32_MAX;
     }
@@ -160,7 +156,6 @@ struct SonarImageMsgInterface
   }
 
   float intensity_float(const AzimuthRangeIndices &idx) const override {
-
     if (do_log_scale_ && (_ping->image.dtype == _ping->image.DTYPE_UINT32)) {
       return intensity_float_log(idx);
     }
@@ -175,7 +170,7 @@ struct SonarImageMsgInterface
     return 0.0;
   }
 
-protected:
+ protected:
   acoustic_msgs::ProjectedSonarImage::ConstPtr _ping;
 
   float _verticalTanSquared;
@@ -183,14 +178,14 @@ protected:
 
   size_t index(const AzimuthRangeIndices &idx) const {
     int data_size;
-    if(_ping->image.dtype == _ping->image.DTYPE_UINT8) {
-        data_size = 1;
+    if (_ping->image.dtype == _ping->image.DTYPE_UINT8) {
+      data_size = 1;
     } else if (_ping->image.dtype == _ping->image.DTYPE_UINT16) {
-        data_size = 2;
+      data_size = 2;
     } else if (_ping->image.dtype == _ping->image.DTYPE_UINT32) {
-        data_size = 4;
+      data_size = 4;
     } else {
-        assert(false);
+      assert(false);
     }
 
     return data_size * ((idx.range() * nBearings()) + idx.azimuth());
@@ -228,7 +223,7 @@ protected:
     const auto intensity = read_uint32(idx);
     const auto v =
         log(static_cast<float>(std::max((uint)1, intensity)) / UINT32_MAX) *
-        10; // dbm
+        10;  // dbm
 
     const auto min_db = (min_db_ == 0 ? log(1.0 / UINT32_MAX) * 10 : min_db_);
 
@@ -239,4 +234,4 @@ protected:
   float min_db_, max_db_, range_db_;
 };
 
-} // namespace sonar_image_proc
+}  // namespace sonar_image_proc

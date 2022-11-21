@@ -1,6 +1,6 @@
 build/
 
-*.mov 
+*.mov
 
 # Compiled Object files
 *.slo

@@ -9,7 +9,6 @@
 #pragma once
 
 #include <memory>
-
 #include <opencv2/core/core.hpp>
 
 #include "sonar_image_proc/AbstractSonarInterface.h"
@@ -39,10 +38,10 @@ inline cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
 //
 // Cell (nRange,nBearing) is the data at the max range, most positive bearing
 //
-inline cv::Mat
-drawSonarRectImage(const sonar_image_proc::AbstractSonarInterface &ping,
-                   const SonarColorMap &colorMap = InfernoColorMap(),
-                   const cv::Mat &rectImage = cv::Mat(0, 0, CV_8UC3)) {
+inline cv::Mat drawSonarRectImage(
+    const sonar_image_proc::AbstractSonarInterface &ping,
+    const SonarColorMap &colorMap = InfernoColorMap(),
+    const cv::Mat &rectImage = cv::Mat(0, 0, CV_8UC3)) {
   SonarDrawer drawer;
   return drawer.drawRectSonarImage(ping, colorMap, rectImage);
 }
@@ -62,16 +61,15 @@ namespace old_api {
 //
 // If set, maxRange is used in lieu of the ping's native max range,
 // allowing truncation of the image
-cv::Size
-calculateImageSize(const sonar_image_proc::AbstractSonarInterface &ping,
-                   cv::Size hint, int pixPerRangeBin = 2,
-                   float maxRange = -1.0);
+cv::Size calculateImageSize(
+    const sonar_image_proc::AbstractSonarInterface &ping, cv::Size hint,
+    int pixPerRangeBin = 2, float maxRange = -1.0);
 
 cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
                   cv::Mat &mat,
                   const SonarColorMap &colorMap = InfernoColorMap(),
                   float maxRange = -1.0);
 
-} // namespace old_api
+}  // namespace old_api
 
-} // namespace sonar_image_proc
+}  // namespace sonar_image_proc

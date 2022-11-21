@@ -33,20 +33,17 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-
-#include <iostream>
 #include <string>
 
+#include "draw_sonar/DataStructures.h"
+#include "draw_sonar/DrawSonar.h"
 #include "ndarray_converter.h"
 
-#include "draw_sonar/DrawSonar.h"
-#include "draw_sonar/DataStructures.h"
-
 namespace py = pybind11;
-
 
 // Sample functions from examples used to bootstrap the project
 
@@ -59,39 +56,26 @@ cv::Mat read_image(std::string image_name) {
   return image;
 }
 
-cv::Mat passthru(cv::Mat image) {
-  return image;
-}
+cv::Mat passthru(cv::Mat image) { return image; }
 
-cv::Mat cloneimg(cv::Mat image) {
-  return image.clone();
-}
+cv::Mat cloneimg(cv::Mat image) { return image.clone(); }
 
-int add(int i, int j) {
-    return i + j;
-}
+int add(int i, int j) { return i + j; }
 
 class AddClass {
-public:
+ public:
   AddClass(int value) : value(value) {}
 
-  cv::Mat add(cv::Mat input) {
-    return input + this->value;
-  }
+  cv::Mat add(cv::Mat input) { return input + this->value; }
 
-private:
+ private:
   int value;
 };
 
-
-int calculateImageWidth( int height ) {
-  return 100;
-}
-
+int calculateImageWidth(int height) { return 100; }
 
 ///
 PYBIND11_MODULE(py_draw_sonar, m) {
-
   NDArrayConverter::init_numpy();
 
   m.def("read_image", &read_image, "A function that read an image",
@@ -102,11 +86,10 @@ PYBIND11_MODULE(py_draw_sonar, m) {
 
   m.def("cppadd", &add, "A function which adds two numbers");
 
-  m.def("calculateImageWidth", &calculateImageWidth, "Given a sonar height, calculate width in pixels");
+  m.def("calculateImageWidth", &calculateImageWidth,
+        "Given a sonar height, calculate width in pixels");
 
   py::class_<AddClass>(m, "AddClass")
-    .def(py::init<int>())
-    .def("add", &AddClass::add);
-
-
+      .def(py::init<int>())
+      .def("add", &AddClass::add);
 }

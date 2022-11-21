@@ -8,7 +8,6 @@
 #pragma once
 
 #include <memory>
-
 #include <opencv2/core/core.hpp>
 
 #include "sonar_image_proc/AbstractSonarInterface.h"
@@ -22,24 +21,24 @@ using sonar_image_proc::AbstractSonarInterface;
 void overlayImage(const cv::Mat &background, const cv::Mat &foreground,
                   cv::Mat &output);
 
-#define OVERLAY_RW(var, tp, set, get)                                          \
-  OverlayConfig &set(tp i) {                                                   \
-    var = i;                                                                   \
-    return *this;                                                              \
-  }                                                                            \
+#define OVERLAY_RW(var, tp, set, get) \
+  OverlayConfig &set(tp i) {          \
+    var = i;                          \
+    return *this;                     \
+  }                                   \
   tp get() const { return var; }
 
 class SonarDrawer {
-public:
+ public:
   struct OverlayConfig {
-  public:
+   public:
     int DEFAULT_LINE_THICKNESS = 1;
     float DEFAULT_LINE_ALPHA = 0.5;
 
     // range spacing of 0 means "calculate automatically"
     float DEFAULT_RANGE_SPACING = 0;
 
-    float DEFAULT_RADIAL_SPACING = 20; // degrees
+    float DEFAULT_RADIAL_SPACING = 20;  // degrees
     bool DEFAULT_RADIAL_AT_ZERO = false;
 
     float DEFAULT_FONT_SCALE = 1.0;
@@ -50,7 +49,8 @@ public:
           range_spacing_m_(DEFAULT_RANGE_SPACING),
           radial_spacing_deg_(DEFAULT_RADIAL_SPACING),
           radial_at_zero_(DEFAULT_RADIAL_AT_ZERO),
-          font_scale_(DEFAULT_FONT_SCALE), line_color_(255, 255, 255) {}
+          font_scale_(DEFAULT_FONT_SCALE),
+          line_color_(255, 255, 255) {}
 
     OVERLAY_RW(line_alpha_, float, setLineAlpha, lineAlpha)
     OVERLAY_RW(line_thickness_, int, setLineThickness, lineThickness)
@@ -76,7 +76,7 @@ public:
              (lineColor() != other.lineColor());
     }
 
-  private:
+   private:
     int line_thickness_;
     float line_alpha_;
     float range_spacing_m_;
@@ -125,7 +125,7 @@ public:
 
   OverlayConfig &overlayConfig() { return overlay_config_; }
 
-private:
+ private:
   OverlayConfig overlay_config_;
 
   // Utility class which can generate and store the two cv::Mats
@@ -134,10 +134,10 @@ private:
   // Also stores meta-information to determine if the map is
   // invalid and needs to be regenerated.
   struct Cached {
-  public:
+   public:
     Cached() { ; }
 
-  protected:
+   protected:
     virtual bool isValid(const AbstractSonarInterface &ping) const;
 
     // Meta-information to validate map
@@ -146,13 +146,13 @@ private:
   };
 
   struct CachedMap : public Cached {
-  public:
+   public:
     CachedMap() : Cached() { ; }
     typedef std::pair<cv::Mat, cv::Mat> MapPair;
 
     MapPair operator()(const AbstractSonarInterface &ping);
 
-  private:
+   private:
     bool isValid(const AbstractSonarInterface &ping) const override;
     void create(const AbstractSonarInterface &ping);
 
@@ -160,14 +160,14 @@ private:
   } _map;
 
   struct CachedOverlay : public Cached {
-  public:
+   public:
     CachedOverlay() : Cached() { ; }
 
     const cv::Mat &operator()(const AbstractSonarInterface &ping,
                               const cv::Mat &sonarImage,
                               const OverlayConfig &config);
 
-  private:
+   private:
     bool isValid(const AbstractSonarInterface &ping, const cv::Mat &sonarImage,
                  const OverlayConfig &config) const;
 
@@ -179,6 +179,6 @@ private:
 
   } _overlay;
 
-}; // namespace sonar_image_procclassSonarDrawer
+};  // namespace sonar_image_procclassSonarDrawer
 
-} // namespace sonar_image_proc
+}  // namespace sonar_image_proc

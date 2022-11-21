@@ -11,4 +11,3 @@
 #include "sonar_image_proc/ColorMaps.h"
 
 namespace sonar_image_proc {
-

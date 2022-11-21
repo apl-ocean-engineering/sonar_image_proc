@@ -1,10 +1,10 @@
 // Copyright 2021 University of Washington Applied Physics Laboratory
 //
 
+#include "sonar_image_proc/AbstractSonarInterface.h"
+
 #include <algorithm>
 #include <utility>
-
-#include "sonar_image_proc/AbstractSonarInterface.h"
 
 namespace sonar_image_proc {
 
@@ -42,4 +42,4 @@ void AbstractSonarInterface::checkAzimuthBounds() const {
   }
 }
 
-} // namespace sonar_image_proc
+}  // namespace sonar_image_proc

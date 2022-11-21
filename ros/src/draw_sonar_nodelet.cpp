@@ -12,7 +12,9 @@
 
 // For uploading drawn sonar images to Image topic
 #include <cv_bridge/cv_bridge.h>
+#include <dynamic_reconfigure/server.h>
 #include <sensor_msgs/image_encodings.h>
+#include <sonar_image_proc/DrawSonarConfig.h>
 #include <std_msgs/String.h>
 #include <std_msgs/UInt32MultiArray.h>
 
@@ -21,9 +23,6 @@
 #include "sonar_image_proc/HistogramGenerator.h"
 #include "sonar_image_proc/SonarDrawer.h"
 #include "sonar_image_proc/sonar_image_msg_interface.h"
-
-#include <dynamic_reconfigure/server.h>
-#include <sonar_image_proc/DrawSonarConfig.h>
 
 // Subscribes to sonar message topic, draws using opencv then publishes
 // result
@@ -43,17 +42,18 @@ using sonar_image_proc::InfernoSaturationColorMap;
 using sonar_image_proc::SonarColorMap;
 
 class DrawSonarNodelet : public nodelet::Nodelet {
-public:
+ public:
   DrawSonarNodelet()
-      : Nodelet(), _maxRange(0.0),
-        _colorMap(new InfernoColorMap) // Set a reasonable default
+      : Nodelet(),
+        _maxRange(0.0),
+        _colorMap(new InfernoColorMap)  // Set a reasonable default
   {
     ;
   }
 
   virtual ~DrawSonarNodelet() { ; }
 
-private:
+ private:
   virtual void onInit() {
     ros::NodeHandle nh = getMTNodeHandle();
     ros::NodeHandle pnh = getMTPrivateNodeHandle();
@@ -100,8 +100,9 @@ private:
     ROS_DEBUG("draw_sonar ready to run...");
   }
 
-  void cvBridgeAndPublish(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
-                          const cv::Mat &mat, ros::Publisher &pub) {
+  void cvBridgeAndPublish(
+      const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
+      const cv::Mat &mat, ros::Publisher &pub) {
     cv_bridge::CvImage img_bridge(msg->header,
                                   sensor_msgs::image_encodings::RGB8, mat);
 
@@ -110,7 +111,8 @@ private:
     pub.publish(output_msg);
   }
 
-  void sonarImageCallback(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
+  void sonarImageCallback(
+      const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
     ROS_FATAL_COND(!_colorMap, "Colormap is undefined, this shouldn't happen");
 
     SonarImageMsgInterface interface(msg);
@@ -183,8 +185,7 @@ private:
       output << ", \"rect\" : " << rectElapsed.toSec();
       output << ", \"map\" : " << mapElapsed.toSec();
 
-      if (_publishOldApi)
-        output << ", \"old_api\" : " << oldApiElapsed.toSec();
+      if (_publishOldApi) output << ", \"old_api\" : " << oldApiElapsed.toSec();
       if (_publishHistogram)
         output << ", \"histogram\" : " << histogramElapsed.toSec();
 
@@ -233,7 +234,7 @@ private:
   std::unique_ptr<SonarColorMap> _colorMap;
 };
 
-} // namespace draw_sonar
+}  // namespace draw_sonar
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(draw_sonar::DrawSonarNodelet, nodelet::Nodelet);

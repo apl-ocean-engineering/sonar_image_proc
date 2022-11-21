@@ -37,7 +37,7 @@ class HistogramDrawer:
         #print(new_histogram)
         fig, ax = plt.subplots()
 
-        plt.yscale("log") 
+        plt.yscale("log")
         ax.plot(np.linspace(0,xmax,128), new_histogram,'b.-')
         ax.set_xlabel("Intensity")
         ax.set_ylabel("Count")
@@ -64,7 +64,7 @@ class HistogramDrawer:
 
 if __name__ == "__main__":
 
-  rospy.init_node('histogram_drawer', anonymous=True) 
+  rospy.init_node('histogram_drawer', anonymous=True)
 
   drawer = HistogramDrawer()
 

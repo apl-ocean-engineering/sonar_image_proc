@@ -3,9 +3,10 @@
 
 #pragma once
 
-#include <limits>
 #include <math.h>
 #include <stdint.h>
+
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -27,7 +28,7 @@ struct AzimuthRangeIndices {
 // Designed as a "common abstact type" between the Blueprint
 // Subsea SimplePingResult and ROS ImagingSonarMsg
 struct AbstractSonarInterface {
-public:
+ public:
   AbstractSonarInterface();
 
   enum DataType_t {
@@ -53,7 +54,7 @@ public:
   int nAzimuth() const { return azimuths().size(); }
   int nAzimuths() const {
     return azimuths().size();
-  } // Whoops, should be consistent
+  }  // Whoops, should be consistent
   float azimuth(int n) const { return azimuths().at(n); }
 
   Bounds_t azimuthBounds() const;
@@ -127,13 +128,13 @@ public:
   }
   __attribute__((deprecated));
 
-private:
+ private:
   // In a few cases, need to "check and potentially calculate cached
   // value" without actually getting the value
   void checkRangeBounds() const;
   void checkAzimuthBounds() const;
 
-private:
+ private:
   // Since we search extensively for the bounds
   // (rather than assuming the first and last are the bounds),
   // cache the results
@@ -142,4 +143,4 @@ private:
   mutable float _maxRangeSquared;
 };
 
-} // namespace sonar_image_proc
+}  // namespace sonar_image_proc

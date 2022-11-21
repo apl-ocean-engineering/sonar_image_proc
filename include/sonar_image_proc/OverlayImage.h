@@ -20,13 +20,13 @@ void overlayImage(const Mat &bg, const Mat &fg, Mat &dst) {
   const float alpha_scale = (float)std::numeric_limits<T>::max(),
               inv_scale = 1.f / alpha_scale;
 
-  #if (CV_VERSION_MAJOR >= 4)
+#if (CV_VERSION_MAJOR >= 4)
   CV_Assert(bg.type() == cv::traits::Type<VB>::value &&
             fg.type() == cv::traits::Type<VF>::value && bg.size() == fg.size());
-  #else
+#else
   CV_Assert(bg.type() == cv::DataType<VB>::type &&
-            fg.type() == cv::DataType<VF>::type && bg.size() == fg.size());  
-  #endif
+            fg.type() == cv::DataType<VF>::type && bg.size() == fg.size());
+#endif
 
   dst.create(bg.size(), bg.type());
 
@@ -111,4 +111,4 @@ void overlayImage(const Mat &bg, const Mat &fg, Mat &dst) {
 //   //     }
 //   //   }
 // }
-}; // namespace sonar_image_proc
+};  // namespace sonar_image_proc
