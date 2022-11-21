@@ -1,5 +1,7 @@
 # sonar_image_proc
 
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+
 Code to draw data from forward-looking imaging sonars.
 
 If built for ROS, it will build a node/nodelet
