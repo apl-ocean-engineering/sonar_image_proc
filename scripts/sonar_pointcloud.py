@@ -27,8 +27,8 @@ class SonarTranslator(object):
         # Flag to determine whether we publish ALL points or only non-zero points
         self.publish_all_points = rospy.get_param("~publish_all_points", False)
 
-        min_elev_deg = rospy.get_param("~min_elev_deg", 0)
-        max_elev_deg = rospy.get_param("~max_elev_deg", 20)
+        min_elev_deg = rospy.get_param("~min_elev_deg", -10)
+        max_elev_deg = rospy.get_param("~max_elev_deg", 10)
         assert (max_elev_deg >= min_elev_deg)
         self.elev_steps = rospy.get_param("~elev_steps", 2)
         self.min_elev = np.radians(min_elev_deg)
@@ -85,6 +85,7 @@ class SonarTranslator(object):
         rospy.loginfo("make_geometry")
         nranges = len(image_msg.ranges)
         nangles = len(image_msg.beam_directions)
+
         points = [[[0, 0, 0] for _ in range(nranges * nangles)]
                   for _ in range(len(self.elevations))]
 
@@ -98,9 +99,9 @@ class SonarTranslator(object):
                 sa = np.sin(azimuth)
                 for jj, distance in enumerate(image_msg.ranges):
                     idx = ii + jj * nangles
-                    xx = distance * ce * ca
-                    yy = -1 * distance * ce * sa
-                    zz = distance * se
+                    zz = distance * ce * ca
+                    yy = -1*distance * ce * sa
+                    xx = distance * se
                     points[kk][idx] = [xx, yy, zz]
 
         self.geometry = np.array(points)

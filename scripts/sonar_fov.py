@@ -25,20 +25,14 @@ def sonar_params(image_msg):
     azimuth_ranges = np.array(
         [beam_dir.y for beam_dir in image_msg.beam_directions])
 
-    num_azimuth_steps = 100  # too many and it looks crazy, too few and it doesn't render well
-
-    azimuth_steps = np.linspace(min(azimuth_ranges), max(azimuth_ranges),
-                                num_azimuth_steps)
     elevation_ranges = np.array(
         [beam_dir.z for beam_dir in image_msg.beam_directions])
+    
+    elevation_rng = np.arccos(max(elevation_ranges)) - np.arccos(min(elevation_ranges)) / 2
+    elevations = np.linspace(-1*elevation_rng, elevation_rng, 2)
 
-    elevations = np.linspace(np.arccos(max(elevation_ranges)),
-                             np.arccos(min(elevation_ranges)), 2)
-
-    elevations = elevations
     param_dict['range'] = max(image_msg.ranges)
     param_dict['elevations'] = elevations
-    param_dict['azimuth_steps'] = azimuth_steps
     param_dict['azimuth_ranges'] = azimuth_ranges
     param_dict['elevation_ranges'] = elevation_ranges
     return param_dict
@@ -61,9 +55,9 @@ def build_vector_list(params):
         ca = np.cos(azimuth)
         sa = np.sin(azimuth)
 
-        x = params['range'] * ce * ca
+        z = params['range'] * ce * ca
         y = -1 * params['range'] * ce * sa
-        z = np.full_like(x, fill_value=params['range'] * se)
+        x = np.full_like(z, fill_value=params['range'] * se)
         xx.extend(x)
         yy.extend(y)
         zz.extend(z)
@@ -134,7 +128,11 @@ class SonarFOV():
                                        queue_size=10)
 
         # Alpha transparency for wedge
-        self.alpha = rospy.get_param("~alpha", 1)
+        self.alpha = rospy.get_param("~alpha", 1.0)
+
+        if isinstance(self.alpha, str):
+            self.alpha = float(self.alpha)
+
         # RGB color for wedge
         self.color = rospy.get_param("~color", [0.0, 1.0, 0.0])
 
