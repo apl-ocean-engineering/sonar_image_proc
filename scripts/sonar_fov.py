@@ -188,6 +188,7 @@ class SonarFOV():
             if not np.all(message_equality):
                 # things have changed, generate the fov stl
                 rospy.logwarn("Updating Parameters of FOV")
+                self.sonar_params = sonar_params(image_msg)
                 self.generate_fov_flag = True
             else:
                 # No change in parameters,
