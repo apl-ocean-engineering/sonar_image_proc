@@ -98,9 +98,11 @@ class SonarTranslator(object):
                 ca = np.cos(azimuth)
                 sa = np.sin(azimuth)
                 for jj, distance in enumerate(image_msg.ranges):
+                    
                     idx = ii + jj * nangles
+
                     zz = distance * ce * ca
-                    yy = -1*distance * ce * sa
+                    yy = distance * ce * sa
                     xx = distance * se
                     points[kk][idx] = [xx, yy, zz]
 
