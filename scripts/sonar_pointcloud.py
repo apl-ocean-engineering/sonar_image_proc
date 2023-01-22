@@ -21,7 +21,7 @@ class SonarImageMetadata(object):
         NOTE(lindzey): excludes beamwidths because those are not used when
             deciding what elevation angles to publish.
         """
-        self.num_angles = sonar_image_msg.image.beam_count
+        self.num_angles = len(sonar_image_msg.beam_directions)
         self.num_ranges = len(sonar_image_msg.ranges)
         self.ranges = np.array(sonar_image_msg.ranges)
         self.min_range = np.min(sonar_image_msg.ranges)
