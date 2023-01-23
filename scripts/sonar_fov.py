@@ -53,11 +53,11 @@ def build_vector_list(params) -> typing.List[Point]:
     zz = []
 
     # Calculate ending arc of the FOV in 3D space
+    ca = np.cos(params['azimuths'])
+    sa = np.sin(params['azimuths'])
     for elevation in params['elevations']:
         ce = np.cos(elevation)
         se = np.sin(elevation)
-        ca = np.cos(params['azimuths'])
-        sa = np.sin(params['azimuths'])
 
         z = params['range'] * ce * ca
         y = -1 * params['range'] * ce * sa
@@ -138,6 +138,8 @@ class SonarFOV():
 
         # RGB color for wedge
         self.color = rospy.get_param("~color", [0.0, 1.0, 0.0])
+        if isinstance(self.color, str):
+            self.color = eval(self.color)
 
         self.vector_list = None
         self.sonar_params = None
