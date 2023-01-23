@@ -194,29 +194,26 @@ class SonarTranslator(object):
         # np.ndarray, shape = (npts,)
         intensities = self.process_intensity_array(image_msg.image)
 
-        # Make a copy of geometry, if not, indexing into positive values will
-        # change the array after one iteration
-        # QUESTION(lindzey): I'm confused by the above statement, given that
-        #     geometry is immediately assigned to a slice of self.geometry
-        geometry = self.geometry.copy()
-
         # QUESTION(lindzey): I could really use some comments on what a
         #     negative intensity means at this point, and why we effectively filter
         #     by intensity twice. Once here, and once when setting points[:, 3:]
-        if not self.publish_all_points:
+        if self.publish_all_points:
+            selected_intensities = intensities
+            geometry = self.geometry
+        else:
             pos_intensity_idx = np.where(intensities > 0)
-            thresholded_intensities = intensities[pos_intensity_idx]
+            selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
 
-        npts = len(thresholded_intensities)
+        npts = len(selected_intensities)
 
         # Allocate our output points
         self.output_points = np.zeros((len(self.elevations) * npts, 7), dtype=np.float32)
 
         # Expand out intensity array (for fast comparison)
         # The np.where call setting colors requires an array of shape (npts, 4).
-        # thresholded_intensities has shape (npts,), but np.repeat requires (npts, 1).
-        expanded_intensities = np.repeat(thresholded_intensities[..., np.newaxis],
+        # selected_intensities has shape (npts,), but np.repeat requires (npts, 1).
+        expanded_intensities = np.repeat(selected_intensities[..., np.newaxis],
                                          4,
                                          axis=1)
         # NOTE(lindzey): Intensity doesn't change as a function of elevation,
