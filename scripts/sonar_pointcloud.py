@@ -1,4 +1,8 @@
 #! /usr/bin/env python3
+"""
+Copyright 2022 University of Washington Applied Physics Laboratory
+Author: Marc Micatka & Laura Lindzey
+"""
 
 from __future__ import annotations  # use type of class in member function annotation.
 from matplotlib import cm
