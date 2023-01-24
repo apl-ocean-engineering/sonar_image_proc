@@ -36,13 +36,15 @@ class SonarTranslator(object):
         # Flag to determine whether we publish ALL points or only non-zero points
         self.publish_all_points = rospy.get_param("~publish_all_points", False)
 
-        # threshold range is a float, [0-1]
+        # threshold range is a float, [0-1] which reduces the
+        # resulting pointcloud to only points with values above threshold
         self.intensity_threshold = rospy.get_param("~intensity_threshold",
                                                    0.74)
         # x,y,z coordinates of points
         # [ELEVATION_IDX, INTENSITY_IDX, DIMENSION_IDX]
         # Shape chosen for ease of mapping coordinates to intensities
         self.geometry = None
+
         # We need to detect whether the geometry has changed.
         self.sonar_msg_metadata = None
 
@@ -52,7 +54,7 @@ class SonarTranslator(object):
         self.save_pickle = True
 
     def make_geometry(self):
-        rospy.loginfo("make_geometry")
+        rospy.loginfo("Naking Geometry")
         # points = [[[0, 0, 0]
         #            for _ in range(self.sonar_msg_metadata.num_ranges *
         #                           self.sonar_msg_metadata.num_angles)]
