@@ -109,10 +109,12 @@ class SonarPointcloud(object):
         # Flag to determine whether we publish ALL points or only non-zero points
         self.publish_all_points = rospy.get_param("~publish_all_points", False)
 
-        # threshold range is a float, [0-1] which scales the pointcloud to
-        # between intensity_threshold and 1
-        self.intensity_threshold = rospy.get_param("~intensity_threshold",
-                                                   0.74)
+        # cmin is a color scaling parameter. The log-scaled and normed intensity values
+        # get scaled to (cmin, 1.0)
+        self.cmin = rospy.get_param("~cmin", 0.74)
+
+        # threshold is the publish parameter if publish_all_points is false
+        self.threshold = rospy.get_param("~threshold", 0)
 
         # Number of planes to add to the pointcloud projection.
         # Steps are evenly distributed between the max and min elevation angles.
@@ -157,22 +159,11 @@ class SonarPointcloud(object):
         v = np.log(np.maximum(1, new_intensites)) / np.log(
             np.iinfo(data_type).max)
 
-        # selected = np.where(v > self.intensity_threshold, v,
-        #                     self.intensity_threshold)
-        # scaled = (selected -
-        #           self.intensity_threshold) / (1 - self.intensity_threshold)
+        v_max = 1.0
+        v_scaled = (v - self.cmin) / (v_max - self.cmin)
+        v_clipped = np.clip(v_scaled, a_min=0.0, a_max=1.0)
 
-        # Then we shift the intensity range by intensity_offset and scale by intensity_scaling
-        # In the original implementation, the scaling is done by (vmax - intensity_offset)
-        # intensity_offset is hardcoded in the original implementation as 0.74
-        self.intensity_offset = 0.74
-        v = (v - self.intensity_offset) / (1.0 - self.intensity_offset)
-
-        # Finally we clip to 0 to 1.
-        # No values shoule be above 1, but plenty of values are below zero.
-        clipped = np.clip(v, a_min=0.0, a_max=1.0)
-
-        intensities = (np.iinfo(np.uint8).max * clipped).astype(np.uint8)
+        intensities = (np.iinfo(np.uint8).max * v_clipped).astype(np.uint8)
         return intensities
 
     def sonar_image_callback(self, sonar_image_msg: ProjectedSonarImage):
@@ -219,14 +210,14 @@ class SonarPointcloud(object):
             selected_intensities = intensities
             geometry = self.geometry
         else:
-            uint8_threshold = 0  #self.intensity_threshold * np.iinfo(np.uint8).max
+            uint8_threshold = self.threshold * np.iinfo(np.uint8).max
             pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
 
             num_original = len(intensities)
             num_selected = len(selected_intensities)
-            rospy.logdebug(
+            rospy.loginfo(
                 f"Filtering Results: (Pts>Thresh, Total): {num_selected, num_original}. "
                 f"Frac: {(num_selected/num_original):.3f}")
 
