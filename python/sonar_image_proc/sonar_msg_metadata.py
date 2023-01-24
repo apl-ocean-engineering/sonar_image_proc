@@ -2,10 +2,7 @@
 from __future__ import annotations  # use type of class in member function annotation.
 
 import numpy as np
-import rospy
 import typing
-import time
-
 from acoustic_msgs.msg import ProjectedSonarImage
 
 
@@ -39,8 +36,9 @@ class SonarImageMetadata(object):
         self.elevations = np.linspace(-0.5 * elev_beamwidth,
                                       0.5 * elev_beamwidth, elevation_steps)
 
-    def equals(self, other: SonarImageMetadata) -> bool:
+    def __eq__(self, other: SonarImageMetadata) -> bool:
         """
+        Overrides the default implementation of == and != (along with is and is not)
         Determine whether all fields are "close enough" for the
         metadata to be the same.
         """
@@ -56,6 +54,9 @@ class SonarImageMetadata(object):
         ])
 
     def __str__(self) -> typing.String:
+        """
+        Overrides the default implementation of print(SonarImageMetadata)
+        """
         ss = (
             "SonarImageMetadata: {} beams, {} ranges, {:0.2f}=>{:0.2f} m, {:0.1f}=>{:0.1f} deg"
             .format(self.num_angles, self.num_ranges, self.min_range,

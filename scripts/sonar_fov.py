@@ -10,7 +10,7 @@ import rospy
 import time
 import typing
 
-from acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
+from acoustic_msgs.msg import ProjectedSonarImage
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray
@@ -104,6 +104,10 @@ class SonarFOV():
         vertices[:, 1] = yy_new
         vertices[:, 2] = zz_new
 
+        # The vertices, faces, and connections are directional in nature
+        # Because the mesh is one-sided and will be invisible certain directions
+        # if the order is incorrect
+
         # Number of faces:
         vertex_cnt = len(xx_new) + 1
         face_cnt = (vertex_cnt // 2 - 2)
@@ -153,7 +157,9 @@ class SonarFOV():
                        (sonar_image_msg.header.seq,
                         sonar_image_msg.header.stamp.to_sec()))
 
-        new_params = SonarImageMetadata(sonar_image_msg)
+        # For the sonar_fov script, the elevation steps need to be 2
+        # The logic to draw the mesh is not generic to step counts
+        new_params = SonarImageMetadata(sonar_image_msg, elevation_steps=2)
         generate_fov_flag = False
         if self.sonar_msg_metadata is None:
             self.sonar_msg_metadata = new_params
@@ -161,8 +167,7 @@ class SonarFOV():
         else:
             # Because the dictionary contains numpy arrays, a simple check for a == b does not work.
             # Using allclose because the range occasionally changes by fractions
-            if self.sonar_msg_metadata is None or not self.sonar_msg_metadata.equals(
-                    new_params):
+            if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_params:
                 # things have changed, regenerate the fov
                 rospy.logwarn("Updating Parameters of FOV")
                 self.sonar_msg_metadata = new_params
@@ -175,11 +180,6 @@ class SonarFOV():
         header = Header()
         header = sonar_image_msg.header
 
-        # QUESTION(lindzey): This is weird. Why would the published FOV ever
-        #     use a different frame_id than in the SonarImage message?
-        frame_id = rospy.get_param("~frame_id", None)
-        if frame_id:
-            header.frame_id = frame_id
         wedge = self.generate_marker_array(self.vector_list)
         for obj in wedge.markers:
             obj.header = sonar_image_msg.header
