@@ -35,3 +35,7 @@ build/
 .fips-*
 .history/*
 .gitignore
+python/sonar_image_proc/__pycache__/sonar_msg_metadata.cpython-38.pyc
+.gitignore
+scripts/sonar_msg.pickle
+.gitignore
