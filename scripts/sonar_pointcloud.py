@@ -54,7 +54,7 @@ class SonarTranslator(object):
         self.save_pickle = True
 
     def make_geometry(self):
-        rospy.loginfo("Naking Geometry")
+        rospy.loginfo("Making Geometry")
         # points = [[[0, 0, 0]
         #            for _ in range(self.sonar_msg_metadata.num_ranges *
         #                           self.sonar_msg_metadata.num_angles)]
