@@ -1,12 +1,14 @@
 #! /usr/bin/env python3
 """
 Copyright 2022 University of Washington Applied Physics Laboratory
-Author: Marc Micatka
+Author: Marc Micatka & Laura Lindzey
 """
+
+import numpy as np
 import os
 import rospy
 import rospkg
-import numpy as np
+import typing
 
 from std_msgs.msg import Header
 from acoustic_msgs.msg import ProjectedSonarImage
@@ -16,29 +18,33 @@ from geometry_msgs.msg import Point
 
 def sonar_params(image_msg):
     """
-    Store sonar message parameters in a dictionary to make comparison between messages easy.
+    Store sonar message parameters in a dictionary for easier comparison
+    between messages.
     """
 
     param_dict = {}
 
-    # Find azimuth parameters:
-    azimuth_ranges = np.array(
-        [beam_dir.y for beam_dir in image_msg.beam_directions])
+    # Find azimuth. (Defined to be elevation from XZ plane)
+    xx = np.array([beam_dir.x for beam_dir in image_msg.beam_directions])
+    yy = np.array([beam_dir.y for beam_dir in image_msg.beam_directions])
+    zz = np.array([beam_dir.z for beam_dir in image_msg.beam_directions])
+    azimuths = np.arctan2(-1*yy, np.sqrt(xx**2 + zz**2))
 
-    elevation_ranges = np.array(
-        [beam_dir.z for beam_dir in image_msg.beam_directions])
-    
-    elevation_rng = np.arccos(max(elevation_ranges)) - np.arccos(min(elevation_ranges)) / 2
-    elevations = np.linspace(-1*elevation_rng, elevation_rng, 2)
+    # Assume that beam is in the YZ plane so we can simplify the geometry.
+    # (so the mesh will be wrong for multibeams that steer beams along-track)
+    elev_beamwidth = np.median(image_msg.ping_info.tx_beamwidths)
+    # Note: unlike arange, linspace includes point at end of range
+    # QUESTION(lindzey): Does this work with more than two elevation points?
+    #    If so, can we make that a parameter?
+    elevations = np.linspace(-0.5*elev_beamwidth, 0.5*elev_beamwidth, 2)
 
     param_dict['range'] = max(image_msg.ranges)
     param_dict['elevations'] = elevations
-    param_dict['azimuth_ranges'] = azimuth_ranges
-    param_dict['elevation_ranges'] = elevation_ranges
+    param_dict['azimuths'] = azimuths
     return param_dict
 
 
-def build_vector_list(params):
+def build_vector_list(params) -> typing.List[Point]:
     """
     From sonar parameters, build the wedge as list of vectors
     """
@@ -47,13 +53,11 @@ def build_vector_list(params):
     zz = []
 
     # Calculate ending arc of the FOV in 3D space
+    ca = np.cos(params['azimuths'])
+    sa = np.sin(params['azimuths'])
     for elevation in params['elevations']:
         ce = np.cos(elevation)
         se = np.sin(elevation)
-        azimuth = np.arctan2(-1 * params['azimuth_ranges'],
-                             params['elevation_ranges'])
-        ca = np.cos(azimuth)
-        sa = np.sin(azimuth)
 
         z = params['range'] * ce * ca
         y = -1 * params['range'] * ce * sa
@@ -120,7 +124,7 @@ class SonarFOV():
     def __init__(self):
         self.sub = rospy.Subscriber("sonar_image",
                                     ProjectedSonarImage,
-                                    self.callback,
+                                    self.sonar_image_callback,
                                     queue_size=1,
                                     buff_size=1000000)
         self.pub_fov = rospy.Publisher('/sonar_fov',
@@ -129,28 +133,27 @@ class SonarFOV():
 
         # Alpha transparency for wedge
         self.alpha = rospy.get_param("~alpha", 1.0)
-
         if isinstance(self.alpha, str):
             self.alpha = float(self.alpha)
 
         # RGB color for wedge
         self.color = rospy.get_param("~color", [0.0, 1.0, 0.0])
+        if isinstance(self.color, str):
+            self.color = eval(self.color)
 
         self.vector_list = None
-        self.generate_fov = False
         self.sonar_params = None
 
-    def generate_marker_array(self):
+    def generate_marker_array(self, vector_list) -> MarkerArray:
         """
-        Load the FOV wedge from an STL
+        Create MarkerArray from the pre-computed FOV wedge.
+
         Sets the color and alpha from rosparams
         """
-        global stl_name
-
         obj = Marker()
         obj.type = Marker.TRIANGLE_LIST
         obj.id = 1
-        obj.points = self.vector_list
+        obj.points = vector_list
         obj.frame_locked = True
 
         obj.scale.x = 1.0
@@ -162,22 +165,24 @@ class SonarFOV():
         obj.color.b = self.color[2]
         obj.color.a = self.alpha
 
-        self.world = MarkerArray()
-        self.world.markers = [obj]
+        wedge = MarkerArray()
+        wedge.markers = [obj]
+        return wedge
 
-    def callback(self, image_msg: ProjectedSonarImage):
+    def sonar_image_callback(self, image_msg: ProjectedSonarImage):
         """
         Callback to publish the marker array containing the FOV wedge.
-        Only updates the vectors if parameters change
+        Only updates the geometry if parameters change.
         """
         rospy.logdebug("Received new image, seq %d at %f" %
                        (image_msg.header.seq, image_msg.header.stamp.to_sec()))
 
+        new_params = sonar_params(image_msg)
+        generate_fov_flag = False
         if self.sonar_params is None:
-            self.sonar_params = sonar_params(image_msg)
-            self.generate_fov_flag = True  # generate the fov stl
+            self.sonar_params = new_params
+            generate_fov_flag = True  # generate the fov stl
         else:
-            new_params = sonar_params(image_msg)
             # Because the dictionary contains numpy arrays, a simple check for a == b does not work.
             # Using allclose because the range occasionally changes by fractions
             message_equality = [
@@ -186,29 +191,27 @@ class SonarFOV():
             ]
 
             if not np.all(message_equality):
-                # things have changed, generate the fov stl
+                # things have changed, regenerate the fov
                 rospy.logwarn("Updating Parameters of FOV")
-                self.sonar_params = sonar_params(image_msg)
-                self.generate_fov_flag = True
-            else:
-                # No change in parameters,
-                # no need to regenerate the fov stl
-                self.generate_fov_flag = False
+                self.sonar_params = new_params
+                generate_fov_flag = True
 
-        if self.generate_fov_flag:
+        if generate_fov_flag:
             rospy.logdebug("Generating FOV mesh...")
             self.vector_list = build_vector_list(self.sonar_params)
 
         header = Header()
         header = image_msg.header
 
+        # QUESTION(lindzey): This is weird. Why would the published FOV ever
+        #     use a different frame_id than in the SonarImage message?
         frame_id = rospy.get_param("~frame_id", None)
         if frame_id:
             header.frame_id = frame_id
-        self.generate_marker_array()
-        for obj in self.world.markers:
+        wedge = self.generate_marker_array(self.vector_list)
+        for obj in wedge.markers:
             obj.header = image_msg.header
-        self.pub_fov.publish(self.world)
+        self.pub_fov.publish(wedge)
 
 
 if __name__ == "__main__":
