@@ -172,9 +172,6 @@ class SonarFOV():
             rospy.logdebug("Generating FOV mesh...")
             self.build_vector_list()
 
-        header = Header()
-        header = sonar_image_msg.header
-
         wedge = self.generate_marker_array(self.vector_list)
         for obj in wedge.markers:
             obj.header = sonar_image_msg.header
