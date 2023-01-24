@@ -9,84 +9,12 @@ from matplotlib import cm
 import numpy as np
 import rospy
 import time
-import typing
 
 from acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 
-
-class SonarImageMetadata(object):
-
-    def __init__(self, sonar_image_msg: ProjectedSonarImage):
-        """
-        Metadata for a sonar image, containing all information necessary
-        to compute its geometry.
-
-        NOTE(lindzey): excludes beamwidths because those are not used when
-            deciding what elevation angles to publish.
-        """
-        self.num_angles = len(sonar_image_msg.beam_directions)
-        self.num_ranges = len(sonar_image_msg.ranges)
-        self.ranges = np.array(sonar_image_msg.ranges)
-        self.min_range = np.min(sonar_image_msg.ranges)
-        self.max_range = np.max(sonar_image_msg.ranges)
-
-        yy = np.array([dir.y for dir in sonar_image_msg.beam_directions])
-        zz = np.array([dir.z for dir in sonar_image_msg.beam_directions])
-        self.azimuths = np.arctan2(-1 * yy, zz)
-        self.min_azimuth = np.min(self.azimuths)
-        self.max_azimuth = np.max(self.azimuths)
-
-    def equals(self, other: SonarImageMetadata) -> bool:
-        """
-        Determine whether all fields are "close enough" for the
-        metadata to be the same.
-        """
-        if self.num_angles != other.num_angles:
-            return False
-        if self.num_ranges != other.num_ranges:
-            return False
-        return np.allclose([
-            self.min_range, self.max_range, self.min_azimuth, self.max_azimuth
-        ], [
-            other.min_range, other.max_range, other.min_azimuth,
-            other.max_azimuth
-        ])
-
-    def create_geometry(self, elevations: np.ndarray):
-        rospy.loginfo("make_geometry")
-        points = [[[0, 0, 0] for _ in range(self.num_ranges * self.num_angles)]
-                  for _ in range(len(elevations))]
-        t0 = time.time()
-        # Pre-compute these values to speed up the loop
-        # NOTE(lindzey): I'll bet this could be vectorized even further, but
-        #    it's probably not worth the time tradeoff to figure it out.
-        ces = np.cos(elevations)
-        ses = np.sin(elevations)
-        cas = np.cos(self.azimuths)
-        sas = np.sin(self.azimuths)
-        for kk, (ce, se) in enumerate(zip(ces, ses)):
-            for ii, (ca, sa) in enumerate(zip(cas, sas)):
-                for jj, distance in enumerate(self.ranges):
-                    idx = ii + jj * self.num_angles
-                    zz = distance * ce * ca
-                    yy = distance * ce * sa
-                    xx = distance * se
-                    points[kk][idx] = [xx, yy, zz]
-
-        geometry = np.array(points)
-        dt = time.time() - t0
-        rospy.logerr("Creating geometry took {:0.2f} ms".format(1000 * dt))
-        return geometry
-
-    def __str__(self) -> typing.String:
-        ss = (
-            "SonarImageMetadata: {} beams, {} ranges, {:0.2f}=>{:0.2f} m, {:0.1f}=>{:0.1f} deg"
-            .format(self.num_angles, self.num_ranges, self.min_range,
-                    self.max_range, np.degrees(self.min_azimuth),
-                    np.degrees(self.max_azimuth)))
-        return ss
+from sonar_image_proc.sonar_msg_metadata import SonarImageMetadata
 
 
 class SonarTranslator(object):
@@ -98,7 +26,7 @@ class SonarTranslator(object):
         # (200k didn't work, and sys.getsizeof doesn't return an accurate size of the whole object)
         self.sub = rospy.Subscriber("sonar_image",
                                     ProjectedSonarImage,
-                                    self.image_callback,
+                                    self.sonar_image_callback,
                                     queue_size=1,
                                     buff_size=1000000)
         self.pub = rospy.Publisher("sonar_cloud", PointCloud2, queue_size=1)
@@ -106,29 +34,70 @@ class SonarTranslator(object):
         # Flag to determine whether we publish ALL points or only non-zero points
         self.publish_all_points = rospy.get_param("~publish_all_points", False)
 
-        min_elev_deg = rospy.get_param("~min_elev_deg", -10)
-        max_elev_deg = rospy.get_param("~max_elev_deg", 10)
-        assert (max_elev_deg >= min_elev_deg)
-        self.elev_steps = rospy.get_param("~elev_steps", 2)
-        self.min_elev = np.radians(min_elev_deg)
-        self.max_elev = np.radians(max_elev_deg)
-        self.elevations = np.linspace(self.min_elev, self.max_elev,
-                                      self.elev_steps)
-
-        # threshold range is a float, [0-1]
+        # threshold range is a float, [0-1] which reduces the
+        # resulting pointcloud to only points with values above threshold
         self.intensity_threshold = rospy.get_param("~intensity_threshold",
                                                    0.74)
         # x,y,z coordinates of points
         # [ELEVATION_IDX, INTENSITY_IDX, DIMENSION_IDX]
         # Shape chosen for ease of mapping coordinates to intensities
         self.geometry = None
+
         # We need to detect whether the geometry has changed.
-        self.image_metadata = None
+        self.sonar_msg_metadata = None
 
         self.color_lookup = None
         self.output_points = None
 
+    def make_geometry(self):
+        """
+        Vectorized geometry generation. 
+        Regenerates when there are changing parameters from the sonar.
+        """
+        rospy.loginfo("Making Geometry")
+        begin_time = time.time()
+        # Pre-compute these values to speed up the loop
+        # Compute the idxs to properly index into the points array
+        idxs = np.arange(
+            0, self.sonar_msg_metadata.num_angles *
+            self.sonar_msg_metadata.num_ranges)
+        idxs = idxs.reshape(
+            self.sonar_msg_metadata.num_ranges,
+            self.sonar_msg_metadata.num_angles).flatten(order='F')
+
+        # Compute the cosines and sines of elevations and azimuths
+        ces = np.cos(self.sonar_msg_metadata.elevations)
+        ses = np.sin(self.sonar_msg_metadata.elevations)
+        cas = np.cos(self.sonar_msg_metadata.azimuths)
+        sas = np.sin(self.sonar_msg_metadata.azimuths)
+
+        # Allocate points
+        new_shape = (len(self.sonar_msg_metadata.elevations),
+                     self.sonar_msg_metadata.num_ranges *
+                     self.sonar_msg_metadata.num_angles, 3)
+        points = np.zeros(shape=(new_shape))
+
+        x_temp = np.tile(self.sonar_msg_metadata.ranges[np.newaxis, :] *
+                         ses[:, np.newaxis],
+                         reps=self.sonar_msg_metadata.num_angles).flatten()
+        y_temp = (self.sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
+                  ces[:, np.newaxis, np.newaxis] *
+                  sas[np.newaxis, :, np.newaxis]).flatten()
+        z_temp = (self.sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
+                  ces[:, np.newaxis, np.newaxis] *
+                  cas[np.newaxis, :, np.newaxis]).flatten()
+
+        points[:, idxs, :] = np.stack([x_temp, y_temp, z_temp],
+                                      axis=1).reshape(new_shape)
+
+        self.geometry = points
+        total_time = time.time() - begin_time
+        rospy.loginfo(f"Creating geometry took {1000*total_time:0.2f} ms")
+
     def make_color_lookup(self):
+        """
+        Generates a lookup table from matplotlib inferno colormapping
+        """
         self.color_lookup = np.zeros(shape=(256, 4))
 
         for aa in range(256):
@@ -138,10 +107,10 @@ class SonarTranslator(object):
             self.color_lookup[aa, :] = [r, g, b, alpha]
 
     def process_intensity_array(self, image: SonarImageData):
-        '''
-        process an intensity array into a parseable format for pointcloud generation
+        """
+        Process an intensity array into a parseable format for pointcloud generation
         Can handle 8bit or 32bit input data, will log scale output data
-        '''
+        """
         if image.dtype == image.DTYPE_UINT8:
             data_type = np.uint8
         elif image.dtype == image.DTYPE_UINT32:
@@ -163,15 +132,16 @@ class SonarTranslator(object):
 
         return intensities
 
-    def image_callback(self, image_msg: ProjectedSonarImage):
+    def sonar_image_callback(self, sonar_image_msg: ProjectedSonarImage):
         """
         Convert img_msg into point cloud with color mappings via numpy.
         """
         begin_time = time.time()
         rospy.logdebug("Received new image, seq %d at %f" %
-                       (image_msg.header.seq, image_msg.header.stamp.to_sec()))
+                       (sonar_image_msg.header.seq,
+                        sonar_image_msg.header.stamp.to_sec()))
         header = Header()
-        header = image_msg.header
+        header = sonar_image_msg.header
 
         frame_id = rospy.get_param("~frame_id", None)
         if frame_id:
@@ -187,38 +157,43 @@ class SonarTranslator(object):
             PointField('a', 24, PointField.FLOAT32, 1)
         ]
 
-        image_metadata = SonarImageMetadata(image_msg)
-        if self.image_metadata is None or not self.image_metadata.equals(
-                image_metadata):
+        new_params = SonarImageMetadata(sonar_image_msg)
+        if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_params:
             print("Metadata updated! \nOld: {} \nNew: {}".format(
-                self.image_metadata, image_metadata))
-            self.image_metadata = image_metadata
-            self.geometry = self.image_metadata.create_geometry(
-                self.elevations)
+                self.sonar_msg_metadata, new_params))
+            self.sonar_msg_metadata = new_params
+            self.make_geometry()
 
         if self.color_lookup is None:
             self.make_color_lookup()
         t0 = time.time()
 
         # np.ndarray, shape = (npts,)
-        intensities = self.process_intensity_array(image_msg.image)
+        intensities = self.process_intensity_array(sonar_image_msg.image)
 
         # QUESTION(lindzey): I could really use some comments on what a
         #     negative intensity means at this point, and why we effectively filter
         #     by intensity twice. Once here, and once when setting points[:, 3:]
+
+        # If you're not publishing all values (if publish_all_points is false)
+        # then the pointcloud is masked and only values above the threshold value are published
+        # NOTE(marc): This implementation will be fixed/made more consistent on a future PR as it's not implemented well right now
+        # self.intensity_threshold is used twice, differently.
         if self.publish_all_points:
             selected_intensities = intensities
             geometry = self.geometry
         else:
-            pos_intensity_idx = np.where(intensities > 0)
+            pos_intensity_idx = np.where(
+                intensities > self.intensity_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
 
         npts = len(selected_intensities)
 
         # Allocate our output points
-        self.output_points = np.zeros((len(self.elevations) * npts, 7),
-                                      dtype=np.float32)
+        self.output_points = np.zeros(
+            (len(self.sonar_msg_metadata.elevations) * npts, 7),
+            dtype=np.float32)
 
         # Expand out intensity array (for fast comparison)
         # The np.where call setting colors requires an array of shape (npts, 4).
@@ -236,7 +211,7 @@ class SonarTranslator(object):
             self.color_lookup[expanded_intensities[:, 0]], np.zeros((npts, 4)))
 
         # Fill the output array
-        for i in range(len(self.elevations)):
+        for i in range(len(self.sonar_msg_metadata.elevations)):
             elev_points[:, 0:3] = geometry[i, :, :]
             step = i * npts
             next_step = step + npts
@@ -256,17 +231,16 @@ class SonarTranslator(object):
 
         dt1 = time.time() - t1
         dt0 = t1 - t0
-        total_time = time.time()
+        total_time = time.time() - begin_time
         self.pub.publish(cloud_msg)
 
         rospy.logdebug(
             f"published pointcloud: npts = {npts}, Find Pts = {dt0:0.5f} sec, "
-            "Convert to Cloud = {dt1:0.5f} sec. "
-            "Total Time = {(total_time - begin_time):0.3f} sec")
+            f"Convert to Cloud = {dt1:0.5f} sec. "
+            f"Total Time = {total_time:0.3f} sec")
 
 
 if __name__ == "__main__":
     rospy.init_node("sonar_pointcloud")
-
     translator = SonarTranslator()
     rospy.spin()
