@@ -207,6 +207,7 @@ class SonarPointcloud(object):
         # If you're not publishing all values (if publish_all_points is false)
         # then the pointcloud is masked and only values above the threshold value are published\
         if self.publish_all_points:
+            # uint8_threshold = 0
             selected_intensities = intensities
             geometry = self.geometry
         else:
