@@ -16,6 +16,8 @@ from std_msgs.msg import Header
 
 from sonar_image_proc.sonar_msg_metadata import SonarImageMetadata
 
+import pickle
+
 
 class SonarTranslator(object):
 
@@ -34,8 +36,8 @@ class SonarTranslator(object):
         # Flag to determine whether we publish ALL points or only non-zero points
         self.publish_all_points = rospy.get_param("~publish_all_points", False)
 
-        # threshold range is a float, [0-1] which reduces the
-        # resulting pointcloud to only points with values above threshold
+        # threshold range is a float, [0-1] which scales the pointcloud to
+        # between intensity_threshold and 1
         self.intensity_threshold = rospy.get_param("~intensity_threshold",
                                                    0.74)
         # x,y,z coordinates of points
@@ -119,13 +121,21 @@ class SonarTranslator(object):
             raise Exception("Only 8 bit and 32 bit data is supported!")
 
         intensities = np.frombuffer(image.data, dtype=data_type)
-        # Log scaling modified from sonar_postprocessor_nodelet.cpp
-        # Avoid log(0)
-        new_intensites = intensities.astype(np.float32) + 1e-6
-        # NOTE(lindzey): This calculation needs more comments.
-        v = np.log(new_intensites) / np.log(np.iinfo(data_type).max)
+        new_intensites = intensities.astype(np.float32)
+        # Scaling calculation is taken from sonar_image_proc/ros/src/sonar_postprocessor_nodelet.cpp
+        # First we log scale the intensities
+
+        # Avoid log(0) and add a small offset
+        v = np.log(new_intensites + 1e-6) / np.log(np.iinfo(data_type).max)
+
+        # Then we shift the intensity range by intensity_offset and scale by intensity_scaling
+        # In the original implementation, the scaling is done by (vmax - intensity_offset)
+        intensity_offset = 0.74
         vmax = 1.0
-        v = (v - self.intensity_threshold) / (vmax - self.intensity_threshold)
+        intensity_scaling = vmax - intensity_offset
+        v = (v - intensity_offset) / intensity_scaling
+        # Finally we clip to 0 to 1.
+        # No values shoule be above 1, but plenty of values are below zero.
 
         v = np.clip(v, a_min=0.0, a_max=1.0)
         intensities = (np.iinfo(np.uint8).max * v).astype(np.uint8)
@@ -177,16 +187,19 @@ class SonarTranslator(object):
 
         # If you're not publishing all values (if publish_all_points is false)
         # then the pointcloud is masked and only values above the threshold value are published
-        # NOTE(marc): This implementation will be fixed/made more consistent on a future PR as it's not implemented well right now
-        # self.intensity_threshold is used twice, differently.
         if self.publish_all_points:
             selected_intensities = intensities
             geometry = self.geometry
         else:
-            pos_intensity_idx = np.where(
-                intensities > self.intensity_threshold)
+            uint8_threshold = self.intensity_threshold * np.iinfo(np.uint8).max
+            pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
+
+            num_points = np.sum(intensities > uint8_threshold)
+            rospy.logdebug(
+                f"(Pts>Thresh, Total): {num_points, intensities.size}. Frac: {(num_points/intensities.size):.3f}"
+            )
 
         npts = len(selected_intensities)
 
