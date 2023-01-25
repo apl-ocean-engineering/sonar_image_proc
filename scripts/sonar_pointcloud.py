@@ -36,8 +36,8 @@ class SonarTranslator(object):
 
         # threshold range is a float, [0-1] which scales the pointcloud to
         # between intensity_threshold and 1
-        self.intensity_threshold = rospy.get_param("~intensity_threshold",
-                                                   0.74)
+        self.intensity_threshold = rospy.get_param("~intensity_threshold", 0)
+
         # x,y,z coordinates of points
         # [ELEVATION_IDX, INTENSITY_IDX, DIMENSION_IDX]
         # Shape chosen for ease of mapping coordinates to intensities
@@ -184,8 +184,9 @@ class SonarTranslator(object):
         #     by intensity twice. Once here, and once when setting points[:, 3:]
 
         # If you're not publishing all values (if publish_all_points is false)
-        # then the pointcloud is masked and only values above the threshold value are published
+        # then the pointcloud is masked and only values above the threshold value are published\
         if self.publish_all_points:
+            # uint8_threshold = 0
             selected_intensities = intensities
             geometry = self.geometry
         else:
@@ -196,7 +197,7 @@ class SonarTranslator(object):
 
             num_points = np.sum(intensities > uint8_threshold)
             rospy.logdebug(
-                f"(Pts>Thresh, Total): {num_points, intensities.size}. Frac: {(num_points/intensities.size):.3f}"
+                f"Filtering Results: (Pts>Thresh, Total): {num_points, intensities.size}. Frac: {(num_points/intensities.size):.3f}"
             )
 
         npts = len(selected_intensities)
@@ -217,9 +218,7 @@ class SonarTranslator(object):
         #    (Since we're using numpy arrays, we don't need to reallocate
         #    points every time.)
         elev_points = np.empty((npts, 7))
-        elev_points[:, 3:] = np.where(
-            expanded_intensities > self.intensity_threshold,
-            self.color_lookup[expanded_intensities[:, 0]], np.zeros((npts, 4)))
+        elev_points[:, 3:] = self.color_lookup[expanded_intensities[:, 0]]
 
         # Fill the output array
         for i in range(len(self.sonar_msg_metadata.elevations)):
