@@ -15,8 +15,6 @@ from std_msgs.msg import Header
 
 from sonar_image_proc.sonar_msg_metadata import SonarImageMetadata
 
-import pickle
-
 
 def make_geometry(sonar_msg_metadata: SonarImageMetadata) -> np.array:
     """
