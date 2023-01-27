@@ -207,7 +207,6 @@ class SonarPointcloud(object):
         # If you're not publishing all values (if publish_all_points is false)
         # then the pointcloud is masked and only values above the threshold value are published\
         if self.publish_all_points:
-            # uint8_threshold = 0
             selected_intensities = intensities
             geometry = self.geometry
         else:
@@ -215,6 +214,7 @@ class SonarPointcloud(object):
             pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
+            pts_over_thresh = np.sum(intensities > uint8_threshold)
 
             num_original = len(intensities)
             num_selected = len(selected_intensities)
