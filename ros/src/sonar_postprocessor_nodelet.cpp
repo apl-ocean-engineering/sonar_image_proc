@@ -66,7 +66,7 @@ private:
         // corresponds to a subset of the range of v.
         const float vmax = 1.0, threshold = 0.74;
         auto color = (vv - threshold) / (vmax - threshold);
-        color = std::min(1.0, std::max(0.0, vv));
+        color = std::min(1.0, std::max(0.0, color));
         out.image.data.push_back(UINT8_MAX * color);
       }
     }
