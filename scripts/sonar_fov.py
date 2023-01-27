@@ -178,6 +178,6 @@ class SonarFOV():
 
 
 if __name__ == "__main__":
-    rospy.init_node("sonar_pointcloud")
+    rospy.init_node("sonar_fov")
     fov_publisher = SonarFOV()
     rospy.spin()
