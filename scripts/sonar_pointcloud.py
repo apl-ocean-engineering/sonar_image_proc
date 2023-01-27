@@ -18,12 +18,12 @@ from sonar_image_proc.sonar_msg_metadata import SonarImageMetadata
 
 def make_geometry(sonar_msg_metadata: SonarImageMetadata) -> np.array:
     """
-    Vectorized geometry generation. 
+    Vectorized geometry generation.
     Regenerates when there are changing parameters from the sonar.
     """
     '''
     The original make_geometry() fxn was nested loops. We replaced it with a vectorized solution but
-    for the purposes of making the indexing and geometry creation more clear, 
+    for the purposes of making the indexing and geometry creation more clear,
     here is the original implementation:
 
     ces = np.cos(elevations)
@@ -137,8 +137,8 @@ class SonarPointcloud(object):
         Process an intensity array into a parseable format for pointcloud generation
         Can handle 8bit or 32bit input data, will log scale output data
 
-        Input intensities are on the range [0, INT_MAX]. 
-        After rescaling and clipping to [0, 1] for consistency across data sizes, 
+        Input intensities are on the range [0, INT_MAX].
+        After rescaling and clipping to [0, 1] for consistency across data sizes,
         the colormap is applied to rescaled intensities in the range [threshold_intensity, 1]
         """
         if image.dtype == image.DTYPE_UINT8:
@@ -223,11 +223,12 @@ class SonarPointcloud(object):
             pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
-            pts_over_thresh = np.sum(intensities > uint8_threshold)
 
-            rospy.loginfo(
-                f"Filtering Results: (Pts>Thresh, Total): {pts_over_thresh, len(intensities)}. Frac: {(pts_over_thresh/len(intensities)):.3f}"
-            )
+            num_original = len(intensities)
+            num_selected = len(selected_intensities)
+            rospy.logdebug(
+                f"Filtering Results: (Pts>Thresh, Total): {num_selected, num_original}. "
+                f"Frac: {(num_selected/num_original):.3f}")
 
         npts = len(selected_intensities)
 
