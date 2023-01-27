@@ -223,11 +223,12 @@ class SonarPointcloud(object):
             pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
-            pts_over_thresh = np.sum(intensities > uint8_threshold)
 
-            rospy.loginfo(
-                f"Filtering Results: (Pts>Thresh, Total): {pts_over_thresh, len(intensities)}. Frac: {(pts_over_thresh/len(intensities)):.3f}"
-            )
+            num_original = len(intensities)
+            num_selected = len(selected_intensities)
+            rospy.logdebug(
+                f"Filtering Results: (Pts>Thresh, Total): {num_selected, num_original}. "
+                f"Frac: {(num_selected/num_original):.3f}")
 
         npts = len(selected_intensities)
 
