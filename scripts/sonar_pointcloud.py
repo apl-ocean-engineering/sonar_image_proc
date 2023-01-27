@@ -214,7 +214,6 @@ class SonarPointcloud(object):
             pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
-            pts_over_thresh = np.sum(intensities > uint8_threshold)
 
             num_original = len(intensities)
             num_selected = len(selected_intensities)
