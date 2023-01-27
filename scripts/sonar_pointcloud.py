@@ -17,6 +17,82 @@ from std_msgs.msg import Header
 from sonar_image_proc.sonar_msg_metadata import SonarImageMetadata
 
 
+def make_geometry(sonar_msg_metadata: SonarImageMetadata) -> np.array:
+    """
+    Vectorized geometry generation. 
+    Regenerates when there are changing parameters from the sonar.
+    """
+    '''
+    The original make_geometry() fxn was nested loops. We replaced it with a vectorized solution but
+    for the purposes of making the indexing and geometry creation more clear, 
+    here is the original implementation:
+
+    ces = np.cos(elevations)
+    ses = np.sin(elevations)
+    cas = np.cos(self.azimuths)
+    sas = np.sin(self.azimuths)
+    for kk, (ce, se) in enumerate(zip(ces, ses)):
+        for ii, (ca, sa) in enumerate(zip(cas, sas)):
+            for jj, distance in enumerate(self.ranges):
+                idx = ii + jj * self.num_angles
+                zz = distance * ce * ca
+                yy = distance * ce * sa
+                xx = distance * se
+                points[kk][idx] = [xx, yy, zz]
+    '''
+    rospy.loginfo("Making Geometry")
+    begin_time = time.time()
+    # Pre-compute these values to speed up the loop
+    # Compute the idxs to properly index into the points array
+    idxs = np.arange(
+        0, sonar_msg_metadata.num_angles * sonar_msg_metadata.num_ranges)
+    idxs = idxs.reshape(sonar_msg_metadata.num_ranges,
+                        sonar_msg_metadata.num_angles).flatten(order='F')
+
+    # Compute the cosines and sines of elevations and azimuths
+    ces = np.cos(sonar_msg_metadata.elevations)
+    ses = np.sin(sonar_msg_metadata.elevations)
+    cas = np.cos(sonar_msg_metadata.azimuths)
+    sas = np.sin(sonar_msg_metadata.azimuths)
+
+    # Allocate points
+    new_shape = (len(sonar_msg_metadata.elevations),
+                 sonar_msg_metadata.num_ranges * sonar_msg_metadata.num_angles,
+                 3)
+    points = np.zeros(shape=(new_shape))
+
+    x_temp = np.tile(sonar_msg_metadata.ranges[np.newaxis, :] *
+                     ses[:, np.newaxis],
+                     reps=sonar_msg_metadata.num_angles).flatten()
+    y_temp = (sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
+              ces[:, np.newaxis, np.newaxis] *
+              sas[np.newaxis, :, np.newaxis]).flatten()
+    z_temp = (sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
+              ces[:, np.newaxis, np.newaxis] *
+              cas[np.newaxis, :, np.newaxis]).flatten()
+
+    points[:, idxs, :] = np.stack([x_temp, y_temp, z_temp],
+                                  axis=1).reshape(new_shape)
+
+    total_time = time.time() - begin_time
+    rospy.loginfo(f"Creating geometry took {1000*total_time:0.2f} ms")
+    return points
+
+
+def make_color_lookup() -> np.array:
+    """
+    Generates a lookup table from matplotlib inferno colormapping
+    """
+    color_lookup = np.zeros(shape=(256, 4))
+
+    for aa in range(256):
+        r, g, b, _ = cm.inferno(aa)
+        alpha = (aa / 256)
+
+        color_lookup[aa, :] = [r, g, b, alpha]
+    return color_lookup
+
+
 class SonarTranslator(object):
 
     def __init__(self):
@@ -49,67 +125,14 @@ class SonarTranslator(object):
         self.color_lookup = None
         self.output_points = None
 
-    def make_geometry(self):
-        """
-        Vectorized geometry generation. 
-        Regenerates when there are changing parameters from the sonar.
-        """
-        rospy.loginfo("Making Geometry")
-        begin_time = time.time()
-        # Pre-compute these values to speed up the loop
-        # Compute the idxs to properly index into the points array
-        idxs = np.arange(
-            0, self.sonar_msg_metadata.num_angles *
-            self.sonar_msg_metadata.num_ranges)
-        idxs = idxs.reshape(
-            self.sonar_msg_metadata.num_ranges,
-            self.sonar_msg_metadata.num_angles).flatten(order='F')
-
-        # Compute the cosines and sines of elevations and azimuths
-        ces = np.cos(self.sonar_msg_metadata.elevations)
-        ses = np.sin(self.sonar_msg_metadata.elevations)
-        cas = np.cos(self.sonar_msg_metadata.azimuths)
-        sas = np.sin(self.sonar_msg_metadata.azimuths)
-
-        # Allocate points
-        new_shape = (len(self.sonar_msg_metadata.elevations),
-                     self.sonar_msg_metadata.num_ranges *
-                     self.sonar_msg_metadata.num_angles, 3)
-        points = np.zeros(shape=(new_shape))
-
-        x_temp = np.tile(self.sonar_msg_metadata.ranges[np.newaxis, :] *
-                         ses[:, np.newaxis],
-                         reps=self.sonar_msg_metadata.num_angles).flatten()
-        y_temp = (self.sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
-                  ces[:, np.newaxis, np.newaxis] *
-                  sas[np.newaxis, :, np.newaxis]).flatten()
-        z_temp = (self.sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
-                  ces[:, np.newaxis, np.newaxis] *
-                  cas[np.newaxis, :, np.newaxis]).flatten()
-
-        points[:, idxs, :] = np.stack([x_temp, y_temp, z_temp],
-                                      axis=1).reshape(new_shape)
-
-        self.geometry = points
-        total_time = time.time() - begin_time
-        rospy.loginfo(f"Creating geometry took {1000*total_time:0.2f} ms")
-
-    def make_color_lookup(self):
-        """
-        Generates a lookup table from matplotlib inferno colormapping
-        """
-        self.color_lookup = np.zeros(shape=(256, 4))
-
-        for aa in range(256):
-            r, g, b, _ = cm.inferno(aa)
-            alpha = (aa / 256)
-
-            self.color_lookup[aa, :] = [r, g, b, alpha]
-
     def process_intensity_array(self, image: SonarImageData):
         """
         Process an intensity array into a parseable format for pointcloud generation
         Can handle 8bit or 32bit input data, will log scale output data
+
+        Input intensities are on the range [0, INT_MAX]. 
+        After rescaling and clipping to [0, 1] for consistency across data sizes, 
+        the colormap is applied to rescaled intensities in the range [threshold_intensity, 1]
         """
         if image.dtype == image.DTYPE_UINT8:
             data_type = np.uint8
@@ -128,16 +151,15 @@ class SonarTranslator(object):
 
         # Then we shift the intensity range by intensity_offset and scale by intensity_scaling
         # In the original implementation, the scaling is done by (vmax - intensity_offset)
-        intensity_offset = 0.74
-        vmax = 1.0
-        intensity_scaling = vmax - intensity_offset
-        v = (v - intensity_offset) / intensity_scaling
+        # intensity_offset is hardcoded in the original implementation as 0.74
+        self.intensity_offset = 0.74
+        v = (v - self.intensity_offset) / (1.0 - self.intensity_offset)
+
         # Finally we clip to 0 to 1.
         # No values shoule be above 1, but plenty of values are below zero.
-
         v = np.clip(v, a_min=0.0, a_max=1.0)
-        intensities = (np.iinfo(np.uint8).max * v).astype(np.uint8)
 
+        intensities = (np.iinfo(np.uint8).max * v).astype(np.uint8)
         return intensities
 
     def sonar_image_callback(self, sonar_image_msg: ProjectedSonarImage):
@@ -165,28 +187,22 @@ class SonarTranslator(object):
             PointField('a', 24, PointField.FLOAT32, 1)
         ]
 
-        new_params = SonarImageMetadata(sonar_image_msg)
-        if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_params:
+        new_metadata = SonarImageMetadata(sonar_image_msg)
+        if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_metadata:
             print("Metadata updated! \nOld: {} \nNew: {}".format(
-                self.sonar_msg_metadata, new_params))
-            self.sonar_msg_metadata = new_params
-            self.make_geometry()
+                self.sonar_msg_metadata, new_metadata))
+            self.sonar_msg_metadata = new_metadata
+            self.geometry = make_geometry(self.sonar_msg_metadata)
 
         if self.color_lookup is None:
-            self.make_color_lookup()
+            self.color_lookup = make_color_lookup()
         t0 = time.time()
 
-        # np.ndarray, shape = (npts,)
         intensities = self.process_intensity_array(sonar_image_msg.image)
-
-        # QUESTION(lindzey): I could really use some comments on what a
-        #     negative intensity means at this point, and why we effectively filter
-        #     by intensity twice. Once here, and once when setting points[:, 3:]
 
         # If you're not publishing all values (if publish_all_points is false)
         # then the pointcloud is masked and only values above the threshold value are published\
         if self.publish_all_points:
-            # uint8_threshold = 0
             selected_intensities = intensities
             geometry = self.geometry
         else:
@@ -194,10 +210,10 @@ class SonarTranslator(object):
             pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
+            pts_over_thresh = np.sum(intensities > uint8_threshold)
 
-            num_points = np.sum(intensities > uint8_threshold)
             rospy.logdebug(
-                f"Filtering Results: (Pts>Thresh, Total): {num_points, intensities.size}. Frac: {(num_points/intensities.size):.3f}"
+                f"Filtering Results: (Pts>Thresh, Total): {pts_over_thresh, len(selected_intensities)}. Frac: {(pts_over_thresh/len(selected_intensities)):.3f}"
             )
 
         npts = len(selected_intensities)
@@ -213,10 +229,6 @@ class SonarTranslator(object):
         expanded_intensities = np.repeat(selected_intensities[..., np.newaxis],
                                          4,
                                          axis=1)
-        # NOTE(lindzey): Intensity doesn't change as a function of elevation,
-        #    so I moved this to be computed outside of the elevations loop.
-        #    (Since we're using numpy arrays, we don't need to reallocate
-        #    points every time.)
         elev_points = np.empty((npts, 7))
         elev_points[:, 3:] = self.color_lookup[expanded_intensities[:, 0]]
 
