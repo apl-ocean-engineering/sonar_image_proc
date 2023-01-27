@@ -14,12 +14,12 @@ using acoustic_msgs::ProjectedSonarImage;
 using sonar_image_proc::SonarImageMsgInterface;
 
 class SonarPostprocessorNodelet : public nodelet::Nodelet {
-public:
+ public:
   SonarPostprocessorNodelet() : Nodelet() { ; }
 
   virtual ~SonarPostprocessorNodelet() { ; }
 
-private:
+ private:
   virtual void onInit() {
     ros::NodeHandle nh = getMTNodeHandle();
     ros::NodeHandle pnh = getMTPrivateNodeHandle();
@@ -31,12 +31,14 @@ private:
         "sonar_image", 10, &SonarPostprocessorNodelet::sonarImageCallback,
         this);
 
-    pubSonarImage_ = nh.advertise<ProjectedSonarImage>("sonar_image_postproc", 10);
+    pubSonarImage_ =
+        nh.advertise<ProjectedSonarImage>("sonar_image_postproc", 10);
 
     ROS_DEBUG("sonar_processor ready to run...");
   }
 
-  void sonarImageCallback(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
+  void sonarImageCallback(
+      const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
     SonarImageMsgInterface interface(msg);
 
     // For now, only postprocess 32bit images
@@ -98,14 +100,14 @@ private:
     pubSonarImage_.publish(out);
   }
 
-protected:
+ protected:
   ros::Subscriber subSonarImage_;
   ros::Publisher pubSonarImage_;
 
   float gain_, gamma_;
 };
 
-} // namespace sonar_postprocessor
+}  // namespace sonar_postprocessor
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(sonar_postprocessor::SonarPostprocessorNodelet,

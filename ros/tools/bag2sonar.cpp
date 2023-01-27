@@ -1,13 +1,15 @@
-#include "sonar_image_proc/SonarDrawer.h"
 #include <acoustic_msgs/ProjectedSonarImage.h>
-#include <boost/program_options.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <opencv2/core.hpp>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sonar_image_proc/sonar_image_msg_interface.h>
+
+#include <boost/program_options.hpp>
+#include <opencv2/core.hpp>
 #include <string>
 #include <vector>
+
+#include "sonar_image_proc/SonarDrawer.h"
 
 namespace po = boost::program_options;
 
@@ -15,19 +17,18 @@ using std::string;
 using std::vector;
 
 class OutputWrapper {
-public:
+ public:
   virtual void write(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
                      const cv::Mat &mat) = 0;
 };
 
 class BagOutput : public OutputWrapper {
-public:
+ public:
   BagOutput(const std::string &bagfile, const std::string topic)
       : _bag(bagfile, rosbag::bagmode::Write), _topic(topic) {}
 
   void write(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
              const cv::Mat &mat) override {
-
     cv_bridge::CvImage img_bridge(msg->header,
                                   sensor_msgs::image_encodings::RGB8, mat);
 
@@ -102,7 +103,6 @@ int main(int argc, char **argv) {
   if (vm.count("help")) {
     print_help(public_description);
   } else if (vm.count("input-files")) {
-
     if (vm.count("input-files") > 1) {
       std::cerr << "Can only process one file at a time" << std::endl;
       exit(-1);
@@ -129,7 +129,8 @@ int main(int argc, char **argv) {
       std::cout << "Bagfile " << file << " is " << bag.getSize() << " bytes"
                 << std::endl;
 
-      rosbag::View view(bag, rosbag::TypeQuery("acoustic_msgs/ProjectedSonarImage"));
+      rosbag::View view(bag,
+                        rosbag::TypeQuery("acoustic_msgs/ProjectedSonarImage"));
 
       int count = 0;
 

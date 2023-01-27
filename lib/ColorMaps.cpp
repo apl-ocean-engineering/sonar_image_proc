@@ -210,4 +210,4 @@ const float InfernoColorMap::_inferno_data_uint8[256][3] = {
     {247, 251, 153}, {249, 252, 157}, {250, 253, 160}, {252, 254, 164},
 };
 
-} // namespace sonar_image_proc
+}  // namespace sonar_image_proc
