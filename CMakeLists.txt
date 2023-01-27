@@ -59,10 +59,13 @@ else()
     dynamic_reconfigure
   )
 
+
+  catkin_python_setup()
+
+  # This needs to come after `catkin_python_setup` and before `catkin_package`
   generate_dynamic_reconfigure_options(
     ros/cfg/DrawSonar.cfg
   )
-
   catkin_package(
     INCLUDE_DIRS include/ ros/include/
     LIBRARIES sonar_image_proc
@@ -147,6 +150,8 @@ else()
     FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
     PATTERN ".git" EXCLUDE)
 
+
+  # Install python scripts and modules
   catkin_install_python(PROGRAMS
     scripts/sonar_pointcloud.py
     scripts/sonar_fov.py
@@ -168,5 +173,4 @@ else()
   # install(TARGETS py_draw_sonar
   # DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} ) #${CATKIN_PACKAGE_PYTHON_DESTINATION})
 
-  # catkin_python_setup()
 endif()
