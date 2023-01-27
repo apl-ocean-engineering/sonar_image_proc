@@ -9,7 +9,6 @@ from matplotlib import cm
 import numpy as np
 import rospy
 import time
-
 from acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
@@ -93,7 +92,7 @@ def make_color_lookup() -> np.array:
     return color_lookup
 
 
-class SonarTranslator(object):
+class SonarPointcloud(object):
 
     def __init__(self):
         # NB: if queue_size is set, have to be sure buff_size is sufficiently large,
@@ -112,7 +111,15 @@ class SonarTranslator(object):
 
         # threshold range is a float, [0-1] which scales the pointcloud to
         # between intensity_threshold and 1
-        self.intensity_threshold = rospy.get_param("~intensity_threshold", 0)
+        self.intensity_threshold = rospy.get_param("~intensity_threshold",
+                                                   0.74)
+
+        # Number of planes to add to the pointcloud projection.
+        # Steps are evenly distributed between the max and min elevation angles.
+        self.elev_steps = rospy.get_param("~elev_steps", 2)
+        if isinstance(self.elev_steps, str) or isinstance(
+                self.elev_steps, float):
+            self.elev_steps = int(self.elev_steps)
 
         # x,y,z coordinates of points
         # [ELEVATION_IDX, INTENSITY_IDX, DIMENSION_IDX]
@@ -146,8 +153,14 @@ class SonarTranslator(object):
         # Scaling calculation is taken from sonar_image_proc/ros/src/sonar_postprocessor_nodelet.cpp
         # First we log scale the intensities
 
-        # Avoid log(0) and add a small offset
-        v = np.log(new_intensites + 1e-6) / np.log(np.iinfo(data_type).max)
+        # Avoid log(0)
+        v = np.log(np.maximum(1, new_intensites)) / np.log(
+            np.iinfo(data_type).max)
+
+        # selected = np.where(v > self.intensity_threshold, v,
+        #                     self.intensity_threshold)
+        # scaled = (selected -
+        #           self.intensity_threshold) / (1 - self.intensity_threshold)
 
         # Then we shift the intensity range by intensity_offset and scale by intensity_scaling
         # In the original implementation, the scaling is done by (vmax - intensity_offset)
@@ -157,9 +170,9 @@ class SonarTranslator(object):
 
         # Finally we clip to 0 to 1.
         # No values shoule be above 1, but plenty of values are below zero.
-        v = np.clip(v, a_min=0.0, a_max=1.0)
+        clipped = np.clip(v, a_min=0.0, a_max=1.0)
 
-        intensities = (np.iinfo(np.uint8).max * v).astype(np.uint8)
+        intensities = (np.iinfo(np.uint8).max * clipped).astype(np.uint8)
         return intensities
 
     def sonar_image_callback(self, sonar_image_msg: ProjectedSonarImage):
@@ -187,7 +200,7 @@ class SonarTranslator(object):
             PointField('a', 24, PointField.FLOAT32, 1)
         ]
 
-        new_metadata = SonarImageMetadata(sonar_image_msg)
+        new_metadata = SonarImageMetadata(sonar_image_msg, self.elev_steps)
         if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_metadata:
             print("Metadata updated! \nOld: {} \nNew: {}".format(
                 self.sonar_msg_metadata, new_metadata))
@@ -206,14 +219,14 @@ class SonarTranslator(object):
             selected_intensities = intensities
             geometry = self.geometry
         else:
-            uint8_threshold = self.intensity_threshold * np.iinfo(np.uint8).max
+            uint8_threshold = 0  #self.intensity_threshold * np.iinfo(np.uint8).max
             pos_intensity_idx = np.where(intensities > uint8_threshold)
             selected_intensities = intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
             pts_over_thresh = np.sum(intensities > uint8_threshold)
 
-            rospy.logdebug(
-                f"Filtering Results: (Pts>Thresh, Total): {pts_over_thresh, len(selected_intensities)}. Frac: {(pts_over_thresh/len(selected_intensities)):.3f}"
+            rospy.loginfo(
+                f"Filtering Results: (Pts>Thresh, Total): {pts_over_thresh, len(intensities)}. Frac: {(pts_over_thresh/len(intensities)):.3f}"
             )
 
         npts = len(selected_intensities)
@@ -264,5 +277,5 @@ class SonarTranslator(object):
 
 if __name__ == "__main__":
     rospy.init_node("sonar_pointcloud")
-    translator = SonarTranslator()
+    pointcloud_publisher = SonarPointcloud()
     rospy.spin()
