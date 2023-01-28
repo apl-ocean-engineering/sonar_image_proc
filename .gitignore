@@ -35,3 +35,4 @@ build/
 .fips-*
 .history/*
 .gitignore
+python/sonar_image_proc/__pycache__/*.pyc
