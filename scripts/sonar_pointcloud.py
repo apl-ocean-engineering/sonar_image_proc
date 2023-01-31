@@ -16,12 +16,11 @@ from std_msgs.msg import Header
 from sonar_image_proc.sonar_msg_metadata import SonarImageMetadata
 
 
-def make_geometry(sonar_msg_metadata: SonarImageMetadata) -> np.array:
+def make_geometry(sonar_msg_metadata: SonarImageMetadata, elevations) -> np.array:
     """
     Vectorized geometry generation.
     Regenerates when there are changing parameters from the sonar.
-    """
-    '''
+
     The original make_geometry() fxn was nested loops. We replaced it with a vectorized solution but
     for the purposes of making the indexing and geometry creation more clear,
     here is the original implementation:
@@ -38,7 +37,7 @@ def make_geometry(sonar_msg_metadata: SonarImageMetadata) -> np.array:
                 yy = distance * ce * sa
                 xx = distance * se
                 points[kk][idx] = [xx, yy, zz]
-    '''
+    """
     rospy.loginfo("Making Geometry")
     begin_time = time.time()
     # Pre-compute these values to speed up the loop
@@ -49,15 +48,17 @@ def make_geometry(sonar_msg_metadata: SonarImageMetadata) -> np.array:
                         sonar_msg_metadata.num_angles).flatten(order='F')
 
     # Compute the cosines and sines of elevations and azimuths
-    ces = np.cos(sonar_msg_metadata.elevations)
-    ses = np.sin(sonar_msg_metadata.elevations)
+    ces = np.cos(elevations)
+    ses = np.sin(elevations)
     cas = np.cos(sonar_msg_metadata.azimuths)
     sas = np.sin(sonar_msg_metadata.azimuths)
 
     # Allocate points
-    new_shape = (len(sonar_msg_metadata.elevations),
-                 sonar_msg_metadata.num_ranges * sonar_msg_metadata.num_angles,
-                 3)
+    new_shape = (
+        len(elevations),
+        sonar_msg_metadata.num_ranges * sonar_msg_metadata.num_angles,
+        3,
+    )
     points = np.zeros(shape=(new_shape))
 
     x_temp = np.tile(sonar_msg_metadata.ranges[np.newaxis, :] *
@@ -118,10 +119,15 @@ class SonarPointcloud(object):
 
         # Number of planes to add to the pointcloud projection.
         # Steps are evenly distributed between the max and min elevation angles.
-        self.elev_steps = rospy.get_param("~elev_steps", 2)
-        if isinstance(self.elev_steps, str) or isinstance(
-                self.elev_steps, float):
-            self.elev_steps = int(self.elev_steps)
+        elev_steps = rospy.get_param("~elev_steps", 2)
+        if isinstance(elev_steps, str) or isinstance(elev_steps, float):
+            elev_steps = int(elev_steps)
+        min_elev_deg = rospy.get_param("~min_elev_deg", -10)
+        max_elev_deg = rospy.get_param("~max_elev_deg", 10)
+        assert max_elev_deg >= min_elev_deg
+        min_elev = np.radians(min_elev_deg)
+        max_elev = np.radians(max_elev_deg)
+        self.elevations = np.linspace(min_elev, max_elev, elev_steps)
 
         # x,y,z coordinates of points
         # [ELEVATION_IDX, INTENSITY_IDX, DIMENSION_IDX]
@@ -191,12 +197,12 @@ class SonarPointcloud(object):
             PointField('a', 24, PointField.FLOAT32, 1)
         ]
 
-        new_metadata = SonarImageMetadata(sonar_image_msg, self.elev_steps)
+        new_metadata = SonarImageMetadata(sonar_image_msg)
         if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_metadata:
             print("Metadata updated! \nOld: {} \nNew: {}".format(
                 self.sonar_msg_metadata, new_metadata))
             self.sonar_msg_metadata = new_metadata
-            self.geometry = make_geometry(self.sonar_msg_metadata)
+            self.geometry = make_geometry(self.sonar_msg_metadata, self.elevations)
 
         if self.color_lookup is None:
             self.color_lookup = make_color_lookup()
@@ -219,26 +225,27 @@ class SonarPointcloud(object):
             num_selected = len(selected_intensities)
             rospy.loginfo(
                 f"Filtering Results: (Pts>Thresh, Total): {num_selected, num_original}. "
-                f"Frac: {(num_selected/num_original):.3f}")
+                f"Frac: {(num_selected/num_original):.3f}"
+            )
 
         npts = len(selected_intensities)
 
         # Allocate our output points
         self.output_points = np.zeros(
-            (len(self.sonar_msg_metadata.elevations) * npts, 7),
-            dtype=np.float32)
+            (len(self.elevations) * npts, 7), dtype=np.float32
+        )
 
         # Expand out intensity array (for fast comparison)
         # The np.where call setting colors requires an array of shape (npts, 4).
         # selected_intensities has shape (npts,), but np.repeat requires (npts, 1).
-        expanded_intensities = np.repeat(selected_intensities[..., np.newaxis],
-                                         4,
-                                         axis=1)
+        expanded_intensities = np.repeat(
+            selected_intensities[..., np.newaxis], 4, axis=1
+        )
         elev_points = np.empty((npts, 7))
         elev_points[:, 3:] = self.color_lookup[expanded_intensities[:, 0]]
 
         # Fill the output array
-        for i in range(len(self.sonar_msg_metadata.elevations)):
+        for i in range(len(self.elevations)):
             elev_points[:, 0:3] = geometry[i, :, :]
             step = i * npts
             next_step = step + npts

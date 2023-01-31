@@ -12,10 +12,7 @@ from acoustic_msgs.msg import ProjectedSonarImage
 
 
 class SonarImageMetadata(object):
-
-    def __init__(self,
-                 sonar_image_msg: ProjectedSonarImage,
-                 elevation_steps=2):
+    def __init__(self, sonar_image_msg: ProjectedSonarImage):
         """
         Metadata for a sonar image, containing all information necessary
         to compute its geometry.
@@ -34,11 +31,9 @@ class SonarImageMetadata(object):
         self.azimuths = np.arctan2(-1 * yy, np.sqrt(xx**2 + zz**2))
         self.min_azimuth = np.min(self.azimuths)
         self.max_azimuth = np.max(self.azimuths)
-
         elev_beamwidth = np.median(sonar_image_msg.ping_info.tx_beamwidths)
-
-        self.elevations = np.linspace(-0.5 * elev_beamwidth,
-                                      0.5 * elev_beamwidth, elevation_steps)
+        self.min_elevation = -0.5 * elev_beamwidth
+        self.max_elevation = 0.5 * elev_beamwidth
 
     def __eq__(self, other: SonarImageMetadata) -> bool:
         """

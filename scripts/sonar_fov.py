@@ -24,7 +24,7 @@ def build_vector_list(msg_metadata):
     zz = []
 
     # Calculate ending arc of the FOV in 3D space
-    for elevation in msg_metadata.elevations:
+    for elevation in [msg_metadata.min_elevation, msg_metadata.max_elevation]:
         ce = np.cos(elevation)
         se = np.sin(elevation)
         ca = np.cos(msg_metadata.azimuths)
@@ -153,7 +153,7 @@ class SonarFOV():
 
         # For the sonar_fov script, the elevation steps need to be 2
         # The logic to draw the mesh is not generic to step counts
-        new_metadata = SonarImageMetadata(sonar_image_msg, elevation_steps=2)
+        new_metadata = SonarImageMetadata(sonar_image_msg)
         generate_fov_flag = False
         if self.sonar_msg_metadata is None:
             self.sonar_msg_metadata = new_metadata
