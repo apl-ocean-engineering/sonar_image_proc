@@ -42,10 +42,10 @@ def make_geometry(sonar_msg_metadata: SonarImageMetadata, elevations) -> np.arra
     begin_time = time.time()
     # Pre-compute these values to speed up the loop
     # Compute the idxs to properly index into the points array
-    idxs = np.arange(
-        0, sonar_msg_metadata.num_angles * sonar_msg_metadata.num_ranges)
-    idxs = idxs.reshape(sonar_msg_metadata.num_ranges,
-                        sonar_msg_metadata.num_angles).flatten(order='F')
+    idxs = np.arange(0, sonar_msg_metadata.num_angles * sonar_msg_metadata.num_ranges)
+    idxs = idxs.reshape(
+        sonar_msg_metadata.num_ranges, sonar_msg_metadata.num_angles
+    ).flatten(order="F")
 
     # Compute the cosines and sines of elevations and azimuths
     ces = np.cos(elevations)
@@ -61,18 +61,22 @@ def make_geometry(sonar_msg_metadata: SonarImageMetadata, elevations) -> np.arra
     )
     points = np.zeros(shape=(new_shape))
 
-    x_temp = np.tile(sonar_msg_metadata.ranges[np.newaxis, :] *
-                     ses[:, np.newaxis],
-                     reps=sonar_msg_metadata.num_angles).flatten()
-    y_temp = (sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
-              ces[:, np.newaxis, np.newaxis] *
-              sas[np.newaxis, :, np.newaxis]).flatten()
-    z_temp = (sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :] *
-              ces[:, np.newaxis, np.newaxis] *
-              cas[np.newaxis, :, np.newaxis]).flatten()
+    x_temp = np.tile(
+        sonar_msg_metadata.ranges[np.newaxis, :] * ses[:, np.newaxis],
+        reps=sonar_msg_metadata.num_angles,
+    ).flatten()
+    y_temp = (
+        sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :]
+        * ces[:, np.newaxis, np.newaxis]
+        * sas[np.newaxis, :, np.newaxis]
+    ).flatten()
+    z_temp = (
+        sonar_msg_metadata.ranges[np.newaxis, np.newaxis, :]
+        * ces[:, np.newaxis, np.newaxis]
+        * cas[np.newaxis, :, np.newaxis]
+    ).flatten()
 
-    points[:, idxs, :] = np.stack([x_temp, y_temp, z_temp],
-                                  axis=1).reshape(new_shape)
+    points[:, idxs, :] = np.stack([x_temp, y_temp, z_temp], axis=1).reshape(new_shape)
 
     total_time = time.time() - begin_time
     rospy.loginfo(f"Creating geometry took {1000*total_time:0.2f} ms")
@@ -87,7 +91,7 @@ def make_color_lookup() -> np.array:
 
     for aa in range(256):
         r, g, b, _ = cm.inferno(aa)
-        alpha = (aa / 256)
+        alpha = aa / 256
 
         color_lookup[aa, :] = [r, g, b, alpha]
     return color_lookup
@@ -100,11 +104,13 @@ class SonarPointcloud(object):
         #     since it can only discard messages that are fully in the buffer.
         # https://stackoverflow.com/questions/26415699/ros-subscriber-not-up-to-date
         # (200k didn't work, and sys.getsizeof doesn't return an accurate size of the whole object)
-        self.sub = rospy.Subscriber("sonar_image",
-                                    ProjectedSonarImage,
-                                    self.sonar_image_callback,
-                                    queue_size=1,
-                                    buff_size=1000000)
+        self.sub = rospy.Subscriber(
+            "sonar_image",
+            ProjectedSonarImage,
+            self.sonar_image_callback,
+            queue_size=1,
+            buff_size=1000000,
+        )
         self.pub = rospy.Publisher("sonar_cloud", PointCloud2, queue_size=1)
 
         # Flag to determine whether we publish ALL points or only non-zero points
@@ -120,7 +126,7 @@ class SonarPointcloud(object):
         # Number of planes to add to the pointcloud projection.
         # Steps are evenly distributed between the max and min elevation angles.
         elev_steps = rospy.get_param("~elev_steps", 2)
-        if isinstance(elev_steps, str) or isinstance(elev_steps, float):
+        if isinstance(elev_steps, (float, str)):
             elev_steps = int(elev_steps)
         min_elev_deg = rospy.get_param("~min_elev_deg", -10)
         max_elev_deg = rospy.get_param("~max_elev_deg", 10)
@@ -177,9 +183,10 @@ class SonarPointcloud(object):
         Convert img_msg into point cloud with color mappings via numpy.
         """
         begin_time = time.time()
-        rospy.logdebug("Received new image, seq %d at %f" %
-                       (sonar_image_msg.header.seq,
-                        sonar_image_msg.header.stamp.to_sec()))
+        rospy.logdebug(
+            "Received new image, seq %d at %f"
+            % (sonar_image_msg.header.seq, sonar_image_msg.header.stamp.to_sec())
+        )
         header = Header()
         header = sonar_image_msg.header
 
@@ -188,19 +195,23 @@ class SonarPointcloud(object):
             header.frame_id = frame_id
 
         fields = [
-            PointField('x', 0, PointField.FLOAT32, 1),
-            PointField('y', 4, PointField.FLOAT32, 1),
-            PointField('z', 8, PointField.FLOAT32, 1),
-            PointField('r', 12, PointField.FLOAT32, 1),
-            PointField('g', 16, PointField.FLOAT32, 1),
-            PointField('b', 20, PointField.FLOAT32, 1),
-            PointField('a', 24, PointField.FLOAT32, 1)
+            PointField("x", 0, PointField.FLOAT32, 1),
+            PointField("y", 4, PointField.FLOAT32, 1),
+            PointField("z", 8, PointField.FLOAT32, 1),
+            PointField("r", 12, PointField.FLOAT32, 1),
+            PointField("g", 16, PointField.FLOAT32, 1),
+            PointField("b", 20, PointField.FLOAT32, 1),
+            PointField("a", 24, PointField.FLOAT32, 1),
         ]
 
         new_metadata = SonarImageMetadata(sonar_image_msg)
         if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_metadata:
-            print("Metadata updated! \nOld: {} \nNew: {}".format(
-                self.sonar_msg_metadata, new_metadata))
+            print(
+                f"Metadata updated! \n"
+                f"Old: {self.sonar_msg_metadata} \n"
+                f"New: {new_metadata}"
+            )
+
             self.sonar_msg_metadata = new_metadata
             self.geometry = make_geometry(self.sonar_msg_metadata, self.elevations)
 
@@ -252,16 +263,18 @@ class SonarPointcloud(object):
             self.output_points[step:next_step, :] = elev_points
 
         t1 = time.time()
-        N = len(self.output_points)
-        cloud_msg = PointCloud2(header=header,
-                                height=1,
-                                width=N,
-                                is_dense=True,
-                                is_bigendian=False,
-                                fields=fields,
-                                point_step=7 * 4,
-                                row_step=7 * 4 * N,
-                                data=self.output_points.tobytes())
+        n_pub = len(self.output_points)
+        cloud_msg = PointCloud2(
+            header=header,
+            height=1,
+            width=n_pub,
+            is_dense=True,
+            is_bigendian=False,
+            fields=fields,
+            point_step=7 * 4,
+            row_step=7 * 4 * n_pub,
+            data=self.output_points.tobytes(),
+        )
 
         dt1 = time.time() - t1
         dt0 = t1 - t0
@@ -271,7 +284,8 @@ class SonarPointcloud(object):
         rospy.logdebug(
             f"published pointcloud: npts = {npts}, Find Pts = {dt0:0.5f} sec, "
             f"Convert to Cloud = {dt1:0.5f} sec. "
-            f"Total Time = {total_time:0.3f} sec")
+            f"Total Time = {total_time:0.3f} sec"
+        )
 
 
 if __name__ == "__main__":
