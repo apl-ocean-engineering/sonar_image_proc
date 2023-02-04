@@ -98,6 +98,10 @@ def make_color_lookup() -> np.array:
 
 
 class SonarPointcloud(object):
+    """
+    Subscribe to ProjectedSonarImage messages and publish slices of the
+    intensity array as rviz MarkerArrays.
+    """
 
     def __init__(self):
         # NB: if queue_size is set, have to be sure buff_size is sufficiently large,
@@ -146,14 +150,13 @@ class SonarPointcloud(object):
         self.color_lookup = None
         self.output_points = None
 
-    def process_intensity_array(self, image: SonarImageData):
+    def normalize_intensity_array(self, image: SonarImageData):
         """
         Process an intensity array into a parseable format for pointcloud generation
         Can handle 8bit or 32bit input data, will log scale output data
 
         Input intensities are on the range [0, INT_MAX].
-        After rescaling and clipping to [0, 1] for consistency across data sizes,
-        the colormap is applied to rescaled intensities in the range [threshold_intensity, 1]
+        Output intensities are log-scaled, normalized to [0, 1]
         """
         if image.dtype == image.DTYPE_UINT8:
             data_type = np.uint8
@@ -167,16 +170,9 @@ class SonarPointcloud(object):
         # Scaling calculation is taken from sonar_image_proc/ros/src/sonar_postprocessor_nodelet.cpp
         # First we log scale the intensities
 
-        # Avoid log(0)
-        v = np.log(np.maximum(1, new_intensites)) / np.log(
-            np.iinfo(data_type).max)
-
-        v_max = 1.0
-        v_scaled = (v - self.cmin) / (v_max - self.cmin)
-        v_clipped = np.clip(v_scaled, a_min=0.0, a_max=1.0)
-
-        intensities = (np.iinfo(np.uint8).max * v_clipped).astype(np.uint8)
-        return intensities
+        # Avoid log(0) and scale full range of possible intensities to [0,1]
+        vv = np.log(np.maximum(1, new_intensites)) / np.log(np.iinfo(data_type).max)
+        return vv
 
     def sonar_image_callback(self, sonar_image_msg: ProjectedSonarImage):
         """
@@ -219,29 +215,32 @@ class SonarPointcloud(object):
             self.color_lookup = make_color_lookup()
         t0 = time.time()
 
-        intensities = self.process_intensity_array(sonar_image_msg.image)
+        normalized_intensities = self.normalize_intensity_array(sonar_image_msg.image)
 
-        # If you're not publishing all values (if publish_all_points is false)
-        # then the pointcloud is masked and only values above the threshold value are published\
+        # Threshold pointcloud based on intensity if not publishing all points
         if self.publish_all_points:
-            selected_intensities = intensities
+            selected_intensities = normalized_intensities
             geometry = self.geometry
         else:
-            uint8_threshold = self.threshold * np.iinfo(np.uint8).max
-            pos_intensity_idx = np.where(intensities > uint8_threshold)
-            selected_intensities = intensities[pos_intensity_idx]
+            pos_intensity_idx = np.where(normalized_intensities > self.threshold)
+            selected_intensities = normalized_intensities[pos_intensity_idx]
             geometry = self.geometry[:, pos_intensity_idx[0]]
 
-            num_original = len(intensities)
+            num_original = len(normalized_intensities)
             num_selected = len(selected_intensities)
             rospy.loginfo(
                 f"Filtering Results: (Pts>Thresh, Total): {num_selected, num_original}. "
                 f"Frac: {(num_selected/num_original):.3f}"
             )
 
-        npts = len(selected_intensities)
+        # Finally, apply colormap to intensity values.
+        v_max = 1.0
+        colors = (selected_intensities - self.cmin) / (v_max - self.cmin)
+        c_clipped = np.clip(colors, a_min=0.0, a_max=1.0)
+        c_uint8 = (np.iinfo(np.uint8).max * c_clipped).astype(np.uint8)
 
         # Allocate our output points
+        npts = len(selected_intensities)
         self.output_points = np.zeros(
             (len(self.elevations) * npts, 7), dtype=np.float32
         )
@@ -249,11 +248,10 @@ class SonarPointcloud(object):
         # Expand out intensity array (for fast comparison)
         # The np.where call setting colors requires an array of shape (npts, 4).
         # selected_intensities has shape (npts,), but np.repeat requires (npts, 1).
-        expanded_intensities = np.repeat(
-            selected_intensities[..., np.newaxis], 4, axis=1
-        )
+        c_expanded = np.repeat(c_uint8[..., np.newaxis], 4, axis=1)
+        print(f"c_uint8's shape: {c_uint8.shape}, c_expanded: {c_expanded.shape}")
         elev_points = np.empty((npts, 7))
-        elev_points[:, 3:] = self.color_lookup[expanded_intensities[:, 0]]
+        elev_points[:, 3:] = self.color_lookup[c_expanded[:, 0]]
 
         # Fill the output array
         for i in range(len(self.elevations)):
@@ -281,7 +279,7 @@ class SonarPointcloud(object):
         total_time = time.time() - begin_time
         self.pub.publish(cloud_msg)
 
-        rospy.logdebug(
+        rospy.logwarn(
             f"published pointcloud: npts = {npts}, Find Pts = {dt0:0.5f} sec, "
             f"Convert to Cloud = {dt1:0.5f} sec. "
             f"Total Time = {total_time:0.3f} sec"
