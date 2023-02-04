@@ -8,17 +8,17 @@ import numpy as np
 import rospy
 
 from acoustic_msgs.msg import ProjectedSonarImage
+from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray
-from geometry_msgs.msg import Point
 
 from sonar_image_proc.sonar_msg_metadata import SonarImageMetadata
 
 
 def build_vector_list(msg_metadata):
     """
-        From sonar parameters, build the wedge as list of vectors
-        """
+    From sonar parameters, build the wedge as list of vectors
+    """
     xx = []
     yy = []
     zz = []
@@ -55,7 +55,7 @@ def build_vector_list(msg_metadata):
 
     # Number of faces:
     vertex_cnt = len(xx_new) + 1
-    face_cnt = (vertex_cnt // 2 - 2)
+    face_cnt = vertex_cnt // 2 - 2
     split = (len(xx_new) - 1) // 2
 
     pt0 = np.zeros(shape=(face_cnt), dtype=np.uint)
@@ -80,8 +80,7 @@ def build_vector_list(msg_metadata):
     second_connection = np.stack([first_pt, fourth_pt, second_pt]).T
     elevation_faces = np.vstack([first_connection, second_connection])
 
-    faces = np.vstack(
-        [top_face, btm_face, left_face, right_face, elevation_faces])
+    faces = np.vstack([top_face, btm_face, left_face, right_face, elevation_faces])
 
     # Create array of vectors
     vectors = []
@@ -93,17 +92,16 @@ def build_vector_list(msg_metadata):
     return vectors
 
 
-class SonarFOV():
-
+class SonarFOV:
     def __init__(self):
-        self.sub = rospy.Subscriber("sonar_image",
-                                    ProjectedSonarImage,
-                                    self.sonar_image_callback,
-                                    queue_size=1,
-                                    buff_size=1000000)
-        self.pub_fov = rospy.Publisher('/sonar_fov',
-                                       MarkerArray,
-                                       queue_size=10)
+        self.sub = rospy.Subscriber(
+            "sonar_image",
+            ProjectedSonarImage,
+            self.sonar_image_callback,
+            queue_size=1,
+            buff_size=1000000,
+        )
+        self.pub_fov = rospy.Publisher("/sonar_fov", MarkerArray, queue_size=10)
 
         # Alpha transparency for wedge
         self.alpha = rospy.get_param("~alpha", 1.0)
@@ -147,9 +145,10 @@ class SonarFOV():
         Callback to publish the marker array containing the FOV wedge.
         Only updates the geometry if parameters change.
         """
-        rospy.logdebug("Received new image, seq %d at %f" %
-                       (sonar_image_msg.header.seq,
-                        sonar_image_msg.header.stamp.to_sec()))
+        rospy.logdebug(
+            "Received new image, seq %d at %f"
+            % (sonar_image_msg.header.seq, sonar_image_msg.header.stamp.to_sec())
+        )
 
         # For the sonar_fov script, the elevation steps need to be 2
         # The logic to draw the mesh is not generic to step counts
@@ -161,7 +160,10 @@ class SonarFOV():
         else:
             # Because the dictionary contains numpy arrays, a simple check for a == b does not work.
             # Using allclose because the range occasionally changes by fractions
-            if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_metadata:
+            if (
+                self.sonar_msg_metadata is None
+                or self.sonar_msg_metadata != new_metadata
+            ):
                 # things have changed, regenerate the fov
                 rospy.logwarn("Updating Parameters of FOV")
                 self.sonar_msg_metadata = new_metadata
