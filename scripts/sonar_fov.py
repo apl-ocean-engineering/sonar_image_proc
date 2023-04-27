@@ -101,7 +101,7 @@ class SonarFOV:
             queue_size=1,
             buff_size=1000000,
         )
-        self.pub_fov = rospy.Publisher("/sonar_fov", MarkerArray, queue_size=10)
+        self.pub_fov = rospy.Publisher("sonar_fov", MarkerArray, queue_size=10)
 
         # Alpha transparency for wedge
         self.alpha = rospy.get_param("~alpha", 1.0)
