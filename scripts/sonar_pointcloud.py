@@ -38,7 +38,7 @@ def make_geometry(sonar_msg_metadata: SonarImageMetadata, elevations) -> np.arra
                 xx = distance * se
                 points[kk][idx] = [xx, yy, zz]
     """
-    rospy.loginfo("Making Geometry")
+    rospy.logdebug("Making Geometry")
     begin_time = time.time()
     # Pre-compute these values to speed up the loop
     # Compute the idxs to properly index into the points array
@@ -79,7 +79,7 @@ def make_geometry(sonar_msg_metadata: SonarImageMetadata, elevations) -> np.arra
     points[:, idxs, :] = np.stack([x_temp, y_temp, z_temp], axis=1).reshape(new_shape)
 
     total_time = time.time() - begin_time
-    rospy.loginfo(f"Creating geometry took {1000*total_time:0.2f} ms")
+    rospy.logdebug(f"Creating geometry took {1000*total_time:0.2f} ms")
     return points
 
 
@@ -202,7 +202,7 @@ class SonarPointcloud(object):
 
         new_metadata = SonarImageMetadata(sonar_image_msg)
         if self.sonar_msg_metadata is None or self.sonar_msg_metadata != new_metadata:
-            print(
+            rospy.logdebug(
                 f"Metadata updated! \n"
                 f"Old: {self.sonar_msg_metadata} \n"
                 f"New: {new_metadata}"
@@ -228,7 +228,7 @@ class SonarPointcloud(object):
 
             num_original = len(normalized_intensities)
             num_selected = len(selected_intensities)
-            rospy.loginfo(
+            rospy.logdebug(
                 f"Filtering Results: (Pts>Thresh, Total): {num_selected, num_original}. "
                 f"Frac: {(num_selected/num_original):.3f}"
             )
@@ -249,7 +249,6 @@ class SonarPointcloud(object):
         # The np.where call setting colors requires an array of shape (npts, 4).
         # selected_intensities has shape (npts,), but np.repeat requires (npts, 1).
         c_expanded = np.repeat(c_uint8[..., np.newaxis], 4, axis=1)
-        print(f"c_uint8's shape: {c_uint8.shape}, c_expanded: {c_expanded.shape}")
         elev_points = np.empty((npts, 7))
         elev_points[:, 3:] = self.color_lookup[c_expanded[:, 0]]
 
@@ -279,7 +278,7 @@ class SonarPointcloud(object):
         total_time = time.time() - begin_time
         self.pub.publish(cloud_msg)
 
-        rospy.logwarn(
+        rospy.logdebug(
             f"published pointcloud: npts = {npts}, Find Pts = {dt0:0.5f} sec, "
             f"Convert to Cloud = {dt1:0.5f} sec. "
             f"Total Time = {total_time:0.3f} sec"

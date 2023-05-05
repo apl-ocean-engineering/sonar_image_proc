@@ -165,7 +165,7 @@ class SonarFOV:
                 or self.sonar_msg_metadata != new_metadata
             ):
                 # things have changed, regenerate the fov
-                rospy.logwarn("Updating Parameters of FOV")
+                rospy.logdebug("Updating Parameters of FOV")
                 self.sonar_msg_metadata = new_metadata
                 generate_fov_flag = True
 
