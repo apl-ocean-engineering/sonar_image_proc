@@ -49,7 +49,7 @@ if(FIPS_CONFIG)
 
 else()
   find_package(catkin REQUIRED
-    acoustic_msgs
+    marine_acoustic_msgs
     cv_bridge
     image_transport
     nodelet
@@ -58,7 +58,6 @@ else()
     rosbag_storage
     dynamic_reconfigure
   )
-
 
   catkin_python_setup()
 
@@ -150,7 +149,6 @@ else()
     FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
     PATTERN ".git" EXCLUDE)
 
-
   # Install python scripts and modules
   catkin_install_python(PROGRAMS
     scripts/sonar_pointcloud.py
@@ -172,5 +170,4 @@ else()
   #
   # install(TARGETS py_draw_sonar
   # DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION} ) #${CATKIN_PACKAGE_PYTHON_DESTINATION})
-
 endif()

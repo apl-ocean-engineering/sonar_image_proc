@@ -7,7 +7,7 @@ Code to draw data from forward-looking imaging sonars.
 If built for ROS, it will build a node/nodelet
 [draw_sonar](https://github.com/apl-ocean-engineering/libdraw_sonar/tree/master/src_ros)
 which subscribes to an
-[acoustic_msgs/ProjectedSonarImage](https://github.com/apl-ocean-engineering/hydrographic_msgs/blob/main/acoustic_msgs/msg/SonarImage.msg)
+[marine_acoustic_msgs/ProjectedSonarImage](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs/msg/ProjectedSonarImage.msg)
 and publishes a
 [sensor_msgs/Image](https://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/Image.html).
 
@@ -19,7 +19,7 @@ The core library contains no ROS dependencies, and can be linked into non-ROS ap
 
 ## Subscribers
 
-Subscribes to the topic `sonar_image` of type [acoustic_msgs/ProjectedSonarImage](https://github.com/apl-ocean-engineering/hydrographic_msgs/blob/main/acoustic_msgs/msg/ProjectedSonarImage.msg).
+Subscribes to the topic `sonar_image` of type [marine_acoustic_msgs/ProjectedSonarImage](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs/msg/ProjectedSonarImage.msg).
 
 
 ## Publishers
@@ -124,7 +124,7 @@ A convenience function [drawSonar](include/sonar_image_proc/DrawSonar.h) is also
 
 * [liboculus](https://github.com/apl-ocean-engineering/liboculus) provides network IO and data parsing for the Oculus sonar (non-ROS).
 * [oculus_sonar_driver](https://gitlab.com/apl-ocean-engineering/oculus_sonar_driver) provides a ROS node for interfacing with the Oculus sonar.
-* [acoustic_msgs](https://github.com/apl-ocean-engineering/hydrographic_msgs/tree/main/acoustic_msgs) defines the ROS [ProjectedSonarImage](https://github.com/apl-ocean-engineering/hydrographic_msgs/blob/main/acoustic_msgs/msg/ProjectedSonarImage.msg) message type published by [oculus_sonar_driver](https://gitlab.com/apl-ocean-engineering/oculus_sonar_driver).
+* [marine_acoustic_msgs](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs) defines the ROS [ProjectedSonarImage](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs/msg/ProjectedSonarImage.msg) message type published by [oculus_sonar_driver](https://gitlab.com/apl-ocean-engineering/oculus_sonar_driver).
 * [rqt_sonar_image_view](https://github.com/apl-ocean-engineering/rqt_sonar_image_view) is an Rqt plugin for displaying sonar imagery (uses [sonar_image_proc](https://github.com/apl-ocean-engineering/sonar_image_proc))
 
 

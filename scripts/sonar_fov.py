@@ -7,7 +7,7 @@ from __future__ import annotations  # use type of class in member function annot
 import numpy as np
 import rospy
 
-from acoustic_msgs.msg import ProjectedSonarImage
+from marine_acoustic_msgsacoustic_msgs.msg import ProjectedSonarImage
 from geometry_msgs.msg import Point
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray

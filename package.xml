@@ -16,7 +16,7 @@
   <depend>roscpp</depend>
   <depend>rospy</depend>
 
-  <depend>acoustic_msgs</depend>
+  <depend>marine_acoustic_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>nodelet_topic_tools</depend>

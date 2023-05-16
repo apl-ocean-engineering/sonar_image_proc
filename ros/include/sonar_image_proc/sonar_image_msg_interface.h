@@ -1,7 +1,7 @@
 // Copyright 2021 University of Washington Applied Physics Laboratory
 //
 // An implementation of an AbstractSonarInterface which
-// wraps a ROS acoustic_msgs::SonarImage
+// wraps a ROS marine_acoustic_msgs::SonarImage
 //
 
 #pragma once
@@ -12,14 +12,14 @@
 
 namespace sonar_image_proc {
 
-using acoustic_msgs::ProjectedSonarImage;
+using marine_acoustic_msgs::ProjectedSonarImage;
 using sonar_image_proc::AbstractSonarInterface;
 using std::vector;
 
 struct SonarImageMsgInterface
     : public sonar_image_proc::AbstractSonarInterface {
   explicit SonarImageMsgInterface(
-      const acoustic_msgs::ProjectedSonarImage::ConstPtr &ping)
+      const marine_acoustic_msgs::ProjectedSonarImage::ConstPtr &ping)
       : _ping(ping), do_log_scale_(false) {
     // Vertical field of view is determined by comparing
     // z / sqrt(x^2 + y^2) to tan(elevation_beamwidth/2)
@@ -171,7 +171,7 @@ struct SonarImageMsgInterface
   }
 
  protected:
-  acoustic_msgs::ProjectedSonarImage::ConstPtr _ping;
+  marine_acoustic_msgs::ProjectedSonarImage::ConstPtr _ping;
 
   float _verticalTanSquared;
   std::vector<float> _ping_azimuths;
