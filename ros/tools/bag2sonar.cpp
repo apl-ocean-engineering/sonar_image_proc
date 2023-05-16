@@ -1,5 +1,5 @@
-#include <acoustic_msgs/ProjectedSonarImage.h>
 #include <cv_bridge/cv_bridge.h>
+#include <marine_acoustic_msgs/ProjectedSonarImage.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sonar_image_proc/sonar_image_msg_interface.h>
@@ -18,8 +18,9 @@ using std::vector;
 
 class OutputWrapper {
  public:
-  virtual void write(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
-                     const cv::Mat &mat) = 0;
+  virtual void write(
+      const marine_acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
+      const cv::Mat &mat) = 0;
 };
 
 class BagOutput : public OutputWrapper {
@@ -27,7 +28,7 @@ class BagOutput : public OutputWrapper {
   BagOutput(const std::string &bagfile, const std::string topic)
       : _bag(bagfile, rosbag::bagmode::Write), _topic(topic) {}
 
-  void write(const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
+  void write(const marine_acoustic_msgs::ProjectedSonarImage::ConstPtr &msg,
              const cv::Mat &mat) override {
     cv_bridge::CvImage img_bridge(msg->header,
                                   sensor_msgs::image_encodings::RGB8, mat);
@@ -129,14 +130,14 @@ int main(int argc, char **argv) {
       std::cout << "Bagfile " << file << " is " << bag.getSize() << " bytes"
                 << std::endl;
 
-      rosbag::View view(bag,
-                        rosbag::TypeQuery("acoustic_msgs/ProjectedSonarImage"));
+      rosbag::View view(
+          bag, rosbag::TypeQuery("marine_acoustic_msgs/ProjectedSonarImage"));
 
       int count = 0;
 
       BOOST_FOREACH (rosbag::MessageInstance const m, view) {
-        acoustic_msgs::ProjectedSonarImage::ConstPtr msg =
-            m.instantiate<acoustic_msgs::ProjectedSonarImage>();
+        marine_acoustic_msgs::ProjectedSonarImage::ConstPtr msg =
+            m.instantiate<marine_acoustic_msgs::ProjectedSonarImage>();
 
         sonar_image_proc::SonarImageMsgInterface interface(msg);
         if (vm["logscale"].as<bool>()) {

@@ -9,7 +9,7 @@ from matplotlib import cm
 import numpy as np
 import rospy
 import time
-from acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
+from marine_acoustic_msgs.msg import ProjectedSonarImage, SonarImageData
 from sensor_msgs.msg import PointCloud2, PointField
 from std_msgs.msg import Header
 

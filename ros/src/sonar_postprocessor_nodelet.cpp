@@ -3,14 +3,14 @@
 
 #include <sstream>
 
-#include "acoustic_msgs/ProjectedSonarImage.h"
+#include "marine_acoustic_msgs/ProjectedSonarImage.h"
 #include "nodelet/nodelet.h"
 #include "ros/ros.h"
 #include "sonar_image_proc/sonar_image_msg_interface.h"
 
 namespace sonar_postprocessor {
 
-using acoustic_msgs::ProjectedSonarImage;
+using marine_acoustic_msgs::ProjectedSonarImage;
 using sonar_image_proc::SonarImageMsgInterface;
 
 class SonarPostprocessorNodelet : public nodelet::Nodelet {
@@ -38,7 +38,7 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
   }
 
   void sonarImageCallback(
-      const acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
+      const marine_acoustic_msgs::ProjectedSonarImage::ConstPtr &msg) {
     SonarImageMsgInterface interface(msg);
 
     // For now, only postprocess 32bit images
@@ -48,7 +48,7 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
     }
 
     // Expect this will copy
-    acoustic_msgs::ProjectedSonarImage out = *msg;
+    marine_acoustic_msgs::ProjectedSonarImage out = *msg;
 
     // For now, only 8-bit output is supported
     out.image.dtype = out.image.DTYPE_UINT8;

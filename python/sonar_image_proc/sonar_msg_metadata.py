@@ -8,7 +8,7 @@ from __future__ import annotations  # use type of class in member function annot
 
 import numpy as np
 import typing
-from acoustic_msgs.msg import ProjectedSonarImage
+from marine_acoustic_msgs.msg import ProjectedSonarImage
 
 
 class SonarImageMetadata(object):
@@ -45,20 +45,21 @@ class SonarImageMetadata(object):
             return False
         if self.num_ranges != other.num_ranges:
             return False
-        return np.allclose([
-            self.min_range, self.max_range, self.min_azimuth, self.max_azimuth
-        ], [
-            other.min_range, other.max_range, other.min_azimuth,
-            other.max_azimuth
-        ])
+        return np.allclose(
+            [self.min_range, self.max_range, self.min_azimuth, self.max_azimuth],
+            [other.min_range, other.max_range, other.min_azimuth, other.max_azimuth],
+        )
 
     def __str__(self) -> typing.String:
         """
         Overrides the default implementation of print(SonarImageMetadata)
         """
-        ss = (
-            "SonarImageMetadata: {} beams, {} ranges, {:0.2f}=>{:0.2f} m, {:0.1f}=>{:0.1f} deg"
-            .format(self.num_angles, self.num_ranges, self.min_range,
-                    self.max_range, np.degrees(self.min_azimuth),
-                    np.degrees(self.max_azimuth)))
+        ss = "SonarImageMetadata: {} beams, {} ranges, {:0.2f}=>{:0.2f} m, {:0.1f}=>{:0.1f} deg".format(
+            self.num_angles,
+            self.num_ranges,
+            self.min_range,
+            self.max_range,
+            np.degrees(self.min_azimuth),
+            np.degrees(self.max_azimuth),
+        )
         return ss
