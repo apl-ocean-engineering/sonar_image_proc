@@ -149,6 +149,11 @@ else()
     FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
     PATTERN ".git" EXCLUDE)
 
+  install(DIRECTORY ros/include/${PROJECT_NAME}/
+    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+    FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
+    PATTERN ".git" EXCLUDE)
+
   # Install python scripts and modules
   catkin_install_python(PROGRAMS
     scripts/sonar_pointcloud.py
