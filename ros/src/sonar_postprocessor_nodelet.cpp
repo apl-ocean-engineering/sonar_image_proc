@@ -56,47 +56,22 @@ class SonarPostprocessorNodelet : public nodelet::Nodelet {
     out.image.data.reserve(interface.ranges().size() *
                            interface.azimuths().size());
 
-    double logmin, logmax;
-
     for (unsigned int r_idx = 0; r_idx < interface.nRanges(); ++r_idx) {
       for (unsigned int a_idx = 0; a_idx < interface.nAzimuth(); ++a_idx) {
         sonar_image_proc::AzimuthRangeIndices idx(a_idx, r_idx);
 
-        // const uint32_t pix = interface.intensity_uint32(idx);
-        // const auto range = interface.range(r_idx);
-
         // Avoid log(0)
         auto intensity = interface.intensity_uint32(idx);
-        auto v = log(std::max((uint)1, intensity)) / log(UINT32_MAX);
+        auto vv = log(std::max((uint)1, intensity)) / log(UINT32_MAX);
 
-        if ((r_idx == 0) && (a_idx == 0)) {
-          logmin = v;
-          logmax = v;
-        } else {
-          logmin = std::min(v, logmin);
-          logmax = std::max(v, logmax);
-        }
-
+        // The output image will look better if the full range of the colormap
+        // corresponds to a subset of the range of v.
         const float vmax = 1.0, threshold = 0.74;
-
-        v = (v - threshold) / (vmax - threshold);
-        v = std::min(1.0, std::max(0.0, v));
-        out.image.data.push_back(UINT8_MAX * v);
-
-        // Just do the math in float for now
-        // float i = static_cast<float>(pix)/UINT32_MAX;
-
-        // //ROS_INFO_STREAM(a_idx << "," << r_idx << " : " << pix << " => " <<
-        // i);
-
-        // i *= gain_;
-
-        // UINT8_MAX * i);
+        auto color = (vv - threshold) / (vmax - threshold);
+        color = std::min(1.0, std::max(0.0, color));
+        out.image.data.push_back(UINT8_MAX * color);
       }
     }
-
-    //
-    float dr = exp(logmax - logmin);
     pubSonarImage_.publish(out);
   }
 
