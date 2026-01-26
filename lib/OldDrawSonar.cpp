@@ -6,13 +6,13 @@
 #include <limits>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "sonar_image_proc/DrawSonar.h"
+#include "libdrawsonar/DrawSonar.h"
 
 #ifndef THETA_SHIFT
 #define THETA_SHIFT PI;
 #endif
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
 namespace old_api {
 
@@ -45,8 +45,10 @@ cv::Size calculateImageSize(const AbstractSonarInterface &ping, cv::Size hint,
   }
 
   // Ensure w and h are both divisible by zero
-  if (w % 2) w++;
-  if (h % 2) h++;
+  if (w % 2)
+    w++;
+  if (h % 2)
+    h++;
 
   return Size(w, h);
 }
@@ -112,7 +114,8 @@ cv::Mat drawSonar(const AbstractSonarInterface &ping, const Mat &mat,
   }
 
   for (int r = 0; r < nRanges; ++r) {
-    if (ping.range(r) > rangeMax) continue;
+    if (ping.range(r) > rangeMax)
+      continue;
 
     for (int b = 0; b < nBeams; ++b) {
       const float range = ping.range(r);
@@ -135,5 +138,5 @@ cv::Mat drawSonar(const AbstractSonarInterface &ping, const Mat &mat,
   return out;
 }
 
-}  // namespace old_api
-}  // namespace sonar_image_proc
+} // namespace old_api
+} // namespace libdrawsonar

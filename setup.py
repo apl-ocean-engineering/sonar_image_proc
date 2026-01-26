@@ -5,8 +5,8 @@
 from distutils.core import setup
 
 setup(
-    version='0.0.1',
-    scripts=['python/histogram_drawer'],
-    packages=['sonar_image_proc'],
-    package_dir={'': 'python/'}
+    version="0.0.1",
+    scripts=["python/histogram_drawer"],
+    packages=["sonar_image_proc"],
+    package_dir={"": "python/"},
 )

@@ -1,0 +1,31 @@
+name: ROS Industrial CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  industrial-ci:
+    name: Run Industrial CI
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          # We include humble because there are still 22.04 systems (Jetson) out there
+          - {UPSTREAM_WORKSPACE: sonar_image_proc.repos, ROS_DISTRO: humble}
+          - {UPSTREAM_WORKSPACE: sonar_image_proc.repos, ROS_DISTRO: kilted}
+          - {UPSTREAM_WORKSPACE: sonar_image_proc.repos, ROS_DISTRO: rolling}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Run ROS Industrial CI
+        uses: ros-industrial/industrial_ci@master
+        env: ${{matrix.env}}

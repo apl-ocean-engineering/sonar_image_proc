@@ -5,12 +5,12 @@
 #include <limits>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "sonar_image_proc/DrawSonar.h"
-#include "sonar_image_proc/OverlayImage.h"
+#include "libdrawsonar/DrawSonar.h"
+#include "libdrawsonar/OverlayImage.h"
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
-using sonar_image_proc::AbstractSonarInterface;
+using libdrawsonar::AbstractSonarInterface;
 
 static float deg2radf(float deg) { return deg * M_PI / 180.0; }
 static float rad2degf(float rad) { return rad * 180.0 / M_PI; }
@@ -97,10 +97,11 @@ bool SonarDrawer::Cached::isValid(const AbstractSonarInterface &ping) const {
 
 // ==== SonarDrawer::CachedMap ====
 
-SonarDrawer::CachedMap::MapPair SonarDrawer::CachedMap::operator()(
-    const AbstractSonarInterface &ping) {
+SonarDrawer::CachedMap::MapPair
+SonarDrawer::CachedMap::operator()(const AbstractSonarInterface &ping) {
   // _scMap[12] are mutable to break out of const
-  if (!isValid(ping)) create(ping);
+  if (!isValid(ping))
+    create(ping);
 
   return std::make_pair(_scMap1, _scMap2);
 }
@@ -121,7 +122,8 @@ void SonarDrawer::CachedMap::create(const AbstractSonarInterface &ping) {
   const int originx = abs(minusWidth);
 
   const cv::Size imgSize(width, nRanges);
-  if ((width <= 0) || (nRanges <= 0)) return;
+  if ((width <= 0) || (nRanges <= 0))
+    return;
 
   newmap.create(imgSize, CV_32FC2);
 
@@ -171,7 +173,8 @@ void SonarDrawer::CachedMap::create(const AbstractSonarInterface &ping) {
 }
 
 bool SonarDrawer::CachedMap::isValid(const AbstractSonarInterface &ping) const {
-  if (_scMap1.empty() || _scMap2.empty()) return false;
+  if (_scMap1.empty() || _scMap2.empty())
+    return false;
 
   return Cached::isValid(ping);
 }
@@ -181,17 +184,21 @@ bool SonarDrawer::CachedMap::isValid(const AbstractSonarInterface &ping) const {
 bool SonarDrawer::CachedOverlay::isValid(const AbstractSonarInterface &ping,
                                          const cv::Mat &sonarImage,
                                          const OverlayConfig &config) const {
-  if (sonarImage.size() != _overlay.size()) return false;
+  if (sonarImage.size() != _overlay.size())
+    return false;
 
-  if (_config_used != config) return false;
+  if (_config_used != config)
+    return false;
 
   return Cached::isValid(ping);
 }
 
-const cv::Mat &SonarDrawer::CachedOverlay::operator()(
-    const AbstractSonarInterface &ping, const cv::Mat &sonarImage,
-    const OverlayConfig &config) {
-  if (!isValid(ping, sonarImage, config)) create(ping, sonarImage, config);
+const cv::Mat &
+SonarDrawer::CachedOverlay::operator()(const AbstractSonarInterface &ping,
+                                       const cv::Mat &sonarImage,
+                                       const OverlayConfig &config) {
+  if (!isValid(ping, sonarImage, config))
+    create(ping, sonarImage, config);
 
   return _overlay;
 }
@@ -318,4 +325,4 @@ void SonarDrawer::CachedOverlay::create(const AbstractSonarInterface &ping,
   _config_used = config;
 }
 
-}  // namespace sonar_image_proc
+} // namespace libdrawsonar

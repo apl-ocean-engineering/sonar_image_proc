@@ -6,7 +6,7 @@
 #include <opencv2/core/core.hpp>
 
 class NDArrayConverter {
- public:
+public:
   // must call this first, or the other routines don't work!
   static bool init_numpy();
 
@@ -23,9 +23,8 @@ class NDArrayConverter {
 namespace pybind11 {
 namespace detail {
 
-template <>
-struct type_caster<cv::Mat> {
- public:
+template <> struct type_caster<cv::Mat> {
+public:
   PYBIND11_TYPE_CASTER(cv::Mat, _("numpy.ndarray"));
 
   bool load(handle src, bool) {
@@ -37,7 +36,7 @@ struct type_caster<cv::Mat> {
   }
 };
 
-}  // namespace detail
-}  // namespace pybind11
+} // namespace detail
+} // namespace pybind11
 
 #endif

@@ -1,12 +1,12 @@
 // Copyright 2021 University of Washington Applied Physics Laboratory
 //
 
-#include "sonar_image_proc/AbstractSonarInterface.h"
+#include "libdrawsonar/AbstractSonarInterface.h"
 
 #include <algorithm>
 #include <utility>
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
 const Bounds_t UnsetBounds = Bounds_t(-1, -1);
 
@@ -42,4 +42,4 @@ void AbstractSonarInterface::checkAzimuthBounds() const {
   }
 }
 
-}  // namespace sonar_image_proc
+} // namespace libdrawsonar

@@ -8,7 +8,7 @@
 
 #include <vector>
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
 // \todo.  Are these used anymore?
 struct SonarPoint {
@@ -19,4 +19,4 @@ struct SonarPoint {
 
 SonarPoint bearingRange2Cartesian(float bearing, float range);
 
-}  // namespace sonar_image_proc
+} // namespace libdrawsonar

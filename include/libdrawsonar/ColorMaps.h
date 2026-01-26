@@ -5,11 +5,11 @@
 
 #include <opencv2/core.hpp>
 
-#include "sonar_image_proc/AbstractSonarInterface.h"
+#include "libdrawsonar/AbstractSonarInterface.h"
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
-using sonar_image_proc::AbstractSonarInterface;
+using libdrawsonar::AbstractSonarInterface;
 
 struct SonarColorMap {
   // A ColorMap is a mapping from one pixel of sonar data to
@@ -106,4 +106,4 @@ struct InfernoSaturationColorMap : public InfernoColorMap {
   }
 };
 
-}  // namespace sonar_image_proc
+} // namespace libdrawsonar

@@ -1,7 +1,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/traits.hpp>
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
 using cv::Mat;
 using cv::Vec;
@@ -111,4 +111,4 @@ void overlayImage(const Mat &bg, const Mat &fg, Mat &dst) {
 //   //     }
 //   //   }
 // }
-};  // namespace sonar_image_proc
+}; // namespace libdrawsonar

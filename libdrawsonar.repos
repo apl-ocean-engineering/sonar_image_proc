@@ -1,0 +1,5 @@
+repositories:
+  marine_msgs:
+    type: git
+    url: https://github.com/apl-ocean-engineering/marine_msgs
+    version: ros2

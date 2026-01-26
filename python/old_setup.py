@@ -2,12 +2,8 @@
 # Much of this copied from https://github.com/edmBernard/pybind11_opencv_numpy
 #
 
-import fnmatch
-import os
-from os.path import dirname, exists, join
 from setuptools import find_packages, setup, Extension
 from setuptools.command.build_ext import build_ext
-import subprocess
 import sys
 import setuptools
 
@@ -15,19 +11,22 @@ import setuptools
 # pybind-specific compilation stuff
 #
 
+
 class get_pybind_include(object):
     """Helper class to determine the pybind11 include path
 
     The purpose of this class is to postpone importing pybind11
     until it is actually installed, so that the ``get_include()``
-    method can be invoked. """
+    method can be invoked."""
 
     def __init__(self, user=False):
         self.user = user
 
     def __str__(self):
         import pybind11
+
         return pybind11.get_include(self.user)
+
 
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
@@ -36,8 +35,9 @@ def has_flag(compiler, flagname):
     the specified compiler.
     """
     import tempfile
-    with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
-        f.write('int main (int argc, char **argv) { return 0; }')
+
+    with tempfile.NamedTemporaryFile("w", suffix=".cpp") as f:
+        f.write("int main (int argc, char **argv) { return 0; }")
         try:
             compiler.compile([f.name], extra_postargs=[flagname])
         except setuptools.distutils.errors.CompileError:
@@ -50,24 +50,24 @@ def cpp_flag(compiler):
 
     The c++14 is preferred over c++11 (when it is available).
     """
-    if has_flag(compiler, '-std=c++14'):
-        return '-std=c++14'
-    elif has_flag(compiler, '-std=c++11'):
-        return '-std=c++11'
+    if has_flag(compiler, "-std=c++14"):
+        return "-std=c++14"
+    elif has_flag(compiler, "-std=c++11"):
+        return "-std=c++11"
     else:
-        raise RuntimeError('Unsupported compiler -- at least C++11 support '
-                           'is needed!')
+        raise RuntimeError("Unsupported compiler -- at least C++11 support is needed!")
 
 
 class BuildExt(build_ext):
     """A custom build extension for adding compiler-specific options."""
+
     c_opts = {
-        'msvc': ['/EHsc'],
-        'unix': [],
+        "msvc": ["/EHsc"],
+        "unix": [],
     }
 
-    if sys.platform == 'darwin':
-        c_opts['unix'] += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
+    if sys.platform == "darwin":
+        c_opts["unix"] += ["-stdlib=libc++", "-mmacosx-version-min=10.7"]
 
     def build_extensions(self):
         ct = self.compiler.compiler_type
@@ -76,45 +76,46 @@ class BuildExt(build_ext):
         for arg in ext_modules[0].extra_compile_args:
             opts.append(arg)
 
-        if ct == 'unix':
-            opts.append('-s') # strip
-            opts.append('-g0') # remove debug symbols
+        if ct == "unix":
+            opts.append("-s")  # strip
+            opts.append("-g0")  # remove debug symbols
             opts.append(cpp_flag(self.compiler))
-            if has_flag(self.compiler, '-fvisibility=hidden'):
-                opts.append('-fvisibility=hidden')
+            if has_flag(self.compiler, "-fvisibility=hidden"):
+                opts.append("-fvisibility=hidden")
         for ext in self.extensions:
             ext.extra_compile_args = opts
         build_ext.build_extensions(self)
 
+
 ext_modules = [
     Extension(
-        'serdp_common',
+        "serdp_common",
         [
-            'serdp_common_py.cpp',
-            'ndarray_converter.cpp',
-            '../lib/DrawSonar.cpp',
-            '../lib/DataStructures.cpp'
+            "serdp_common_py.cpp",
+            "ndarray_converter.cpp",
+            "../lib/DrawSonar.cpp",
+            "../lib/DataStructures.cpp",
         ],
         include_dirs=[
             # Path to pybind11 headers
             get_pybind_include(),
             get_pybind_include(user=True),
-            "../include/"
+            "../include/",
         ],
-        extra_compile_args=['-DABSTRACT_SONAR_INTERFACE_ONLY'],
-        libraries=['opencv_core', 'opencv_highgui'],
-        language='c++',
+        extra_compile_args=["-DABSTRACT_SONAR_INTERFACE_ONLY"],
+        libraries=["opencv_core", "opencv_highgui"],
+        language="c++",
     ),
 ]
 
 setup(
-    name='serdp_common',
-    version='0.1',
-    author='Aaron Marburg',
-    author_email='amarburg@uw.edu',
+    name="serdp_common",
+    version="0.1",
+    author="Aaron Marburg",
+    author_email="amarburg@uw.edu",
     packages=find_packages(),
     ext_modules=ext_modules,
     install_requires=None,
-    cmdclass={'build_ext': BuildExt},
+    cmdclass={"build_ext": BuildExt},
     zip_safe=False,
 )

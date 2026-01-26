@@ -45,36 +45,36 @@ static int failmsg(const char *fmt, ...) {
 }
 
 class PyAllowThreads {
- public:
+public:
   PyAllowThreads() : _state(PyEval_SaveThread()) {}
   ~PyAllowThreads() { PyEval_RestoreThread(_state); }
 
- private:
+private:
   PyThreadState *_state;
 };
 
 class PyEnsureGIL {
- public:
+public:
   PyEnsureGIL() : _state(PyGILState_Ensure()) {}
   ~PyEnsureGIL() { PyGILState_Release(_state); }
 
- private:
+private:
   PyGILState_STATE _state;
 };
 
-#define ERRWRAP2(expr)                       \
-  try {                                      \
-    PyAllowThreads allowThreads;             \
-    expr;                                    \
-  } catch (const cv::Exception &e) {         \
-    PyErr_SetString(opencv_error, e.what()); \
-    return 0;                                \
+#define ERRWRAP2(expr)                                                         \
+  try {                                                                        \
+    PyAllowThreads allowThreads;                                               \
+    expr;                                                                      \
+  } catch (const cv::Exception &e) {                                           \
+    PyErr_SetString(opencv_error, e.what());                                   \
+    return 0;                                                                  \
   }
 
 using namespace cv;
 
 class NumpyAllocator : public MatAllocator {
- public:
+public:
   NumpyAllocator() { stdAllocator = Mat::getStdAllocator(); }
   ~NumpyAllocator() {}
 
@@ -83,7 +83,8 @@ class NumpyAllocator : public MatAllocator {
     UMatData *u = new UMatData(this);
     u->data = u->origdata = (uchar *)PyArray_DATA((PyArrayObject *)o);
     npy_intp *_strides = PyArray_STRIDES((PyArrayObject *)o);
-    for (int i = 0; i < dims - 1; i++) step[i] = (size_t)_strides[i];
+    for (int i = 0; i < dims - 1; i++)
+      step[i] = (size_t)_strides[i];
     step[dims - 1] = CV_ELEM_SIZE(type);
     u->size = sizes[0] * step[0];
     u->userdata = o;
@@ -120,8 +121,10 @@ class NumpyAllocator : public MatAllocator {
                                     : f * NPY_ULONGLONG + (f ^ 1) * NPY_UINT;
     int i, dims = dims0;
     cv::AutoBuffer<npy_intp> _sizes(dims + 1);
-    for (i = 0; i < dims; i++) _sizes[i] = sizes[i];
-    if (cn > 1) _sizes[dims++] = cn;
+    for (i = 0; i < dims; i++)
+      _sizes[i] = sizes[i];
+    if (cn > 1)
+      _sizes[dims++] = cn;
     PyObject *o = PyArray_SimpleNew(dims, _sizes, typenum);
     if (!o)
       CV_Error_(Error::StsError,
@@ -141,7 +144,8 @@ class NumpyAllocator : public MatAllocator {
   }
 
   void deallocate(UMatData *u) const {
-    if (!u) return;
+    if (!u)
+      return;
     PyEnsureGIL gil;
     CV_Assert(u->urefcount >= 0);
     CV_Assert(u->refcount >= 0);
@@ -160,7 +164,8 @@ NumpyAllocator g_numpyAllocator;
 bool NDArrayConverter::toMat(PyObject *o, Mat &m) {
   bool allowND = true;
   if (!o || o == Py_None) {
-    if (!m.data) m.allocator = &g_numpyAllocator;
+    if (!m.data)
+      m.allocator = &g_numpyAllocator;
     return true;
   }
 
@@ -317,7 +322,8 @@ bool NDArrayConverter::toMat(PyObject *o, Mat &m) {
 }
 
 PyObject *NDArrayConverter::toNDArray(const cv::Mat &m) {
-  if (!m.data) Py_RETURN_NONE;
+  if (!m.data)
+    Py_RETURN_NONE;
   Mat temp, *p = (Mat *)&m;
   if (!p->u || p->allocator != &g_numpyAllocator) {
     temp.allocator = &g_numpyAllocator;

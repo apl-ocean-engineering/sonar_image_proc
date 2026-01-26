@@ -1,0 +1,10 @@
+# - Config file for the drawsonar package
+# It defines the following variables
+#  drawsonar_INCLUDE_DIRS - include directories for drawsonar
+#  drawsonar_LIBRARY_DIRS - directories for drawsonar library
+
+# Compute paths
+get_filename_component(drawsonar_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(drawsonar_INCLUDE_DIRS "@drawsonar_include_dirs@")
+set(drawsonar_LIBRARY_DIRS "@drawsonar_library_dirs@")
+set(drawsonar_LIBRARIES "@drawsonar_libraries@")

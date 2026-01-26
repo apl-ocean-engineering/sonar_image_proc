@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
 typedef std::pair<float, float> Bounds_t;
 extern const Bounds_t UnsetBounds;
@@ -28,7 +28,7 @@ struct AzimuthRangeIndices {
 // Designed as a "common abstact type" between the Blueprint
 // Subsea SimplePingResult and ROS ImagingSonarMsg
 struct AbstractSonarInterface {
- public:
+public:
   AbstractSonarInterface();
 
   enum DataType_t {
@@ -54,7 +54,7 @@ struct AbstractSonarInterface {
   int nAzimuth() const { return azimuths().size(); }
   int nAzimuths() const {
     return azimuths().size();
-  }  // Whoops, should be consistent
+  } // Whoops, should be consistent
   float azimuth(int n) const { return azimuths().at(n); }
 
   Bounds_t azimuthBounds() const;
@@ -128,13 +128,13 @@ struct AbstractSonarInterface {
   }
   __attribute__((deprecated));
 
- private:
+private:
   // In a few cases, need to "check and potentially calculate cached
   // value" without actually getting the value
   void checkRangeBounds() const;
   void checkAzimuthBounds() const;
 
- private:
+private:
   // Since we search extensively for the bounds
   // (rather than assuming the first and last are the bounds),
   // cache the results
@@ -143,4 +143,4 @@ struct AbstractSonarInterface {
   mutable float _maxRangeSquared;
 };
 
-}  // namespace sonar_image_proc
+} // namespace libdrawsonar

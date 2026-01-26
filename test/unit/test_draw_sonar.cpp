@@ -5,7 +5,7 @@
 #include <string>
 using namespace std;
 
-#include "sonar_image_proc/DrawSonar.h"
-using namespace sonar_image_proc;
+#include "libdrawsonar/DrawSonar.h"
+using namespace libdrawsonar;
 
 TEST(TestDrawSonar, NullTest) { ASSERT_TRUE(true); }

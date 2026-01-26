@@ -63,12 +63,12 @@ cv::Mat cloneimg(cv::Mat image) { return image.clone(); }
 int add(int i, int j) { return i + j; }
 
 class AddClass {
- public:
+public:
   AddClass(int value) : value(value) {}
 
   cv::Mat add(cv::Mat input) { return input + this->value; }
 
- private:
+private:
   int value;
 };
 

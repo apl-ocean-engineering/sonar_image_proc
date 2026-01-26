@@ -11,13 +11,13 @@
 #include <memory>
 #include <opencv2/core/core.hpp>
 
-#include "sonar_image_proc/AbstractSonarInterface.h"
-#include "sonar_image_proc/ColorMaps.h"
-#include "sonar_image_proc/SonarDrawer.h"
+#include "libdrawsonar/AbstractSonarInterface.h"
+#include "libdrawsonar/ColorMaps.h"
+#include "libdrawsonar/SonarDrawer.h"
 
-namespace sonar_image_proc {
+namespace libdrawsonar {
 
-inline cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+inline cv::Mat drawSonar(const libdrawsonar::AbstractSonarInterface &ping,
                          const SonarColorMap &colorMap = InfernoColorMap(),
                          const cv::Mat &image = cv::Mat(0, 0, CV_8UC3)) {
   SonarDrawer drawer;
@@ -38,10 +38,10 @@ inline cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
 //
 // Cell (nRange,nBearing) is the data at the max range, most positive bearing
 //
-inline cv::Mat drawSonarRectImage(
-    const sonar_image_proc::AbstractSonarInterface &ping,
-    const SonarColorMap &colorMap = InfernoColorMap(),
-    const cv::Mat &rectImage = cv::Mat(0, 0, CV_8UC3)) {
+inline cv::Mat
+drawSonarRectImage(const libdrawsonar::AbstractSonarInterface &ping,
+                   const SonarColorMap &colorMap = InfernoColorMap(),
+                   const cv::Mat &rectImage = cv::Mat(0, 0, CV_8UC3)) {
   SonarDrawer drawer;
   return drawer.drawRectSonarImage(ping, colorMap, rectImage);
 }
@@ -61,15 +61,15 @@ namespace old_api {
 //
 // If set, maxRange is used in lieu of the ping's native max range,
 // allowing truncation of the image
-cv::Size calculateImageSize(
-    const sonar_image_proc::AbstractSonarInterface &ping, cv::Size hint,
-    int pixPerRangeBin = 2, float maxRange = -1.0);
+cv::Size calculateImageSize(const libdrawsonar::AbstractSonarInterface &ping,
+                            cv::Size hint, int pixPerRangeBin = 2,
+                            float maxRange = -1.0);
 
-cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
+cv::Mat drawSonar(const libdrawsonar::AbstractSonarInterface &ping,
                   cv::Mat &mat,
                   const SonarColorMap &colorMap = InfernoColorMap(),
                   float maxRange = -1.0);
 
-}  // namespace old_api
+} // namespace old_api
 
-}  // namespace sonar_image_proc
+} // namespace libdrawsonar

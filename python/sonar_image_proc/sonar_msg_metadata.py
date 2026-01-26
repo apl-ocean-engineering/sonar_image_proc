@@ -1,4 +1,3 @@
-#! /usr/bin/env python3
 """
 Copyright 2023 University of Washington Applied Physics Laboratory
 Author: Marc Micatka & Laura Lindzey
