@@ -1,0 +1,72 @@
+draw_sonar:
+  max_range:
+    type: double
+    default_value: 0.0
+    description: ""
+
+  publish_old:
+    type: bool
+    default_value: false
+    description: ""
+
+  publish_timing:
+    type: bool
+    default_value: true
+    description: ""
+
+  publish_histogram:
+    type: bool
+    default_value: true
+    description: ""
+
+  color_map:
+    type: string
+    default_value: "inferno"
+    description: ""
+
+  line_alpha:
+    type: double
+    default_value: 0.5
+    description: ""
+    validation:
+      bounds<>: [0.0,1.0]
+
+  line_thickness:
+    type: int
+    default_value: 1
+    description: ""
+    validation:
+      bounds<>: [1,5]
+
+  range_spacing:
+    type: double
+    default_value: 0
+    description: ""
+    validation:
+      bounds<>: [0.0,100.0]
+
+  bearing_spacing:
+    type: double
+    default_value: 0
+    description: ""
+    validation:
+      bounds<>: [20.0,100.0]
+
+  log_scale:
+    type: bool
+    default_value: false
+    description: ""
+
+  min_db:
+    type: double
+    default_value: 0
+    description: ""
+    validation:
+      bounds<>: [-221.0,0.0]
+
+  max_db:
+    type: double
+    default_value: 0
+    description: ""
+    validation:
+      bounds<>: [-221.0,0.0]

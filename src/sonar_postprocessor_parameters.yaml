@@ -1,0 +1,14 @@
+sonar_postprocessor:
+  gain:
+    type: double
+    default_value: 1.0
+    description: ""
+    validation:
+      bounds<>: [0.0,100.0]
+
+  gamma:
+    type: double
+    default_value: 1.0
+    description: ""
+    validation:
+      bounds<>: [0.0,100.0]
