@@ -1,34 +1,4 @@
-// #include <pybind11/pybind11.h>
-//
-// #include <opencv2/highgui/highgui.hpp>
-//
-// // #include "ndarray_converter.h"
-// // #include "serdp_common/DrawSonar.h"
-//
-// namespace py = pybind11;
-//
-//
-// cv::Mat read_image(std::string image_name) {
-// #if CV_MAJOR_VERSION < 4
-//   cv::Mat image = cv::imread(image_name, CV_LOAD_IMAGE_COLOR);
-// #else
-//   cv::Mat image = cv::imread(image_name, cv::IMREAD_COLOR);
-// #endif
-//   return image;
-// }
-//
-// // class AddClass {
-// // public:
-// //   AddClass(int value) : value(value) {}
-// //
-// //   cv::Mat add(cv::Mat input) {
-// //     return input + this->value;
-// //   }
-// //
-// // private:
-// //   int value;
-// // };
-//
+
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>

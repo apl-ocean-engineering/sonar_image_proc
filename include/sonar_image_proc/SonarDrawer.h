@@ -6,6 +6,8 @@
 // See "DrawSonar.h" for the function-based API
 
 #pragma once
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverloaded-virtual"
 
 #include <memory>
 #include <opencv2/core/core.hpp>
@@ -122,7 +124,8 @@ class SonarDrawer {
   // configuration in overlayConfig
   cv::Mat drawOverlay(const AbstractSonarInterface &ping,
                       const cv::Mat &sonarImage);
-
+  // cv::Size calculateImageSize(const AbstractSonarInterface &ping, cv::Size hint,
+  //                           int pixPerRangeBin, float maxRange);
   OverlayConfig &overlayConfig() { return overlay_config_; }
 
  private:
@@ -182,3 +185,4 @@ class SonarDrawer {
 };  // namespace sonar_image_procclassSonarDrawer
 
 }  // namespace sonar_image_proc
+#pragma GCC diagnostic pop

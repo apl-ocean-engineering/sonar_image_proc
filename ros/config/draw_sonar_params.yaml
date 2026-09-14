@@ -1,0 +1,15 @@
+oculus:
+  draw_sonar_node:
+    ros__parameters:
+        max_range: 40.0  # Specify if necessary
+        publish_old: false
+        publish_timing: true
+        publish_histogram: false
+        color_map: inferno
+        line_alpha: 0.2
+        line_thickness: 1
+        range_spacing: 1.0
+        bearing_spacing: 45.0
+        log_scale: false
+        min_db: 0.0
+        max_db: 0.0

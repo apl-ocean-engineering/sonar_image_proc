@@ -25,7 +25,7 @@ std::vector<unsigned int> HistogramGenerator::GenerateUint8(
   std::vector<unsigned int> result(256, 0);
 
   for (int r = 0; r < ping.nRanges(); r++) {
-    for (int b = 0; b < ping.nBearings(); b++) {
+    for (size_t b = 0; b < ping.azimuths().size(); b++) {
       const auto val = ping.intensity_uint8(AzimuthRangeIndices(b, r));
       result[val]++;
     }
@@ -39,7 +39,7 @@ std::vector<unsigned int> HistogramGenerator::GenerateUint16(
   std::vector<unsigned int> result(65536, 0);
 
   for (int r = 0; r < ping.nRanges(); r++) {
-    for (int b = 0; b < ping.nBearings(); b++) {
+    for (size_t b = 0; b < ping.azimuths().size(); b++) {
       const auto val = ping.intensity_uint16(AzimuthRangeIndices(b, r));
 
       result[val]++;
@@ -56,7 +56,7 @@ std::vector<unsigned int> HistogramGenerator::GenerateUint32(
   const float logMax = log10(UINT32_MAX);
 
   for (int r = 0; r < ping.nRanges(); r++) {
-    for (int b = 0; b < ping.nBearings(); b++) {
+    for (size_t b = 0; b < ping.azimuths().size(); b++) {
       const auto val = ping.intensity_uint32(AzimuthRangeIndices(b, r));
 
       if (val == 0) continue;
@@ -68,7 +68,8 @@ std::vector<unsigned int> HistogramGenerator::GenerateUint32(
       // std::cerr << "val = " << val << "; l = " << l << "; idx = " << idx <<
       // std::endl;
 
-      if ((idx < 0) || (idx > result.size())) continue;
+      // if ((idx < 0) || (idx > result.size())) continue;
+      if (idx >= result.size()) continue;
       result[idx]++;
     }
   }

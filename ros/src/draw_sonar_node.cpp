@@ -1,19 +1,25 @@
-// Copyright 2021 University of Washington Applied Physics Laboratory
-//
 
-#include "nodelet/loader.h"
-#include "ros/ros.h"
+
+
+#include "rclcpp/rclcpp.hpp"
+// #include "draw_sonar_component.cpp"
+#include "sonar_image_proc/draw_sonar_lifecycle_node.hpp"
+
 
 int main(int argc, char **argv) {
-  ros::init(argc, argv, "draw_sonar");
 
-  nodelet::Loader nodelet;
-  nodelet::M_string remap(ros::names::getRemappings());
-  nodelet::V_string nargv;
+  // libg3logger::G3Logger<ROSLogSink> log_worker("sonar_node");
 
-  nodelet.load(ros::this_node::getName(), "sonar_image_proc/draw_sonar", remap,
-               nargv);
+  rclcpp::init(argc, argv);
 
-  ros::spin();
+  // auto node = std::make_shared<draw_sonar::DrawSonarComponent>(rclcpp::NodeOptions{});
+  // rclcpp::spin(node);
+
+  auto node = std::make_shared<draw_sonar::DrawSonarLifecycleNode>(rclcpp::NodeOptions{});
+
+  rclcpp::spin(node->get_node_base_interface());
+
+
+  rclcpp::shutdown();
   return 0;
 }

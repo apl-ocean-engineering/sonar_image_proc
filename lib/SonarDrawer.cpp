@@ -22,7 +22,7 @@ cv::Mat SonarDrawer::drawRectSonarImage(const AbstractSonarInterface &ping,
                                         const cv::Mat &rectIn) {
   cv::Mat rect(rectIn);
 
-  const cv::Size imgSize(ping.nRanges(), ping.nBearings());
+  const cv::Size imgSize(ping.nRanges(), ping.azimuths().size());
 
   if ((rect.type() == CV_8UC3) || (rect.type() == CV_32FC3) ||
       (rect.type() == CV_32FC1)) {
@@ -32,7 +32,7 @@ cv::Mat SonarDrawer::drawRectSonarImage(const AbstractSonarInterface &ping,
   }
 
   for (int r = 0; r < ping.nRanges(); r++) {
-    for (int b = 0; b < ping.nBearings(); b++) {
+    for (size_t b = 0; b < ping.azimuths().size(); b++) {
       const AzimuthRangeIndices loc(b, r);
 
       if (rect.type() == CV_8UC3) {
@@ -164,7 +164,7 @@ void SonarDrawer::CachedMap::create(const AbstractSonarInterface &ping) {
 
   // Save meta-information to check for cache expiry
   _numRanges = ping.nRanges();
-  _numAzimuth = ping.nBearings();
+  _numAzimuth = ping.azimuths().size();
 
   _rangeBounds = ping.rangeBounds();
   _azimuthBounds = ping.azimuthBounds();
