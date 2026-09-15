@@ -66,7 +66,7 @@ cv::Size calculateImageSize(
     int pixPerRangeBin = 2, float maxRange = -1.0);
 
 cv::Mat drawSonar(const sonar_image_proc::AbstractSonarInterface &ping,
-                  cv::Mat &mat,
+                  const cv::Mat &mat,
                   const SonarColorMap &colorMap = InfernoColorMap(),
                   float maxRange = -1.0);
 

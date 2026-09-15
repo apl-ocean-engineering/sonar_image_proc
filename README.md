@@ -1,133 +1,148 @@
 # sonar_image_proc
 
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+A **ROS 2** package for processing and visualizing data from **forward-looking imaging sonars**. This package ports and adapts the [APL Ocean Engineering ROS 1 package](https://github.com/apl-ocean-engineering/sonar_image_proc) to ROS 2.
 
-Code to draw data from forward-looking imaging sonars.
+## Maintainers
 
-If built for ROS, it will build a node/nodelet
-[draw_sonar](https://github.com/apl-ocean-engineering/libdraw_sonar/tree/master/src_ros)
-which subscribes to an
-[marine_acoustic_msgs/ProjectedSonarImage](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs/msg/ProjectedSonarImage.msg)
-and publishes a
-[sensor_msgs/Image](https://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/Image.html).
+- [Ankita Jadhav](mailto:ajadhav@marum.de)
+- [Christian Meurer](mailto:cmeurer@uni-bremen.de)
 
-The core library contains no ROS dependencies, and can be linked into non-ROS applications.
+---
 
-# ROS Interfaces (draw_sonar_node)
+## Features
 
-`rosrun sonar_image_proc draw_sonar_node`
+> **Note:** This package is designed to work with **ROS 2 Humble and Jazzy**. It has been tested with `marine_acoustic_msgs` and OpenCV for sonar data processing.
 
-## Subscribers
+- **Real-time sonar image processing** for forward-looking imaging sonars.
+- **ROS 2 Lifecycle Node** (`draw_sonar_lifecycle_node`) for managing node state transitions (configure, activate, deactivate, cleanup, shutdown).
+- **Sonar image drawing** with configurable parameters:
+  - Max range
+  - Color maps (e.g., `InfernoColorMap`, `MitchellColorMap`, `InfernoSaturationColorMap`)
+  - Line alpha, thickness, and spacing for overlays
+  - Logarithmic scaling for intensity values
+- **Multiple output topics**:
+  - `/drawn_sonar`: Processed sonar image (polar remapped).
+  - `/drawn_sonar_rect`: Rectangular sonar image.
+  - `/drawn_sonar_osd`: Sonar image with overlay (e.g., range/bearing lines).
+  - `/sonar_image_proc_timing`: Timing metrics for performance analysis.
+- **Dynamic parameter reconfiguration** at runtime.
+- **Compatibility** with `marine_acoustic_msgs` for sonar data input.
 
-Subscribes to the topic `sonar_image` of type [marine_acoustic_msgs/ProjectedSonarImage](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs/msg/ProjectedSonarImage.msg).
+---
 
+## Dependencies
 
-## Publishers
+### Build Dependencies
+- **ROS 2 Humble/Jazzy**
+- `ament_cmake`
+- `rclcpp`
+- `rclcpp_components`
+- `rclcpp_lifecycle`
+- `lifecycle_msgs`
+- `cv_bridge`
+- `image_transport`
+- `marine_acoustic_msgs`
+- `std_msgs`
+- `OpenCV` (for image processing)
 
-By default publishes three [sensor_msgs/Image](https://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/Image.html) topics:
+### Runtime Dependencies (In addition to build dependencies)
+- `rclcpp_lifecycle`
+- `lifecycle_msgs`
 
-*  `drawn_sonar` contains an image of the sonar drawn with a cartesian projection
-with the origin (range = 0) of the sonar centered on the bottom edge of
-the image, and azimuth=0 extending vertically upwards in the image.  By default,
-the image height is set by the number range bins, and the image width is
-automatically determined based on the height and the min/max azimuth of the
-sonar image.   The color map used to convert the sonar intensity to RGB is set
-in code.
+---
 
-![](drawn_sonar.png)
+## Installation
 
-* `drawn_sonar_rect` is the contents of the SonarImage data mapped directly from polar to cartesian coordinates.
-Since the intensity data in the SonarImage is stored azimuth-major, the data is
-mapped into the image space with range in the X direction and azimuth in the Y
-direction:
+### From Source
+1. Clone this repository into your ROS 2 workspace:
+   ```bash
+   git clone <repository_url> sonar_image_proc
+   ```
+2. Build the package:
+   ```bash
+   colcon build --packages-select sonar_image_proc
+   ```
+3. Source the workspace:
+   ```bash
+   source install/setup.bash
+   ```
 
- * Image width is the number of range bins in the data, with the minimum range
-   on the left side and maximum range on the right side.
+---
 
- * Image height is the number of azimuth bins in the data, with the lowest
-   azimuth (typically the most negative) at the top, and most positive at the
-   bottom.
+## Usage
 
-![](drawn_sonar_rect.png)
-
-* `drawn_sonar_osd` adds guidelines and annotations to `drawn_sonar`.  Overlay parameters can be configured in realtime.
-
-If the param `publish_timing` is `true`, the node will track the elapsed time to
-draw each sonar image and publish that information to the topic `sonar_image_proc_timing`
-as a [std_msgs/String](http://docs.ros.org/en/noetic/api/std_msgs/html/msg/String.html)
-containing a JSON dict.
-
-If the param `publish_old` is `true`, the node will also draw the sonar using
-the old `draw_sonar` algorithm for comparison.
-
-## Params
-
-If `max_range` is set to a non-zero value, images will be clipped/dropped to that max range (or the actual sonar range, whichever is smaller).
-
-If `publish_timing` is `true` the node will publish performance information as a
-JSON [string](http://docs.ros.org/en/noetic/api/std_msgs/html/msg/String.html)
-to the topic `sonar_image_proc_timing`.  Defaults to `true`
-
-If `publish_old` is `true` the node will also draw the sonar using the old
-algorithm to the topic `old_drawn_sonar`.   Defaults to `false`
-
-If `publish_histogram` is `true` the node will publish a "raw" histogram information as a `UInt32MultiArray` to the topic `histogram`.   It contains a vector of unsigned ints giving the count for each intensity value -- so for 8 bit data the vector will be 256 elements in length, and for 16-bit data it will be 65536 elements in length.
-
-# bag2sonar
-
-The program `bag2sonar` reads in a bagfile containing a `ProjectedSonarImage` topic, draws the sonar image and writes those images to *new* bagfile in a `Image` topic.
-
-Usage:
-
-```
-$ rosrun sonar_image_proc bag2sonar
-Usage:
-
-   bag2sonar [options]  <input file(s)>
-
-Draw sonar from a bagfile:
-  -h [ --help ]                         Display this help message
-  -l [ --logscale ]                     Do logscale
-  --min-db arg (=0)                     Min db
-  --max-db arg (=0)                     Max db
-  --osd                                 If set, include the on-screen display
-                                        in output
-  -o [ --output-bag ] arg               Name of output bagfile
-  -t [ --output-topic ] arg (=/drawn_sonar)
-                                        Topic for images in output bagfile
+### Running the Node
+Launch the `draw_sonar_lifecycle_node` to process sonar images:
+```bash
+ros2 run sonar_image_proc draw_sonar_node --ros-args -p max_range:=30.0
 ```
 
-Note that `bag2sonar` is not a conventional ROS node, it is intended to run as a standalone commandline program.  It uses `ros_storage` to read the input bagfile sequentially, rather than subscribing to a topic.
+### Parameters
+The node supports the following parameters (configurable via ROS 2 parameter overrides or dynamic reconfiguration):
 
-# histogram_drawer
+| Parameter            | Type    | Default Value | Description |
+|----------------------|---------|---------------|-------------|
+| `max_range`          | double  | 30.0          | Maximum range (meters) to visualize. |
+| `publish_old`        | bool    | false         | Enable publishing legacy API output. |
+| `publish_timing`     | bool    | true          | Publish timing metrics. |
+| `publish_histogram`  | bool    | false         | Publish histogram data. |
+| `color_map`          | string  | "inferno"     | Color map for visualization (e.g., "inferno", "mitchell"). |
+| `line_alpha`         | double  | 0.5           | Transparency of overlay lines. |
+| `line_thickness`     | int     | 1             | Thickness of overlay lines. |
+| `range_spacing`      | double  | 0.0           | Spacing between range lines (0 = auto). |
+| `bearing_spacing`    | double  | 20.0          | Spacing between bearing lines (degrees). |
+| `log_scale`          | bool    | false         | Enable logarithmic scaling for intensity. |
+| `min_db`             | double  | 0.0           | Minimum dB for logarithmic scaling. |
+| `max_db`             | double  | 0.0           | Maximum dB for logarithmic scaling. |
 
-`python/histogram_drawer` is a Python script which subscribes to the `histogram` topic and uses numpy+Matplotlib to bin the data (into a fixed set of 128 bin right now), and draw a plot to the topic `drawn_histogram`.
+Example parameter override:
+```bash
+ros2 run sonar_image_proc draw_sonar_node --ros-args -p max_range:=50.0 
+```
 
-# Python API
+### Topics
+#### Subscribed Topics
+| Topic         | Type                                  | Description |
+|---------------|---------------------------------------|-------------|
+| `sonar_image` | `marine_acoustic_msgs/msg/ProjectedSonarImage` | Input sonar image data. |
 
-Long term, I'd like to be able to call this drawing function from Python,
-however we're not there yet.
+#### Published Topics
+| Topic                     | Type                                  | Description |
+|---------------------------|---------------------------------------|-------------|
+| `drawn_sonar`             | `sensor_msgs/msg/Image`               | Processed sonar image (polar remapped). |
+| `drawn_sonar_rect`        | `sensor_msgs/msg/Image`               | Rectangular sonar image. |
+| `drawn_sonar_osd`         | `sensor_msgs/msg/Image`               | Sonar image with overlay. |
+| `old_drawn_sonar`         | `sensor_msgs/msg/Image`               | Legacy API output. |
+| `histogram`               | `std_msgs/msg/UInt32MultiArray`       | Histogram data. |
+| `sonar_image_proc_timing` | `std_msgs/msg/String`                | Timing metrics (JSON format). |
 
-There IS a totally separate python node that publishes a pointcloud
-for visualization in rviz:
+---
 
-`rosrun sonar_image_proc sonar_pointcloud.py`
+## Architecture
 
+### Key Classes
+| Class | File | Description |
+|-------|------|-------------|
+| `DrawSonarLifecycleNode` | `ros/include/sonar_image_proc/draw_sonar_lifecycle_node.hpp` | ROS 2 Lifecycle Node for sonar image processing. |
+| `SonarDrawer` | `include/sonar_image_proc/SonarDrawer.h` | Draws sonar images in rectangular and polar formats. |
+| `SonarColorMap` | `include/sonar_image_proc/ColorMaps.h` | Color maps for sonar intensity visualization. |
+| `HistogramGenerator` | `include/sonar_image_proc/HistogramGenerator.h` | Generates histograms for sonar data. |
+| `SonarImageMsgInterface` | `ros/include/sonar_image_proc/sonar_image_msg_interface.h` | Adapts `ProjectedSonarImage` messages to `AbstractSonarInterface`. |
 
-# API
+### Nodelets (Legacy)
+- `sonar_postprocessor_node.cpp`: ROS 1 nodelet for backward compatibility (deprecated in ROS 2).
 
-Sonar drawing is implemented in the [SonarDrawer](include/sonar_image_proc/SonarDrawer.h) class, which takes an instance of an [AbstractSonarInterface](include/sonar_image_proc/AbstractSonarInterface.h) and returns a cv::Mat.   SonarDrawer computes and stores pre-calculated matrices to accelerate the drawing.
+---
 
-A convenience function [drawSonar](include/sonar_image_proc/DrawSonar.h) is also provided.  It is a trivial wrapper which creates an instance of SonarDrawer then calls it.  Calls to drawSonar do not retain the cached matrices and are less efficient.
+## License
+This package is licensed under the **BSD** license. See the [LICENSE](LICENSE) file for details.
 
-# Related Packages
+---
+## Contributing
+Contributions are welcome! Please open an issue or submit a pull request.
 
-* [liboculus](https://github.com/apl-ocean-engineering/liboculus) provides network IO and data parsing for the Oculus sonar (non-ROS).
-* [oculus_sonar_driver](https://gitlab.com/apl-ocean-engineering/oculus_sonar_driver) provides a ROS node for interfacing with the Oculus sonar.
-* [marine_acoustic_msgs](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs) defines the ROS [ProjectedSonarImage](https://github.com/apl-ocean-engineering/marine_msgs/blob/main/marine_acoustic_msgs/msg/ProjectedSonarImage.msg) message type published by [oculus_sonar_driver](https://gitlab.com/apl-ocean-engineering/oculus_sonar_driver).
-* [rqt_sonar_image_view](https://github.com/apl-ocean-engineering/rqt_sonar_image_view) is an Rqt plugin for displaying sonar imagery (uses [sonar_image_proc](https://github.com/apl-ocean-engineering/sonar_image_proc))
-
-
-# License
-
-Licensed under [BSD 3-clause license](LICENSE).
+---
+## References
+- Original ROS 1 package: [apl-ocean-engineering/sonar_image_proc](https://github.com/apl-ocean-engineering/sonar_image_proc)
+- Colormap inspiration: [BIDS/colormap](https://github.com/BIDS/colormap)
+- OpenCV documentation: [Overlay Image Example](https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html)
